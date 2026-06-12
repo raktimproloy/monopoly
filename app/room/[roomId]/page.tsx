@@ -7,7 +7,7 @@ import PlayerList from '../../../components/PlayerList';
 import ChatBox from '../../../components/ChatBox';
 import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
-import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play } from 'lucide-react';
+import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
 function GameRoomContent() {
@@ -35,7 +35,9 @@ function GameRoomContent() {
     respondToTrade,
     endTurn,
     updateSettings,
-    startGame
+    startGame,
+    declareBankruptcy,
+    payJailFine
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Loading indicator while connecting
@@ -257,7 +259,7 @@ function GameRoomContent() {
       <div className="flex-1 w-full p-4 overflow-hidden flex gap-4 min-h-0 relative z-10">
 
         {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
-        <section className="w-80 shrink-0 flex flex-col gap-4 h-full min-w-0">
+        <section className="w-96 shrink-0 flex flex-col gap-4 h-full min-w-0">
           <div className="flex-1 min-h-0">
             <PropertyManager
               gameState={gameState}
@@ -279,8 +281,10 @@ function GameRoomContent() {
             gameState={gameState}
             boardTiles={boardTiles}
             userId={userId}
+            logs={logs}
             onRollDice={rollDice}
             onEndTurn={endTurn}
+            onPayJailFine={payJailFine}
             onTileClick={(idx) => {
               // Can hook custom tile inspect actions here
             }}
@@ -288,7 +292,36 @@ function GameRoomContent() {
         </section>
 
         {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
-        <section className="w-80 shrink-0 flex flex-col gap-4 h-full min-w-0">
+        <section className="w-96 shrink-0 flex flex-col gap-3 h-full min-w-0 select-none">
+          {/* Top Actions: Votekick and Bankrupt */}
+          <div className="flex justify-between items-center shrink-0">
+            <button
+              onClick={() => {
+                // Future Votekick placeholder
+              }}
+              className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <UserX size={12} className="stroke-current" />
+              Votekick
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm("Are you sure you want to declare bankruptcy? You will surrender all assets and exit the game.")) {
+                  declareBankruptcy();
+                }
+              }}
+              disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
+              className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${
+                (gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
+                  ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
+                  : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
+              }`}
+            >
+              <Flag size={12} className="fill-current stroke-current" />
+              Bankrupt
+            </button>
+          </div>
+
           <div className="shrink-0 h-auto">
             <PlayerList
               gameState={gameState}

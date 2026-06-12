@@ -36,10 +36,10 @@ export default function Dice3D({
   dotColor = '#111111',
 }: Dice3DProps) {
   return (
-    <div className="w-full h-[240px] md:h-[280px] relative overflow-hidden select-none bg-transparent">
+    <div className="w-full h-full relative overflow-hidden select-none bg-transparent">
       <Canvas
         shadows
-        camera={{ position: [0, 5.5, 4.2], fov: 50 }}
+        camera={{ position: [0, 4.8, 3.6], fov: 48 }}
         style={{ pointerEvents: 'none' }}
       >
         {/* Soft Ambient Light */}

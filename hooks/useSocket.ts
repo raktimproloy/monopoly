@@ -65,6 +65,10 @@ export function useSocket(
       setLogs((prev) => [data.log, ...prev]);
     });
 
+    socket.on('trade_resolved', (data: { tradeId: string }) => {
+      setPendingTrade((prev) => (prev && prev.tradeId === data.tradeId ? null : prev));
+    });
+
     // Handle validation errors
     socket.on('error_message', (msg: string) => {
       setErrorMessage(msg);
@@ -142,6 +146,18 @@ export function useSocket(
     }
   }, [userId]);
 
+  const declareBankruptcy = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.emit('declare_bankruptcy', { playerId: userId });
+    }
+  }, [userId]);
+
+  const payJailFine = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.emit('pay_jail_fine', { playerId: userId });
+    }
+  }, [userId]);
+
   return {
     isConnected,
     gameState,
@@ -158,6 +174,8 @@ export function useSocket(
     respondToTrade,
     endTurn,
     updateSettings,
-    startGame
+    startGame,
+    declareBankruptcy,
+    payJailFine
   };
 }
