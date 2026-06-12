@@ -124,30 +124,35 @@ export function useSocket(
 
   // Actions
   const rollDice = useCallback(() => {
+    console.log('[Socket Emit] roll_dice', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('roll_dice', { playerId: userId });
     }
   }, [userId]);
 
   const buyProperty = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] buy_property', { playerId: userId, tileIndex });
     if (socketRef.current) {
       socketRef.current.emit('buy_property', { playerId: userId, tileIndex });
     }
   }, [userId]);
 
   const mortgageProperty = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] mortgage_property', { playerId: userId, tileIndex });
     if (socketRef.current) {
       socketRef.current.emit('mortgage_property', { playerId: userId, tileIndex });
     }
   }, [userId]);
 
   const unmortgageProperty = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] unmortgage_property', { playerId: userId, tileIndex });
     if (socketRef.current) {
       socketRef.current.emit('unmortgage_property', { playerId: userId, tileIndex });
     }
   }, [userId]);
 
   const proposeTrade = useCallback((offer: Omit<TradeOfferPayload, 'senderId'>) => {
+    console.log('[Socket Emit] propose_trade', { ...offer, senderId: userId });
     if (socketRef.current) {
       socketRef.current.emit('propose_trade', {
         ...offer,
@@ -157,6 +162,7 @@ export function useSocket(
   }, [userId]);
 
   const respondToTrade = useCallback((tradeId: string, accept: boolean) => {
+    console.log('[Socket Emit] respond_to_trade', { playerId: userId, tradeId, accept });
     if (socketRef.current) {
       socketRef.current.emit('respond_to_trade', {
         playerId: userId,
@@ -168,32 +174,65 @@ export function useSocket(
   }, [userId]);
 
   const endTurn = useCallback(() => {
+    console.log('[Socket Emit] end_turn', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('end_turn', { playerId: userId });
     }
   }, [userId]);
 
   const updateSettings = useCallback((settings: GameSettings) => {
+    console.log('[Socket Emit] update_settings', { settings, playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('update_settings', { settings, playerId: userId });
     }
   }, [userId]);
 
   const startGame = useCallback(() => {
+    console.log('[Socket Emit] start_game', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('start_game', { playerId: userId });
     }
   }, [userId]);
 
   const declareBankruptcy = useCallback(() => {
+    console.log('[Socket Emit] declare_bankruptcy', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('declare_bankruptcy', { playerId: userId });
     }
   }, [userId]);
 
   const payJailFine = useCallback(() => {
+    console.log('[Socket Emit] pay_jail_fine', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('pay_jail_fine', { playerId: userId });
+    }
+  }, [userId]);
+
+  const buildHouse = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] build_house', { playerId: userId, tileIndex });
+    if (socketRef.current) {
+      socketRef.current.emit('build_house', { playerId: userId, tileIndex });
+    }
+  }, [userId]);
+
+  const sellHouse = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] sell_house', { playerId: userId, tileIndex });
+    if (socketRef.current) {
+      socketRef.current.emit('sell_house', { playerId: userId, tileIndex });
+    }
+  }, [userId]);
+
+  const sellProperty = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] sell_property', { playerId: userId, tileIndex });
+    if (socketRef.current) {
+      socketRef.current.emit('sell_property', { playerId: userId, tileIndex });
+    }
+  }, [userId]);
+
+  const auctionProperty = useCallback((tileIndex: number) => {
+    console.log('[Socket Emit] auction_property', { playerId: userId, tileIndex });
+    if (socketRef.current) {
+      socketRef.current.emit('auction_property', { playerId: userId, tileIndex });
     }
   }, [userId]);
 
@@ -217,6 +256,10 @@ export function useSocket(
     updateSettings,
     startGame,
     declareBankruptcy,
-    payJailFine
+    payJailFine,
+    buildHouse,
+    sellHouse,
+    sellProperty,
+    auctionProperty
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GameState, BoardTile, Player } from '../../shared/types';
 import DiceManager from './dice/DiceManager';
 
@@ -18,6 +18,8 @@ interface BoardProps {
   onUnmortgageProperty?: (tileIndex: number) => void;
   onBuildHouse?: (tileIndex: number) => void;
   onSellHouse?: (tileIndex: number) => void;
+  onSellProperty?: (tileIndex: number) => void;
+  onAuctionProperty?: (tileIndex: number) => void;
 }
 
 // Inline SVGs for self-contained, crash-free icons
@@ -118,6 +120,91 @@ function XIcon({ size = 12, className = "" }) {
   );
 }
 
+function CopyIcon({ size = 12, className = "" }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+  );
+}
+
+function PlayerToken({ player, gameState, userId }: { player: Player; gameState: GameState; userId: string }) {
+  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
+  const [displayPosition, setDisplayPosition] = useState(player.position);
+
+  const isCurrentTurn = gameState.currentTurnPlayerId === player.id;
+  const isMe = player.id === userId;
+
+  useEffect(() => {
+    if (player.position !== displayPosition) {
+      if (isCurrentTurn) {
+        // Delay moving until the dice roll animation finishes (1.5s)
+        const t = setTimeout(() => {
+          setDisplayPosition(player.position);
+        }, 1500);
+        return () => clearTimeout(t);
+      } else {
+        setDisplayPosition(player.position);
+      }
+    }
+  }, [player.position, displayPosition, isCurrentTurn]);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const tileEl = document.getElementById(`tile-${displayPosition}`);
+      const boardEl = document.getElementById('board-container');
+      if (tileEl && boardEl) {
+        const tileRect = tileEl.getBoundingClientRect();
+        const boardRect = boardEl.getBoundingClientRect();
+
+        // Find index on tile to stagger overlapping tokens smoothly in a circle
+        const playersOnTile = Object.values(gameState.players).filter(
+          (p) => p.position === displayPosition && !p.isBankrupt
+        );
+        const indexOnTile = playersOnTile.findIndex((p) => p.id === player.id);
+        const totalOnTile = playersOnTile.length;
+
+        let offsetX = 0;
+        let offsetY = 0;
+        if (totalOnTile > 1) {
+          const angle = (indexOnTile / totalOnTile) * Math.PI * 2;
+          const radius = 6;
+          offsetX = Math.cos(angle) * radius;
+          offsetY = Math.sin(angle) * radius;
+        }
+
+        const top = tileRect.top - boardRect.top;
+        const left = tileRect.left - boardRect.left;
+
+        setStyle({
+          transform: `translate(${left + tileRect.width / 2 + offsetX}px, ${top + tileRect.height / 2 + offsetY}px) translate(-50%, -50%)`,
+          opacity: 1,
+        });
+      }
+    };
+
+    const t = setTimeout(updatePosition, 50);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [displayPosition, gameState.players, player.id]);
+
+  return (
+    <div style={{ ...style }} className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-40 pointer-events-none">
+      <div
+        style={{ backgroundColor: player.avatar, boxShadow: isCurrentTurn ? `0 0 15px ${player.avatar}, inset 0 -2px 6px rgba(0,0,0,0.4), inset 0 2px 6px rgba(255,255,255,0.6)` : `0 4px 6px rgba(0,0,0,0.4), inset 0 -2px 4px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.5)` }}
+        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-[8px] md:text-[11px] font-orbitron font-extrabold text-slate-900 border-[2px] ${isMe ? 'border-white' : 'border-white/80'} ${isCurrentTurn ? 'ring-2 ring-white/60 animate-player-pulse scale-110' : 'shadow-xl'}`}
+        title={player.name}
+      >
+        {player.name.substring(0, 1).toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
 export default function Board({
   gameState,
   boardTiles,
@@ -131,9 +218,12 @@ export default function Board({
   onMortgageProperty,
   onUnmortgageProperty,
   onBuildHouse,
-  onSellHouse
+  onSellHouse,
+  onSellProperty,
+  onAuctionProperty
 }: BoardProps) {
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
+  const [devMode, setDevMode] = useState<boolean>(false);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
   const myPlayer = gameState.players[userId];
@@ -150,23 +240,22 @@ export default function Board({
     (myPlayer?.balance ?? 0) >= (currentTile.price || 0) &&
     gameState.turnStatus === 'MUST_ACT_OR_END';
 
-  // Group players by their current tile position
-  const playersOnTile = (tileIndex: number): Player[] => {
-    return Object.values(gameState.players).filter((p) => p.position === tileIndex && !p.isBankrupt);
-  };
-
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
-      case 'Brown': return 'bg-amber-800';
-      case 'Light Blue': return 'bg-sky-400';
-      case 'Pink': return 'bg-fuchsia-400';
-      case 'Orange': return 'bg-orange-500';
-      case 'Red': return 'bg-red-500';
-      case 'Yellow': return 'bg-yellow-400';
-      case 'Green': return 'bg-emerald-500';
-      case 'Dark Blue': return 'bg-blue-700';
+      case 'Brown': return 'bg-[#B1EA40]'; // Rongpur
+      case 'Light Blue': return 'bg-[#3FCEEB]'; // Borishal
+      case 'Pink': return 'bg-[#3FEB92]'; // Khulna
+      case 'Orange': return 'bg-[#EBA03F]'; // Rajshahi
+      case 'Red': return 'bg-[#FF9696]'; // Sylhet
+      case 'Yellow': return 'bg-[#96FFFD]'; // Chottogram
+      case 'Green': return 'bg-[#C396FF]'; // Moymonsingho
+      case 'Dark Blue': return 'bg-[#FF96C9]'; // Dhaka
       default: return 'bg-slate-700';
     }
+  };
+
+  const getGroupTextColor = (group: string | undefined): string => {
+    return 'text-black';
   };
 
   // Helper to parse log rows dynamically and render avatars + city flags
@@ -251,8 +340,21 @@ export default function Board({
 
   return (
     <div className="relative aspect-square w-full max-w-[calc(100vh-32px)] max-h-full mx-auto bg-[#0B0E14] p-2 border border-slate-800/80 rounded-3xl shadow-2xl flex flex-col justify-between">
+      {/* Dev Mode Toggle Button */}
+      <button
+        onClick={() => setDevMode(!devMode)}
+        className={`absolute -top-3 left-4 md:-top-4 md:left-6 z-40 text-[9px] md:text-[11px] font-orbitron font-extrabold px-2.5 py-1 rounded-full shadow-lg transition-all border ${
+          devMode 
+            ? 'bg-purple-600 text-white border-purple-400 shadow-purple-500/50' 
+            : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300'
+        }`}
+      >
+        DEV: {devMode ? 'ON' : 'OFF'}
+      </button>
+
       {/* 11x11 Grid Wrapper */}
       <div 
+        id="board-container"
         className="grid gap-1 w-full h-full"
         style={{
           gridTemplateColumns: '1.6fr repeat(9, 1fr) 1.6fr',
@@ -263,7 +365,10 @@ export default function Board({
           const coords = getGridCoords(tile.index);
           const orientation = getOrientation(tile.index);
           const propState = gameState.properties[tile.index];
-          const standingPlayers = playersOnTile(tile.index);
+
+          const nameParts = tile.name.split(' (');
+          const districtName = nameParts[0];
+          const divisionName = nameParts.length === 2 ? nameParts[1].replace(')', '') : null;
 
           // Get owner details
           let ownerAvatar: string | null = null;
@@ -306,15 +411,23 @@ export default function Board({
             ownerIndicatorClass = 'absolute right-0 top-1/2 -translate-y-1/2 h-[85%] w-[3px] md:w-[5px] rounded-l-sm z-10';
           }
 
+          // Hover Overlay Positioning (inside board, front of cell)
+          let hoverPositionClass = 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
+          if (orientation === 'TOP') hoverPositionClass = 'top-[calc(100%+8px)] left-1/2 -translate-x-1/2';
+          else if (orientation === 'BOTTOM') hoverPositionClass = 'bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2';
+          else if (orientation === 'LEFT') hoverPositionClass = 'left-[calc(100%+8px)] top-1/2 -translate-y-1/2';
+          else if (orientation === 'RIGHT') hoverPositionClass = 'right-[calc(100%+8px)] top-1/2 -translate-y-1/2';
+
           return (
             <div
+              id={`tile-${tile.index}`}
               key={tile.index}
               style={{ gridRow: coords.row, gridColumn: coords.col }}
               onClick={() => {
                 setSelectedTileIndex(tile.index);
                 onTileClick(tile.index);
               }}
-              className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible ${
+            className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible z-10 hover:z-[60] ${
                 orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
               }`}
             >
@@ -323,10 +436,8 @@ export default function Board({
                 
                 {/* 1. Price (Outer Edge) — hidden when owned */}
                 {orientation !== 'CORNER' && (
-                  <div className="text-[7px] md:text-[9px] xl:text-[11px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[14px] md:h-[16px] w-full z-20 leading-none mt-0.5">
-                  <div className="text-[8.5px] md:text-[11px] xl:text-[13px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[16px] md:h-[18px] w-full z-20 leading-none mt-0.5">
+                  <div className="text-[7.5px] md:text-[10px] xl:text-[12px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[13px] md:h-[18px] w-full z-20 leading-none mt-0.5">
                     {!isOwned && tile.price && (
-                      <span className="bg-slate-950/80 border border-slate-500/50 px-1 md:px-1.5 py-[1.5px] rounded shadow-md backdrop-blur-sm flex items-center justify-center">
                       <span className="bg-slate-950/80 border border-slate-500/50 px-1.5 md:px-2 py-[2px] rounded shadow-md backdrop-blur-sm flex items-center justify-center">
                         ${tile.price}
                       </span>
@@ -345,16 +456,7 @@ export default function Board({
                         </>
                       );
                     }
-                    const parts = tile.name.split(' (');
-                    if (parts.length === 2) {
-                      return (
-                        <div className="flex flex-col items-center justify-center gap-1 md:gap-1.5 w-full text-center">
-                          <span className="font-extrabold text-white tracking-wide">{parts[0]}</span>
-                          <span className="font-extrabold text-white tracking-wide leading-none">({parts[1]}</span>
-                        </div>
-                      );
-                    }
-                    return <span className="font-extrabold text-white tracking-wide">{tile.name}</span>;
+                    return <span className="font-extrabold text-white tracking-wide">{districtName}</span>;
                   })()}
                 </div>
 
@@ -373,7 +475,19 @@ export default function Board({
 
               {/* Dynamic Overlapping Color Indicator (group color — outer edge) */}
               {tile.group && orientation !== 'CORNER' && (
-                <div className={`${colorIndicatorClass} ${getGroupColor(tile.group)}`} />
+                <div className={`${colorIndicatorClass} ${getGroupColor(tile.group)} flex items-center justify-center overflow-hidden`}>
+                  {divisionName && (
+                    <span 
+                      className={`${getGroupTextColor(tile.group)} font-bold whitespace-nowrap leading-none ${
+                        orientation === 'LEFT' ? '-rotate-90 text-[5.5px] md:text-[8px]' : 
+                        orientation === 'RIGHT' ? 'rotate-90 text-[5.5px] md:text-[8px]' : 
+                        'text-[5.5px] md:text-[8px]'
+                      }`}
+                    >
+                      {divisionName}
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* Owner Avatar Color Bar (inner edge — shows who owns this property) */}
@@ -388,27 +502,38 @@ export default function Board({
                 />
               )}
 
-              {/* Standing Player Tokens Overlay */}
-              {standingPlayers.length > 0 && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center gap-[2px] flex-wrap pointer-events-none rounded-lg">
-                  {standingPlayers.map((p) => {
-                    const isMe = p.id === userId;
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          backgroundColor: p.avatar,
-                          boxShadow: `0 0 10px ${p.avatar}`
-                        }}
-                        className={`w-3.5 h-3.5 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[7px] md:text-[10px] font-orbitron font-extrabold text-slate-950 border-2 shadow-lg ${
-                          isMe ? 'border-white' : 'border-white/60'
-                        }`}
-                        title={p.name}
-                      >
-                        {p.name.substring(0, 1).toUpperCase()}
-                      </div>
-                    );
-                  })}
+              {/* Quick Action / Info Hover Overlay */}
+              {orientation !== 'CORNER' && (
+                <div className="absolute inset-0 z-50 pointer-events-none">
+                  {isOwned && propState.ownerId === userId ? (
+                    <div className={`absolute ${hoverPositionClass} flex flex-wrap justify-center items-center gap-1.5 md:gap-2 pointer-events-auto transform scale-50 opacity-0 group-hover:scale-125 group-hover:opacity-100 transition-all duration-200 origin-center z-[100] ${tile.type === 'STREET' ? 'w-[60px] md:w-[80px]' : 'w-auto flex-nowrap'}`}>
+                      <button title={propState?.isMortgaged ? 'Unmortgage' : 'Mortgage'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                        {propState?.isMortgaged ? 'UNMTG' : 'MTG'}
+                      </button>
+                      <button title="Sell Property" onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                        SELL
+                      </button>
+                      {tile.type === 'STREET' && (
+                        <>
+                          <button title="Build House" onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-blue-500 hover:bg-blue-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                            +H
+                          </button>
+                          <button title="Break House" onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-orange-500 hover:bg-orange-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                            -H
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ) : isOwned && propState.ownerId !== userId ? (
+                    <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
+                      {propState.isMortgaged ? 'Mortgaged' : (
+                        tile.type === 'STREET' && tile.rent ? `Rent: $${tile.rent[propState.houses]}` : 
+                        tile.type === 'RAILROAD' ? 'Check Rent' : 
+                        tile.type === 'UTILITY' ? 'Dice x Rent' : 
+                        'Owned'
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -419,7 +544,7 @@ export default function Board({
         <div className="col-start-2 col-end-11 row-start-2 row-end-11 flex flex-col items-center justify-center p-4 rounded-2xl m-3 relative overflow-hidden gap-3">
           
           {/* 3D Physics Dice Display - Centered wrapper with standard height constraint */}
-          <div className="w-full h-36 md:h-40 flex items-center justify-center relative shrink-0">
+          <div className="w-full h-40 md:h-48 flex items-center justify-center relative shrink-0 transform-gpu perspective-1000">
             <DiceManager gameState={gameState} />
           </div>
 
@@ -448,24 +573,38 @@ export default function Board({
                   </button>
                 )}
 
-                {gameState.turnStatus === 'MUST_ACT_OR_END' && canBuyCurrent && (
-                  <button
-                    onClick={() => onBuyProperty(currentTileIndex)}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-sm md:text-base px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
-                  >
-                    <CartIcon size={16} className="stroke-white" />
-                    Buy ${currentTile?.price}
-                  </button>
-                )}
-
                 {gameState.turnStatus === 'MUST_ACT_OR_END' && (
-                  <button
-                    onClick={onEndTurn}
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-sm md:text-base px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                  >
-                    <CheckIcon size={16} className="stroke-white" />
-                    Conclude turn
-                  </button>
+                  <div className="flex gap-2 w-full justify-center flex-wrap">
+                    {canBuyCurrent && (
+                      <button
+                        onClick={() => onBuyProperty(currentTileIndex)}
+                        className="bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
+                      >
+                        <CartIcon size={14} className="stroke-white" />
+                        Buy ${currentTile?.price}
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={onEndTurn}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                    >
+                      <CheckIcon size={14} className="stroke-white" />
+                      End Turn
+                    </button>
+
+                    {canBuyCurrent && (
+                      <button
+                        onClick={() => { 
+                          onAuctionProperty?.(currentTileIndex);
+                          onEndTurn();
+                        }}
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                      >
+                        Auction
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* get free for $50 fine option */}
@@ -483,7 +622,37 @@ export default function Board({
           </div>
 
           {/* Real-time Activity History Log — filtered to important events only */}
-          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0">
+          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0 group">
+            <button
+              onClick={() => {
+                const importantLogs = logs.filter(log => {
+                  const l = log.toLowerCase();
+                  if (l.includes('bought')) return true;
+                  if (l.includes('paid rent')) return true;
+                  if (l.includes('paid $')) return true;
+                  if (l.includes('tax')) return true;
+                  if (l.includes('collecting $200')) return true;
+                  if (l.includes('passing go')) return true;
+                  if (l.includes('jail')) return true;
+                  if (l.includes('bankrupt')) return true;
+                  if (l.includes('trade')) return true;
+                  if (l.includes('swapped')) return true;
+                  if (l.includes('mortgage')) return true;
+                  if (l.includes('game over')) return true;
+                  if (l.includes('winner')) return true;
+                  if (l.includes('built')) return true;
+                  if (l.includes('broke')) return true;
+                  if (l.includes('liquidated')) return true;
+                  if (l.includes('auction')) return true;
+                  return false;
+                });
+                navigator.clipboard.writeText(importantLogs.join('\n'));
+              }}
+              className="absolute top-1 right-2 z-30 p-1.5 md:p-2 bg-slate-800/80 text-slate-400 hover:text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-white/10 shadow-lg"
+              title="Copy Logs"
+            >
+              <CopyIcon size={14} />
+            </button>
             <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2.5 scrollbar-thin select-none max-h-[120px] pb-10 text-[12px] md:text-[13px]">
               {(() => {
                 // Whitelist: only show truly important game events
@@ -502,6 +671,10 @@ export default function Board({
                   if (l.includes('mortgage')) return true;
                   if (l.includes('game over')) return true;
                   if (l.includes('winner')) return true;
+                  if (l.includes('built')) return true;
+                  if (l.includes('broke')) return true;
+                  if (l.includes('liquidated')) return true;
+                  if (l.includes('auction')) return true;
                   return false;
                 });
 
@@ -526,6 +699,12 @@ export default function Board({
           </div>
 
         </div>
+
+        {/* Dynamic Smooth Player Tokens Overlay */}
+        {Object.values(gameState.players).map((p) => {
+          if (p.isBankrupt) return null;
+          return <PlayerToken key={p.id} player={p} gameState={gameState} userId={userId} />;
+        })}
       </div>
 
       {/* Tile Detail Modal Overlay */}
@@ -553,13 +732,68 @@ export default function Board({
 
               if (!selTile) return null;
 
+              // Advanced Monopoly Logic Checks for the Modal UI
+              let ownsFullSet = false;
+              let anyMortgaged = false;
+              let groupHasHouses = false;
+              let minHouses = 0;
+              let maxHouses = 0;
+              
+              if (selTile.type === 'STREET' && selTile.group && isMyProp) {
+                const groupTiles = boardTiles.filter(t => t.group === selTile.group);
+                const groupProps = groupTiles.map(t => gameState.properties[t.index]);
+                
+                ownsFullSet = groupProps.every(p => p && p.ownerId === userId);
+                anyMortgaged = groupProps.some(p => p && p.isMortgaged);
+                groupHasHouses = groupProps.some(p => p && p.houses > 0);
+                minHouses = Math.min(...groupProps.map(p => p ? (p.houses || 0) : 0));
+                maxHouses = Math.max(...groupProps.map(p => p ? (p.houses || 0) : 0));
+              }
+
+              const houseCost = selTile.houseCost || 0;
+              const currentHouses = selProp?.houses || 0;
+              const hasEnoughMoney = (myPlayer?.balance || 0) >= houseCost;
+
+              const canBuildHere = ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
+              const canSellHere = currentHouses > 0 && currentHouses === maxHouses;
+              const canMortgageHere = !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
+
+              let buildDisabledReason = "";
+              if (!ownsFullSet) buildDisabledReason = "Requires Full Set";
+              else if (anyMortgaged) buildDisabledReason = "Group is Mortgaged";
+              else if (currentHouses > minHouses) buildDisabledReason = "Build Evenly";
+              else if (currentHouses >= 5) buildDisabledReason = "Max Upgrades Built";
+              else if (!hasEnoughMoney) buildDisabledReason = "Insufficient Funds";
+
+              let sellDisabledReason = "";
+              if (currentHouses === 0) sellDisabledReason = "No Houses To Break";
+              else if (currentHouses < maxHouses) sellDisabledReason = "Break Evenly";
+
+              const canSellPropertyHere = !groupHasHouses;
+
+              let mortgageDisabledReason = "";
+              if (selProp?.isMortgaged) mortgageDisabledReason = "Already Mortgaged";
+              else if (currentHouses > 0) mortgageDisabledReason = "Has Houses";
+              else if (groupHasHouses) mortgageDisabledReason = "Group Has Houses";
+
+              const isOwnedByAnyone = !!selProp?.ownerId;
+              const activeRentTier = (isOwnedByAnyone && !selProp.isMortgaged) ? selProp.houses : -1;
+
+              let ownerRailroads = 0;
+              if (isOwnedByAnyone && selTile.type === 'RAILROAD') {
+                ownerRailroads = Object.values(gameState.properties).filter(
+                  (p) => p.ownerId === selProp.ownerId && boardTiles[p.tileIndex]?.type === 'RAILROAD'
+                ).length;
+              }
+              const activeRailroadTier = (!selProp?.isMortgaged && ownerRailroads > 0) ? ownerRailroads - 1 : -1;
+
               return (
                 <>
                   {/* HEADER */}
                   {selTile.type === 'STREET' && selTile.group ? (
                     <div className={`${getGroupColor(selTile.group)} w-full pt-6 pb-4 text-center border-b-2 border-slate-800`}>
-                      <h2 className="text-white/80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1">TITLE DEED</h2>
-                      <h3 className="text-white font-extrabold text-xl md:text-2xl font-sans leading-tight px-4">{selTile.name}</h3>
+                      <h2 className={`${getGroupTextColor(selTile.group)} opacity-80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1`}>TITLE DEED</h2>
+                      <h3 className={`${getGroupTextColor(selTile.group)} font-extrabold text-xl md:text-2xl font-sans leading-tight px-4`}>{selTile.name}</h3>
                     </div>
                   ) : (
                     <div className="bg-slate-800 w-full pt-6 pb-4 text-center border-b-2 border-slate-900">
@@ -571,12 +805,26 @@ export default function Board({
                   <div className="p-5 flex flex-col gap-2 text-xs md:text-sm font-semibold font-sans">
                     {selTile.type === 'STREET' && selTile.rent && (
                       <>
-                        <div className="flex justify-between items-center text-slate-700"><span>RENT</span> <span className="font-bold text-slate-900">${selTile.rent[0]}</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>With 1 House</span> <span>${selTile.rent[1]}</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>With 2 Houses</span> <span>${selTile.rent[2]}</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>With 3 Houses</span> <span>${selTile.rent[3]}</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>With 4 Houses</span> <span>${selTile.rent[4]}</span></div>
-                        <div className="flex justify-between items-center mt-1 pt-2 border-t border-slate-300 text-slate-800"><span>With HOTEL</span> <span className="font-bold">${selTile.rent[5]}</span></div>
+                        <div className="flex flex-col gap-1 w-full">
+                          <div className={`flex justify-between items-center transition-all ${activeRentTier === 0 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-700'}`}>
+                            <span className={activeRentTier === 0 ? 'font-bold' : ''}>RENT</span> <span className={`font-bold ${activeRentTier === 0 ? 'text-purple-700' : 'text-slate-900'}`}>${selTile.rent[0]}</span>
+                          </div>
+                          <div className={`flex justify-between items-center transition-all ${activeRentTier === 1 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
+                            <span className={activeRentTier === 1 ? 'font-bold' : ''}>With 1 House</span> <span className={activeRentTier === 1 ? 'font-black text-purple-700' : ''}>${selTile.rent[1]}</span>
+                          </div>
+                          <div className={`flex justify-between items-center transition-all ${activeRentTier === 2 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
+                            <span className={activeRentTier === 2 ? 'font-bold' : ''}>With 2 Houses</span> <span className={activeRentTier === 2 ? 'font-black text-purple-700' : ''}>${selTile.rent[2]}</span>
+                          </div>
+                          <div className={`flex justify-between items-center transition-all ${activeRentTier === 3 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
+                            <span className={activeRentTier === 3 ? 'font-bold' : ''}>With 3 Houses</span> <span className={activeRentTier === 3 ? 'font-black text-purple-700' : ''}>${selTile.rent[3]}</span>
+                          </div>
+                          <div className={`flex justify-between items-center transition-all ${activeRentTier === 4 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
+                            <span className={activeRentTier === 4 ? 'font-bold' : ''}>With 4 Houses</span> <span className={activeRentTier === 4 ? 'font-black text-purple-700' : ''}>${selTile.rent[4]}</span>
+                          </div>
+                          <div className={`flex justify-between items-center mt-1 pt-2 border-t border-slate-300 transition-all ${activeRentTier === 5 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-800'}`}>
+                            <span className={activeRentTier === 5 ? 'font-bold' : ''}>With HOTEL</span> <span className={`font-bold ${activeRentTier === 5 ? 'text-purple-700' : ''}`}>${selTile.rent[5]}</span>
+                          </div>
+                        </div>
                         
                         <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>${selTile.mortgageValue}</span></div>
                         <div className="flex justify-between items-center text-slate-700"><span>Houses cost</span> <span>${selTile.houseCost} each</span></div>
@@ -585,10 +833,12 @@ export default function Board({
 
                     {selTile.type === 'RAILROAD' && selTile.rent && (
                       <>
-                        <div className="flex justify-between items-center text-slate-600"><span>Rent</span> <span>$25</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>If 2 R.R.'s are owned</span> <span>$50</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>If 3 R.R.'s are owned</span> <span>$100</span></div>
-                        <div className="flex justify-between items-center text-slate-600"><span>If 4 R.R.'s are owned</span> <span>$200</span></div>
+                        <div className="flex flex-col gap-1 w-full">
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 0 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>Rent</span> <span className={activeRailroadTier === 0 ? 'font-black text-purple-700' : ''}>$25</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 1 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 2 R.R.'s are owned</span> <span className={activeRailroadTier === 1 ? 'font-black text-purple-700' : ''}>$50</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 2 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 3 R.R.'s are owned</span> <span className={activeRailroadTier === 2 ? 'font-black text-purple-700' : ''}>$100</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 3 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 4 R.R.'s are owned</span> <span className={activeRailroadTier === 3 ? 'font-black text-purple-700' : ''}>$200</span></div>
+                        </div>
                         <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>${selTile.mortgageValue}</span></div>
                       </>
                     )}
@@ -630,6 +880,18 @@ export default function Board({
                           <>
                             <span className="text-[10px] md:text-xs text-emerald-600 uppercase tracking-wider font-bold">Available For Purchase</span>
                             <span className="font-black text-lg md:text-xl text-slate-900">${selTile.price}</span>
+                            
+                            {devMode && (
+                              <button 
+                                className="mt-2 w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]"
+                                onClick={() => { 
+                                  onBuyProperty(selectedTileIndex); 
+                                  setSelectedTileIndex(null); 
+                                }}
+                              >
+                                Force Buy (Dev Mode)
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -638,38 +900,70 @@ export default function Board({
 
                   {/* ACTIONS FOOTER */}
                   {isMyProp && (
-                    <div className="bg-slate-200 p-3 grid grid-cols-2 gap-2 border-t border-slate-300">
-                      {(!selProp.isMortgaged && selProp.houses === 0) && (
+                    <div className="bg-slate-200 p-3 flex flex-col gap-2 border-t border-slate-300">
+                      
+                      {/* Mortgage / Unmortgage */}
+                      {!selProp.isMortgaged ? (
                         <button 
-                          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-2 rounded text-xs transition-colors"
-                          onClick={() => { onMortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); }}
+                          className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center gap-1 ${canMortgageHere ? 'bg-red-500 hover:bg-red-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                          onClick={() => { if (canMortgageHere) { onMortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                         >
-                          Mortgage
+                          {canMortgageHere ? `Mortgage (+$${selTile.mortgageValue})` : `Cannot Mortgage: ${mortgageDisabledReason}`}
                         </button>
-                      )}
-                      {selProp.isMortgaged && (
+                      ) : (
                         <button 
-                          className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-2 rounded text-xs transition-colors"
+                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-2 rounded-lg text-xs transition-colors shadow-md active:scale-[0.98]"
                           onClick={() => { onUnmortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); }}
                         >
-                          Unmortgage
+                          Unmortgage (-${Math.ceil((selTile.mortgageValue || 0) * 1.1)})
                         </button>
                       )}
-                      {selTile.type === 'STREET' && !selProp.isMortgaged && selProp.houses < 5 && (
-                        <button 
-                          className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-2 rounded text-xs transition-colors"
-                          onClick={() => { onBuildHouse?.(selectedTileIndex); setSelectedTileIndex(null); }}
-                        >
-                          Build House
-                        </button>
-                      )}
-                      {selTile.type === 'STREET' && !selProp.isMortgaged && selProp.houses > 0 && (
-                        <button 
-                          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-2 rounded text-xs transition-colors"
-                          onClick={() => { onSellHouse?.(selectedTileIndex); setSelectedTileIndex(null); }}
-                        >
-                          Break House
-                        </button>
+                      
+                      {/* Sell Property to Bank */}
+                      <button 
+                        className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md ${canSellPropertyHere ? 'bg-amber-600 hover:bg-amber-700 text-white active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                        onClick={() => { if (canSellPropertyHere) { onSellProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
+                      >
+                        {canSellPropertyHere ? `Sell Property (+$${selTile.mortgageValue || Math.floor((selTile.price||0)/2)})` : `Cannot Sell: Group Has Houses`}
+                      </button>
+
+                      {/* Build / Break Houses */}
+                      {selTile.type === 'STREET' && !selProp.isMortgaged && (
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <button 
+                            className={`font-bold py-2 px-1 rounded-lg text-[10px] sm:text-xs transition-colors flex flex-col items-center justify-center leading-tight ${canBuildHere ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                            onClick={() => { if (canBuildHere) { onBuildHouse?.(selectedTileIndex); setSelectedTileIndex(null); } }}
+                          >
+                            {canBuildHere ? (
+                              <>
+                                <span>Build House</span>
+                                <span className="text-[9px] font-mono font-normal">Cost: ${houseCost}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Cannot Build</span>
+                                <span className="text-[8px] font-mono font-normal">{buildDisabledReason}</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button 
+                            className={`font-bold py-2 px-1 rounded-lg text-[10px] sm:text-xs transition-colors flex flex-col items-center justify-center leading-tight ${canSellHere ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                            onClick={() => { if (canSellHere) { onSellHouse?.(selectedTileIndex); setSelectedTileIndex(null); } }}
+                          >
+                            {canSellHere ? (
+                              <>
+                                <span>Break House</span>
+                                <span className="text-[9px] font-mono font-normal">Gain: +${houseCost / 2}</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Cannot Break</span>
+                                <span className="text-[8px] font-mono font-normal">{sellDisabledReason}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}

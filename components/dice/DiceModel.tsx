@@ -1,6 +1,5 @@
 "use client";
 
-import { useBox } from '@react-three/cannon';
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
@@ -94,10 +93,7 @@ export default function DiceModel({
   const lastSoundTime = useRef<number>(0);
 
   // Animation phase variables
-  const interpStartPos = useRef<THREE.Vector3>(new THREE.Vector3());
   const interpStartRot = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const interpTargetPos = useRef<THREE.Vector3>(new THREE.Vector3());
-  const interpTargetRot = useRef<THREE.Quaternion>(new THREE.Quaternion());
 
   // Textures array (initialized on mount to avoid cascading renders)
   const [textures] = useState<THREE.CanvasTexture[]>(() =>
@@ -112,23 +108,6 @@ export default function DiceModel({
     return qYaw.multiply(qAlign);
   }, [targetValue, index]);
 
-  // Rigid body physics ref (dummy)
-  const [dummyRef, api] = useBox(() => ({
-    mass: 1,
-    args: [1.2, 1.2, 1.2],
-    position: [index === 0 ? -2.2 : 2.2, 5, 0],
-    rotation: [Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI],
-    onCollide: (e) => {
-      // Play bounce sound if velocity is sufficient and rate limit allows
-      const velocity = e.contact.impactVelocity;
-      const now = Date.now();
-      if (velocity > 1.5 && now - lastSoundTime.current > 120) {
-        lastSoundTime.current = now;
-        playDiceBounceSound(Math.min(velocity / 12, 1.0));
-      }
-    }
-  }));
-
   // Handle new roll trigger
   useEffect(() => {
     if (rollTrigger === 0) return;
@@ -136,92 +115,42 @@ export default function DiceModel({
     isRolling.current = true;
     startTimer.current = 0; // reset on next useFrame
 
-    // Reset physics body position, linear and angular velocities
-    const startX = index === 0 ? -2.5 : 2.5;
-    const startY = 5.5 + Math.random() * 1.5;
-    const startZ = -1.2 + Math.random() * 2.4;
-    
-    api.position.set(startX, startY, startZ);
-    
-    // Launch towards the center with random arc
-    const vx = index === 0 ? 4 + Math.random() * 3 : -4 - Math.random() * 3;
-    const vy = -3 - Math.random() * 3;
-    const vz = -1.5 + Math.random() * 3.0;
-    
-    api.velocity.set(vx, vy, vz);
-    
-    // Apply heavy spin
-    const wx = (Math.random() - 0.5) * 22;
-    const wy = (Math.random() - 0.5) * 22;
-    const wz = (Math.random() - 0.5) * 22;
-    api.angularVelocity.set(wx, wy, wz);
-
-    // Reset interpolation target positions
-    interpTargetPos.current.set(0, 0, 0);
-
-  }, [rollTrigger, index, api]);
+  }, [rollTrigger, index]);
 
   useFrame((state) => {
-    if (!meshRef.current || !dummyRef.current) return;
+    if (!meshRef.current) return;
 
     if (isRolling.current) {
       if (startTimer.current === 0) {
         startTimer.current = state.clock.getElapsedTime();
+        interpStartRot.current.copy(meshRef.current.quaternion);
       }
 
       const elapsed = state.clock.getElapsedTime() - startTimer.current;
+      const ROLL_DURATION = 1.5;
+      const FLOAT_HEIGHT = 0.8; // Lowered to keep it fully visible inside the camera bounds
 
-      if (elapsed < 0.95) {
-        // 1. Physics phase: copy state from physics dummy to visible mesh
-        meshRef.current.position.copy(dummyRef.current.position);
-        meshRef.current.quaternion.copy(dummyRef.current.quaternion);
-
-      } else if (elapsed >= 0.95 && elapsed < 1.45) {
-        // 2. Setup interpolation targets on the first frame of this phase
-        if (interpTargetPos.current.x === 0 && interpTargetPos.current.y === 0) {
-          // Stop physics body
-          api.velocity.set(0, 0, 0);
-          api.angularVelocity.set(0, 0, 0);
-
-          // Capture starting points
-          interpStartPos.current.copy(meshRef.current.position);
-          interpStartRot.current.copy(meshRef.current.quaternion);
-
-          // Compute target resting position (Y = 0.6 rests flat on floor Y = 0)
-          interpTargetPos.current.set(index === 0 ? -1.0 : 1.0, 0.6, 0.0);
-
-          // Calculate smooth target rotation:
-          // Extract current yaw to avoid sudden Y spin snap
-          const currentQuat = meshRef.current.quaternion;
-          const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(currentQuat);
-          const yaw = Math.atan2(forward.x, forward.z);
-
-          // Target alignment: local vector of targetValue points up (0, 1, 0)
-          const localVec = localVectors[targetValue] || new THREE.Vector3(0, 1, 0);
-          const qAlign = new THREE.Quaternion().setFromUnitVectors(localVec, new THREE.Vector3(0, 1, 0));
-          
-          // Final orientation
-          const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-          interpTargetRot.current.copy(qYaw.multiply(qAlign));
-        }
-
-        // Linear interpolation factor (duration 0.5s: from 0.95s to 1.45s)
-        const tVal = Math.min((elapsed - 0.95) / 0.5, 1.0);
+      if (elapsed < ROLL_DURATION) {
+        // Float up and down using a math parabola shape
+        const t = Math.min(elapsed / ROLL_DURATION, 1.0);
+        const heightOffset = 4 * t * (1 - t) * FLOAT_HEIGHT;
         
-        // Easing function (easeOutQuad)
-        const easeT = tVal * (2 - tVal);
-
-        // Lerp position & slerp rotation
-        meshRef.current.position.lerpVectors(interpStartPos.current, interpTargetPos.current, easeT);
-        meshRef.current.quaternion.slerpQuaternions(interpStartRot.current, interpTargetRot.current, easeT);
+        meshRef.current.position.set(index === 0 ? -1.0 : 1.0, 0.6 + heightOffset, 0.0);
+        
+        // Fast spin in place based on elapsed time
+        meshRef.current.rotation.x = elapsed * 15 + index;
+        meshRef.current.rotation.y = elapsed * 20 + index;
+        meshRef.current.rotation.z = elapsed * 12 + index;
 
       } else {
-        // 3. Final landing: lock to exact final target
-        meshRef.current.position.copy(interpTargetPos.current);
-        meshRef.current.quaternion.copy(interpTargetRot.current);
+        // Play the bounce sound exactly as they lock into place
+        if (isRolling.current && Date.now() - lastSoundTime.current > 200) {
+           lastSoundTime.current = Date.now();
+           try { playDiceBounceSound(0.6); } catch (e) {}
+        }
         
-        // Reset interpolations states for the next roll
-        interpTargetPos.current.set(0, 0, 0);
+        meshRef.current.position.set(index === 0 ? -1.0 : 1.0, 0.6, 0.0);
+        meshRef.current.quaternion.copy(restingRotation);
         isRolling.current = false;
       }
     } else {
@@ -233,12 +162,6 @@ export default function DiceModel({
 
   return (
     <>
-      {/* Hidden physics dummy body */}
-      <mesh ref={dummyRef} visible={false}>
-        <boxGeometry args={[1.2, 1.2, 1.2]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
-
       {/* Visible premium dice mesh */}
       <mesh 
         ref={meshRef} 

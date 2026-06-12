@@ -57,7 +57,11 @@ function GameRoomContent() {
     updateSettings,
     startGame,
     declareBankruptcy,
-    payJailFine
+    payJailFine,
+    buildHouse,
+    sellHouse,
+    sellProperty,
+    auctionProperty
   } = useSocket(roomId, playerName, userId, avatar);
 
   const [guestName, setGuestName] = useState('');
@@ -478,6 +482,12 @@ function GameRoomContent() {
             onTileClick={(idx) => {
               // Can hook custom tile inspect actions here
             }}
+            onMortgageProperty={mortgageProperty}
+            onUnmortgageProperty={unmortgageProperty}
+            onBuildHouse={buildHouse}
+            onSellHouse={sellHouse}
+            onSellProperty={sellProperty}
+            onAuctionProperty={auctionProperty}
           />
         </section>
 

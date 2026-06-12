@@ -14,14 +14,14 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
-      case 'Brown': return 'bg-amber-800';
-      case 'Light Blue': return 'bg-sky-400';
-      case 'Pink': return 'bg-fuchsia-400';
-      case 'Orange': return 'bg-orange-500';
-      case 'Red': return 'bg-red-500';
-      case 'Yellow': return 'bg-yellow-400';
-      case 'Green': return 'bg-emerald-500';
-      case 'Dark Blue': return 'bg-blue-700';
+      case 'Brown': return 'bg-[#B1EA40]';
+      case 'Light Blue': return 'bg-[#3FCEEB]';
+      case 'Pink': return 'bg-[#3FEB92]';
+      case 'Orange': return 'bg-[#EBA03F]';
+      case 'Red': return 'bg-[#FF9696]';
+      case 'Yellow': return 'bg-[#96FFFD]';
+      case 'Green': return 'bg-[#C396FF]';
+      case 'Dark Blue': return 'bg-[#FF96C9]';
       default: return 'bg-slate-700';
     }
   };
