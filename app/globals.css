@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.maateen.me/kalpurush/font.css');
 
 :root {
   --background: #0B0E14;
@@ -14,14 +15,15 @@
   --color-cyber-blue: var(--cyber-blue);
   --color-cyber-purple: var(--cyber-purple);
   --color-game-bg: var(--background);
-  --font-sans: var(--font-inter);
+  --font-sans: 'Kalpurush', var(--font-inter);
   --font-orbitron: var(--font-orbitron);
+  --font-kalpurush: 'Kalpurush', sans-serif;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter);
+  font-family: 'Kalpurush', var(--font-inter);
 }
 
 /* Premium iOS-Style Frosted Glassmorphism Panels */

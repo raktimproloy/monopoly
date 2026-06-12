@@ -48,10 +48,10 @@ export default function Lobby() {
         <div className="absolute bottom-0 right-0 w-24 h-[2px] bg-cyber-purple" />
 
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-orbitron font-extrabold tracking-widest text-white text-shadow-neon-blue uppercase">
+          <h1 className="text-4xl font-kalpurush font-extrabold tracking-widest text-white text-shadow-neon-blue uppercase">
             Monopoly
           </h1>
-          <p className="text-xs text-slate-400 mt-2 font-mono tracking-widest uppercase">
+          <p className="text-sm text-slate-300 mt-2 font-kalpurush tracking-widest uppercase">
             Server-Authoritative Strategy Node
           </p>
         </div>
@@ -59,12 +59,12 @@ export default function Lobby() {
         <form onSubmit={handleJoin} className="space-y-6">
           {/* Callsign Input */}
           <div>
-            <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-2">
               Operator Callsign
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                <Terminal size={16} />
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Terminal size={18} />
               </span>
               <input
                 type="text"
@@ -73,19 +73,19 @@ export default function Lobby() {
                 placeholder="ENTER PLAYER CALLSIGN"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-600 text-sm font-mono tracking-wide"
+                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-400 text-base font-kalpurush tracking-wide"
               />
             </div>
           </div>
 
           {/* Room ID Input */}
           <div>
-            <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-2">
               Match Sector (Room ID)
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">
-                <Users size={16} />
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                <Users size={18} />
               </span>
               <input
                 type="text"
@@ -93,14 +93,14 @@ export default function Lobby() {
                 placeholder="ENTER ROOM ID"
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-600 text-sm font-mono tracking-wide uppercase"
+                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-400 text-base font-kalpurush tracking-wide uppercase"
               />
             </div>
           </div>
 
           {/* Avatar Selector */}
           <div>
-            <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-3">
+            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-3">
               TACTICAL APP SIGNATURE (AVATAR COLOR)
             </label>
             <div className="flex justify-between items-center gap-3">
@@ -117,8 +117,8 @@ export default function Lobby() {
                     className="w-5 h-5 rounded-full border border-white/20"
                   />
                   <span
-                    style={{ color: selectedAvatar === col.hex ? col.hex : 'rgb(100, 116, 139)' }}
-                    className="text-[7px] font-orbitron font-extrabold tracking-wider leading-none"
+                    style={{ color: selectedAvatar === col.hex ? col.hex : 'rgb(148, 163, 184)' }}
+                    className="text-[10px] font-kalpurush font-extrabold tracking-wider leading-none"
                   >
                     {col.name}
                   </span>
@@ -129,9 +129,9 @@ export default function Lobby() {
 
           <button
             type="submit"
-            className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
+            className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-kalpurush font-bold tracking-widest text-base hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
           >
-            <Sparkles size={14} />
+            <Sparkles size={18} />
             INITIALIZE SESSION
           </button>
         </form>
