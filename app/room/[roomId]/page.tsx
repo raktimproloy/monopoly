@@ -1,6 +1,7 @@
 "use client";
 
-import { useSearchParams, useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
 import Board from '../../../components/Board';
 import PlayerList from '../../../components/PlayerList';
@@ -13,11 +14,28 @@ import { Suspense } from 'react';
 function GameRoomContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const roomId = params.roomId as string;
-  const playerName = searchParams.get('name') || 'Guest';
-  const userId = searchParams.get('uid') || 'usr_guest';
-  const avatar = searchParams.get('avatar') || '#8BA4F9';
+
+  // Retrieve or generate unique client user ID session
+  const [userId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const qUid = searchParams.get('uid');
+      if (qUid) return qUid;
+      let storedUid = localStorage.getItem('monopoly_user_id');
+      if (!storedUid) {
+        storedUid = `usr_${Math.random().toString(36).substring(2, 11)}`;
+        localStorage.setItem('monopoly_user_id', storedUid);
+      }
+      return storedUid;
+    }
+    return 'usr_guest';
+  });
+
+  const playerName = searchParams.get('name');
+  const avatar = searchParams.get('avatar');
+  const isGuest = !playerName || !avatar;
 
   const {
     isConnected,
@@ -27,6 +45,8 @@ function GameRoomContent() {
     pendingTrade,
     errorMessage,
     clearError,
+    roomDetails,
+    refetchRoomDetails,
     rollDice,
     buyProperty,
     mortgageProperty,
@@ -39,6 +59,176 @@ function GameRoomContent() {
     declareBankruptcy,
     payJailFine
   } = useSocket(roomId, playerName, userId, avatar);
+
+  const [guestName, setGuestName] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('');
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const AVATAR_COLORS = [
+    { hex: '#8BA4F9', name: 'SOFT BLUE' },
+    { hex: '#D8B4F8', name: 'SOFT PURPLE' },
+    { hex: '#F98BA4', name: 'SOFT PINK' },
+    { hex: '#A4F98B', name: 'SOFT GREEN' }
+  ];
+
+  // Auto-select first available avatar signature
+  useEffect(() => {
+    if (isGuest && roomDetails?.players) {
+      const takenColors = roomDetails.players.map(p => p.avatar.toLowerCase());
+      const available = AVATAR_COLORS.find(col => !takenColors.includes(col.hex.toLowerCase()));
+      if (available) {
+        setSelectedAvatar(available.hex);
+      }
+    }
+  }, [isGuest, roomDetails]);
+
+  // Synchronize server socket errors with local modal errors if we're a guest
+  useEffect(() => {
+    if (isGuest && errorMessage) {
+      setModalError(errorMessage);
+      clearError();
+    }
+  }, [isGuest, errorMessage, clearError]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim()) {
+      setModalError('Please enter a player callsign.');
+      return;
+    }
+    if (!selectedAvatar) {
+      setModalError('Please select an appearance signature.');
+      return;
+    }
+
+    // Quick local verification
+    if (roomDetails?.players) {
+      const takenColors = roomDetails.players.map(p => p.avatar.toLowerCase());
+      if (takenColors.includes(selectedAvatar.toLowerCase())) {
+        setModalError('This color signature has been taken by another operator. Please choose another.');
+        return;
+      }
+    }
+
+    // Update query parameters in URL to trigger join flow
+    router.replace(
+      `/room/${roomId}?name=${encodeURIComponent(guestName.trim())}&uid=${userId}&avatar=${encodeURIComponent(selectedAvatar)}`
+    );
+  };
+
+  // --- SCREEN 0: GUEST REGISTER MODAL ---
+  if (isGuest) {
+    const takenColors = roomDetails?.players?.map(p => p.avatar.toLowerCase()) || [];
+
+    return (
+      <div className="min-h-screen w-full bg-[#0B0E14] flex flex-col items-center justify-center font-sans cyber-grid z-50 relative">
+        <div className="absolute top-[20%] left-[15%] w-72 h-72 rounded-full bg-[#8BA4F9]/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[20%] right-[15%] w-72 h-72 rounded-full bg-[#D8B4F8]/5 blur-[120px] pointer-events-none" />
+
+        <div className="relative w-full max-w-md p-8 glass-panel mx-4 border border-cyber-blue/30 shadow-[0_0_30px_rgba(139,164,249,0.05)]">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
+          <div className="absolute bottom-0 right-0 w-24 h-[2px] bg-cyber-purple" />
+
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-orbitron font-extrabold tracking-widest text-white text-shadow-neon-blue uppercase">
+              SECTOR GATEWAY
+            </h2>
+            <p className="text-[10px] text-slate-400 mt-2 font-mono tracking-widest uppercase">
+              REGISTER OPERATOR FOR SECTOR: {roomId.toUpperCase()}
+            </p>
+          </div>
+
+          {modalError && (
+            <div className="mb-4 p-3 bg-red-950/80 border border-red-500/30 text-red-200 text-xs font-mono rounded-lg flex items-center gap-2">
+              <span>{modalError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-2">
+                Operator Callsign (Name)
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={15}
+                placeholder="ENTER PLAYER CALLSIGN"
+                value={guestName}
+                onChange={(e) => {
+                  setGuestName(e.target.value);
+                  setModalError(null);
+                }}
+                className="w-full px-4 py-3 glass-input text-white placeholder-slate-600 text-sm font-mono tracking-wide"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-3">
+                TACTICAL APP SIGNATURE (AVATAR COLOR)
+              </label>
+              <div className="flex justify-between items-center gap-3">
+                {AVATAR_COLORS.map((col) => {
+                  const isTaken = takenColors.includes(col.hex.toLowerCase());
+                  const isSelected = selectedAvatar === col.hex;
+
+                  return (
+                    <button
+                      key={col.hex}
+                      type="button"
+                      disabled={isTaken}
+                      onClick={() => {
+                        if (!isTaken) {
+                          setSelectedAvatar(col.hex);
+                          setModalError(null);
+                        }
+                      }}
+                      style={{
+                        borderColor: isSelected 
+                          ? col.hex 
+                          : isTaken 
+                            ? 'rgba(239, 68, 68, 0.1)' 
+                            : 'rgba(255, 255, 255, 0.08)'
+                      }}
+                      className={`flex-1 py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 relative ${
+                        isTaken 
+                          ? 'opacity-40 cursor-not-allowed border-red-950' 
+                          : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
+                      }`}
+                    >
+                      <div
+                        style={{ backgroundColor: col.hex }}
+                        className="w-5 h-5 rounded-full border border-white/20"
+                      />
+                      <span
+                        style={{
+                          color: isSelected 
+                            ? col.hex 
+                            : isTaken 
+                              ? '#ef4444' 
+                              : 'rgb(100, 116, 139)'
+                        }}
+                        className="text-[7px] font-orbitron font-extrabold tracking-wider leading-none"
+                      >
+                        {isTaken ? 'TAKEN' : col.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
+            >
+              INITIALIZE SESSION
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // Loading indicator while connecting
   if (!gameState || boardTiles.length === 0) {
@@ -255,28 +445,27 @@ function GameRoomContent() {
         </div>
       )}
 
-      {/* Main UI Layout (Full screen 3-column system) */}
-      <div className="flex-1 w-full p-4 overflow-hidden flex gap-4 min-h-0 relative z-10">
+      {/* Main UI Layout (Board-priority 3-column system) */}
+      <div className="flex-1 w-full p-3 overflow-hidden flex gap-3 min-h-0 relative z-10">
 
         {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
-        <section className="w-96 shrink-0 flex flex-col gap-4 h-full min-w-0">
-          <div className="flex-1 min-h-0">
+        <section className="w-72 shrink flex flex-col gap-3 h-full min-w-[220px] overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <PropertyManager
               gameState={gameState}
               boardTiles={boardTiles}
               userId={userId}
-              onBuyProperty={buyProperty}
               onMortgageProperty={mortgageProperty}
               onUnmortgageProperty={unmortgageProperty}
             />
           </div>
-          <div className="h-64 shrink-0">
+          <div className="h-56 shrink-0">
             <ChatBox logs={logs} />
           </div>
         </section>
 
-        {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas) */}
-        <section className="flex-1 flex items-center justify-center min-w-0 h-full p-2">
+        {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas — highest priority) */}
+        <section className="flex-1 flex items-center justify-center min-w-0 h-full shrink-0">
           <Board
             gameState={gameState}
             boardTiles={boardTiles}
@@ -285,6 +474,7 @@ function GameRoomContent() {
             onRollDice={rollDice}
             onEndTurn={endTurn}
             onPayJailFine={payJailFine}
+            onBuyProperty={buyProperty}
             onTileClick={(idx) => {
               // Can hook custom tile inspect actions here
             }}
@@ -292,7 +482,7 @@ function GameRoomContent() {
         </section>
 
         {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
-        <section className="w-96 shrink-0 flex flex-col gap-3 h-full min-w-0 select-none">
+        <section className="w-72 shrink flex flex-col gap-3 h-full min-w-[220px] select-none overflow-hidden">
           {/* Top Actions: Votekick and Bankrupt */}
           <div className="flex justify-between items-center shrink-0">
             <button

@@ -15,9 +15,24 @@ export function useSocket(
   const [logs, setLogs] = useState<string[]>([]);
   const [pendingTrade, setPendingTrade] = useState<{ tradeId: string; offer: TradeOfferPayload } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [roomDetails, setRoomDetails] = useState<{
+    exists: boolean;
+    gameStatus: string;
+    players: { id: string; name: string; avatar: string }[];
+  } | null>(null);
+
+  const refetchRoomDetails = useCallback(() => {
+    if (socketRef.current && roomId) {
+      socketRef.current.emit('get_room_details', { roomId }, (response: any) => {
+        if (response && !response.error) {
+          setRoomDetails(response);
+        }
+      });
+    }
+  }, [roomId]);
 
   useEffect(() => {
-    if (!roomId || !playerName) return;
+    if (!roomId || !userId) return;
 
     // Connect to Socket.io server with auth credentials
     const socket = io(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001', {
@@ -31,8 +46,18 @@ export function useSocket(
     socket.on('connect', () => {
       setIsConnected(true);
       setErrorMessage(null);
-      // Join game session with avatar color!
-      socket.emit('join_room', { roomId, name: playerName, avatar });
+      
+      // Fetch room details on connect
+      socket.emit('get_room_details', { roomId }, (response: any) => {
+        if (response && !response.error) {
+          setRoomDetails(response);
+        }
+      });
+
+      // Join game session only if playerName is provided
+      if (playerName && avatar) {
+        socket.emit('join_room', { roomId, name: playerName, avatar });
+      }
     });
 
     socket.on('disconnect', () => {
@@ -47,13 +72,27 @@ export function useSocket(
     socket.on('room_initialized', (data: { state: GameState; board: BoardTile[] }) => {
       setGameState(data.state);
       setBoardTiles(data.board);
-      setLogs([`Joined room ${roomId} as ${playerName}`]);
+      setLogs([`Joined room ${roomId} as ${playerName || 'Guest'}`]);
     });
 
     // Handle state mutations
     socket.on('state_updated', (data: { state: GameState; log: string }) => {
       setGameState(data.state);
       setLogs((prev) => [data.log, ...prev]);
+
+      // Refresh room details if we receive updates, to keep taken avatars synced
+      if (data.state) {
+        const playersList = Object.values(data.state.players).map(p => ({
+          id: p.id,
+          name: p.name,
+          avatar: p.avatar
+        }));
+        setRoomDetails({
+          exists: true,
+          gameStatus: data.state.gameStatus,
+          players: playersList
+        });
+      }
     });
 
     // Handle trade negotiations
@@ -166,6 +205,8 @@ export function useSocket(
     pendingTrade,
     errorMessage,
     clearError: () => setErrorMessage(null),
+    roomDetails,
+    refetchRoomDetails,
     rollDice,
     buyProperty,
     mortgageProperty,

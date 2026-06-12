@@ -11,6 +11,7 @@ interface BoardProps {
   onRollDice: () => void;
   onEndTurn: () => void;
   onPayJailFine: () => void;
+  onBuyProperty: (tileIndex: number) => void;
   onTileClick: (index: number) => void;
 }
 
@@ -93,6 +94,16 @@ const getTileFlag = (name: string, group?: string) => {
   return '🏳️';
 };
 
+function CartIcon({ size = 12, className = "" }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="9" cy="21" r="1"></circle>
+      <circle cx="20" cy="21" r="1"></circle>
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+    </svg>
+  );
+}
+
 export default function Board({
   gameState,
   boardTiles,
@@ -101,10 +112,24 @@ export default function Board({
   onRollDice,
   onEndTurn,
   onPayJailFine,
+  onBuyProperty,
   onTileClick
 }: BoardProps) {
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
+  const myPlayer = gameState.players[userId];
+
+  // Determine if current player can buy the property they're standing on
+  const currentTileIndex = myPlayer?.position ?? -1;
+  const currentTile = boardTiles[currentTileIndex];
+  const currentTileState = gameState.properties[currentTileIndex];
+  const canBuyCurrent =
+    isMyTurn &&
+    currentTile &&
+    ['STREET', 'RAILROAD', 'UTILITY'].includes(currentTile.type) &&
+    (!currentTileState || !currentTileState.ownerId) &&
+    (myPlayer?.balance ?? 0) >= (currentTile.price || 0) &&
+    gameState.turnStatus === 'MUST_ACT_OR_END';
 
   // Group players by their current tile position
   const playersOnTile = (tileIndex: number): Player[] => {
@@ -216,16 +241,17 @@ export default function Board({
           const standingPlayers = playersOnTile(tile.index);
 
           // Get owner details
-          let ownerInitials = '';
+          let ownerAvatar: string | null = null;
           let isMortgaged = false;
           let houses = 0;
+          const isOwned = propState?.ownerId ? true : false;
           if (propState) {
             isMortgaged = propState.isMortgaged;
             houses = propState.houses;
             if (propState.ownerId) {
               const owner = gameState.players[propState.ownerId];
               if (owner) {
-                ownerInitials = owner.name.substring(0, 2).toUpperCase();
+                ownerAvatar = owner.avatar;
               }
             }
           }
@@ -250,6 +276,15 @@ export default function Board({
             CORNER: 'hidden',
           }[orientation];
 
+          // Owner color indicator positioning (inner edge, subtle glow bar)
+          const ownerIndicatorClass = {
+            TOP: 'absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-[3px] md:h-[4px] rounded-full z-10',
+            BOTTOM: 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[70%] h-[3px] md:h-[4px] rounded-full z-10',
+            RIGHT: 'absolute right-0 top-1/2 -translate-y-1/2 h-[70%] w-[3px] md:w-[4px] rounded-full z-10',
+            LEFT: 'absolute left-0 top-1/2 -translate-y-1/2 h-[70%] w-[3px] md:w-[4px] rounded-full z-10',
+            CORNER: 'hidden',
+          }[orientation];
+
           return (
             <div
               key={tile.index}
@@ -262,10 +297,10 @@ export default function Board({
               {/* Glassmorphism Inner Layout Wrapper */}
               <div className={`w-full h-full flex items-center justify-between p-1 ${flexDirClass} ${rotationClass}`}>
                 
-                {/* 1. Price (Outer Edge) */}
+                {/* 1. Price (Outer Edge) — hidden when owned */}
                 {orientation !== 'CORNER' && (
                   <div className="text-[6px] md:text-[8px] xl:text-[10px] font-mono font-bold text-slate-400 h-[10px] flex items-center shrink-0">
-                    {tile.price ? `$${tile.price}` : ''}
+                    {!isOwned && tile.price ? `$${tile.price}` : ''}
                   </div>
                 )}
 
@@ -275,48 +310,50 @@ export default function Board({
                   {orientation === 'CORNER' && tile.index === 0 && <div className="text-emerald-400 mt-1">GO</div>}
                 </div>
 
-                {/* 3. Icons / Ownership (Inner Edge Area) */}
-                {orientation !== 'CORNER' && (
-                  <div className="flex flex-col items-center gap-[1px] h-[10px] shrink-0 justify-end">
-                    {/* Houses */}
-                    {houses > 0 && (
-                      <div className="flex gap-[1px]">
-                        {Array.from({ length: Math.min(houses, 4) }).map((_, i) => (
-                          <span key={i} className="w-[3px] h-[3px] rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.6)]" />
-                        ))}
-                        {houses === 5 && (
-                          <span className="w-[4px] h-[4px] rounded bg-red-400 shadow-[0_0_4px_rgba(248,113,113,0.6)]" />
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Ownership Badge */}
-                    {ownerInitials && (
-                      <div className={`px-[2px] text-[4px] md:text-[6px] font-mono rounded font-bold border ${
-                        isMortgaged ? 'bg-red-950 text-red-400 border-red-800' : 'bg-slate-800 text-slate-300 border-slate-600'
-                      }`}>
-                        {isMortgaged ? 'M' : ownerInitials}
-                      </div>
+                {/* 3. Houses indicator (Inner Edge Area) */}
+                {orientation !== 'CORNER' && houses > 0 && (
+                  <div className="flex items-center gap-[1px] h-[10px] shrink-0 justify-center">
+                    {Array.from({ length: Math.min(houses, 4) }).map((_, i) => (
+                      <span key={i} className="w-[3px] h-[3px] rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.6)]" />
+                    ))}
+                    {houses === 5 && (
+                      <span className="w-[4px] h-[4px] rounded bg-red-400 shadow-[0_0_4px_rgba(248,113,113,0.6)]" />
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Dynamic Overlapping Color Indicator (Flag replacement) */}
+              {/* Dynamic Overlapping Color Indicator (group color — outer edge) */}
               {tile.group && orientation !== 'CORNER' && (
                 <div className={`${colorIndicatorClass} ${getGroupColor(tile.group)}`} />
               )}
 
+              {/* Owner Avatar Color Bar (inner edge — shows who owns this property) */}
+              {ownerAvatar && orientation !== 'CORNER' && (
+                <div
+                  className={`${ownerIndicatorClass}`}
+                  style={{
+                    backgroundColor: ownerAvatar,
+                    boxShadow: `0 0 6px ${ownerAvatar}`,
+                    opacity: isMortgaged ? 0.3 : 1
+                  }}
+                />
+              )}
+
               {/* Standing Player Tokens Overlay */}
               {standingPlayers.length > 0 && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center gap-[2px] flex-wrap pointer-events-none bg-slate-950/40 rounded-lg backdrop-blur-[2px]">
+                <div className="absolute inset-0 z-20 flex items-center justify-center gap-[2px] flex-wrap pointer-events-none rounded-lg">
                   {standingPlayers.map((p) => {
                     const isMe = p.id === userId;
                     return (
                       <div
                         key={p.id}
+                        style={{
+                          backgroundColor: p.avatar,
+                          boxShadow: `0 0 10px ${p.avatar}`
+                        }}
                         className={`w-3.5 h-3.5 md:w-5 md:h-5 rounded-full flex items-center justify-center text-[7px] md:text-[10px] font-orbitron font-extrabold text-slate-950 border-2 shadow-lg ${
-                          isMe ? 'bg-[#8BA4F9] border-white shadow-[0_0_10px_rgba(139,164,249,0.8)]' : 'bg-[#D8B4F8] border-white shadow-[0_0_10px_rgba(216,180,248,0.8)]'
+                          isMe ? 'border-white' : 'border-white/60'
                         }`}
                         title={p.name}
                       >
@@ -363,6 +400,16 @@ export default function Board({
                   </button>
                 )}
 
+                {gameState.turnStatus === 'MUST_ACT_OR_END' && canBuyCurrent && (
+                  <button
+                    onClick={() => onBuyProperty(currentTileIndex)}
+                    className="bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-xs px-5 py-2.5 rounded-lg flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
+                  >
+                    <CartIcon size={12} className="stroke-white" />
+                    Buy ${currentTile?.price}
+                  </button>
+                )}
+
                 {gameState.turnStatus === 'MUST_ACT_OR_END' && (
                   <button
                     onClick={onEndTurn}
@@ -387,20 +434,43 @@ export default function Board({
             )}
           </div>
 
-          {/* Real-time Activity History Log with Opacity Fading overlay at the bottom */}
+          {/* Real-time Activity History Log — filtered to important events only */}
           <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0">
             <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2 scrollbar-thin select-none max-h-[120px] pb-10">
-              {logs.length === 0 ? (
-                <div className="text-center py-8 text-slate-600 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
-                  No activities recorded
-                </div>
-              ) : (
-                logs.map((log, index) => (
+              {(() => {
+                // Whitelist: only show truly important game events
+                const importantLogs = logs.filter(log => {
+                  const l = log.toLowerCase();
+                  if (l.includes('bought')) return true;
+                  if (l.includes('paid rent')) return true;
+                  if (l.includes('paid $')) return true;
+                  if (l.includes('tax')) return true;
+                  if (l.includes('collecting $200')) return true;
+                  if (l.includes('passing go')) return true;
+                  if (l.includes('jail')) return true;
+                  if (l.includes('bankrupt')) return true;
+                  if (l.includes('trade')) return true;
+                  if (l.includes('swapped')) return true;
+                  if (l.includes('mortgage')) return true;
+                  if (l.includes('game over')) return true;
+                  if (l.includes('winner')) return true;
+                  return false;
+                });
+
+                if (importantLogs.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-slate-600 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
+                      No activities recorded
+                    </div>
+                  );
+                }
+
+                return importantLogs.map((log, index) => (
                   <div key={index} className="flex items-center justify-center gap-1 py-px w-full">
                     {renderLogWithAvatars(log)}
                   </div>
-                ))
-              )}
+                ));
+              })()}
             </div>
 
             {/* Opacity Fading overlay at the bottom fading into black/main grid bg */}
