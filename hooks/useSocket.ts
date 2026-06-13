@@ -31,6 +31,40 @@ export function useSocket(
     }
   }, [roomId]);
 
+  // Intercept and rewrite incoming telemetry logs to tactical style
+  const formatTelemetryLog = useCallback((log: string): string => {
+    if (!log) return '';
+    let f = log;
+
+    // 1. Fix Currency Glitch (remove spaces/newlines between ৳ and numbers)
+    f = f.replace(/৳[\s\n]*(\d+)/g, '৳$1');
+
+    // Skip heavy regex parsing if the log was already pre-tagged by the server
+    if (f.startsWith('[')) return f;
+
+    // 2. Acquisition
+    const buyMatch = f.match(/(.+) bought (.+) for (৳\d+)/i);
+    if (buyMatch) {
+      return `[ACQUIRE] ${buyMatch[1]} secured ${buyMatch[2]} for ${buyMatch[3]}.`;
+    }
+
+    // 3. Rent / Transfer (handles "paid rent of ৳X to Y")
+    const rentMatch = f.match(/(?:Rent payment processed automatically:\s*)?(.+) paid rent of (৳\d+) to (.+)/i);
+    if (rentMatch) {
+      return `[TRANSFER] ${rentMatch[1]} paid ${rentMatch[2]} to ${rentMatch[3]} for access.`;
+    }
+
+    // 4. Movement
+    const moveMatch = f.match(/(.+) rolled \[(.+?)\] and moved from .+ to (.+)\./i);
+    if (moveMatch) {
+      const diceStr = moveMatch[2]; // e.g., "3, 4"
+      const diceTotal = diceStr.split(',').reduce((a, b) => a + parseInt(b.trim(), 10), 0);
+      return `[NAV] ${moveMatch[1]} rolled ${diceTotal} ➡️ Landed on ${moveMatch[3]}.`;
+    }
+
+    return f;
+  }, []);
+
   useEffect(() => {
     if (!roomId || !userId) return;
 
@@ -78,7 +112,8 @@ export function useSocket(
     // Handle state mutations
     socket.on('state_updated', (data: { state: GameState; log: string }) => {
       setGameState(data.state);
-      setLogs((prev) => [data.log, ...prev]);
+      const formattedLog = formatTelemetryLog(data.log);
+      setLogs((prev) => [formattedLog, ...prev]);
 
       // Refresh room details if we receive updates, to keep taken avatars synced
       if (data.state) {
@@ -101,7 +136,8 @@ export function useSocket(
     });
 
     socket.on('trade_declined', (data: { tradeId: string; log: string }) => {
-      setLogs((prev) => [data.log, ...prev]);
+      const formattedLog = formatTelemetryLog(data.log);
+      setLogs((prev) => [formattedLog, ...prev]);
     });
 
     socket.on('trade_resolved', (data: { tradeId: string }) => {
@@ -173,6 +209,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const placeBid = useCallback((amountToAdd: number) => {
+    console.log('[Socket Emit] place_bid', { playerId: userId, amountToAdd });
+    if (socketRef.current) {
+      socketRef.current.emit('place_bid', { playerId: userId, amountToAdd });
+    }
+  }, [userId]);
+
   const endTurn = useCallback(() => {
     console.log('[Socket Emit] end_turn', { playerId: userId });
     if (socketRef.current) {
@@ -236,6 +279,32 @@ export function useSocket(
     }
   }, [userId]);
 
+  useEffect(() => {
+    const handleCustomBid = (e: any) => {
+      if (socketRef.current) {
+        socketRef.current.emit('place_bid', { playerId: userId, amountToAdd: e.detail });
+      }
+    };
+    const handleCustomAuction = (e: any) => auctionProperty(e.detail);
+    const handleCustomBankrupt = () => declareBankruptcy();
+    const handleCustomMortgage = (e: any) => mortgageProperty(e.detail);
+    const handleCustomUnmortgage = (e: any) => unmortgageProperty(e.detail);
+    
+    window.addEventListener('place_bid', handleCustomBid);
+    window.addEventListener('auction_property', handleCustomAuction);
+    window.addEventListener('declare_bankruptcy', handleCustomBankrupt);
+    window.addEventListener('mortgage_property', handleCustomMortgage);
+    window.addEventListener('unmortgage_property', handleCustomUnmortgage);
+    
+    return () => {
+      window.removeEventListener('place_bid', handleCustomBid);
+      window.removeEventListener('auction_property', handleCustomAuction);
+      window.removeEventListener('declare_bankruptcy', handleCustomBankrupt);
+      window.removeEventListener('mortgage_property', handleCustomMortgage);
+      window.removeEventListener('unmortgage_property', handleCustomUnmortgage);
+    };
+  }, [userId, auctionProperty, declareBankruptcy, mortgageProperty, unmortgageProperty]);
+
   return {
     isConnected,
     gameState,
@@ -260,6 +329,7 @@ export function useSocket(
     buildHouse,
     sellHouse,
     sellProperty,
-    auctionProperty
+    auctionProperty,
+    placeBid
   };
 }

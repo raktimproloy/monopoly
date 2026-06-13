@@ -132,3 +132,14 @@ body {
 .animate-dice-roll {
   animation: diceRollBounce 0.8s cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
 }
+
+/* Floating Money Animation */
+@keyframes floatUpAndFade {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  15% { opacity: 1; transform: translateY(-15px) scale(1.2); }
+  80% { opacity: 1; transform: translateY(-35px) scale(1); }
+  100% { opacity: 0; transform: translateY(-45px) scale(0.9); }
+}
+.animate-float-up {
+  animation: floatUpAndFade 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}

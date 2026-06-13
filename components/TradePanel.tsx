@@ -10,6 +10,8 @@ interface TradePanelProps {
   pendingTrade: { tradeId: string; offer: TradeOfferPayload } | null;
   onProposeTrade: (offer: Omit<TradeOfferPayload, 'senderId'>) => void;
   onRespondToTrade: (tradeId: string, accept: boolean) => void;
+  onMortgageProperty?: (index: number) => void;
+  onUnmortgageProperty?: (index: number) => void;
 }
 
 // Inline SVGs for self-contained, crash-free icons
@@ -112,6 +114,20 @@ const getTileFlag = (name: string, group?: string) => {
   return '🏳️';
 };
 
+const getGroupColor = (group: string | undefined): string => {
+  switch (group) {
+    case 'Brown': return 'bg-[#B1EA40]';
+    case 'Light Blue': return 'bg-[#3FCEEB]';
+    case 'Pink': return 'bg-[#3FEB92]';
+    case 'Orange': return 'bg-[#EBA03F]';
+    case 'Red': return 'bg-[#FF9696]';
+    case 'Yellow': return 'bg-[#96FFFD]';
+    case 'Green': return 'bg-[#C396FF]';
+    case 'Dark Blue': return 'bg-[#FF96C9]';
+    default: return 'bg-slate-700';
+  }
+};
+
 // Formats time left to MM:SS
 const formatTime = (secs: number) => {
   const m = Math.floor(secs / 60);
@@ -125,7 +141,9 @@ export default function TradePanel({
   userId,
   pendingTrade,
   onProposeTrade,
-  onRespondToTrade
+  onRespondToTrade,
+  onMortgageProperty,
+  onUnmortgageProperty
 }: TradePanelProps) {
   const self = gameState.players[userId];
 
@@ -329,31 +347,108 @@ export default function TradePanel({
       </div>
 
       {/* 2. MY PROPERTIES CARD */}
-      <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[180px] overflow-hidden">
+      <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
         <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase block text-center border-b border-[#241F3C] pb-2.5">
-          My properties ({myProperties.length})
+          My Properties ({myProperties.length})
         </span>
         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
           {myProperties.length === 0 ? (
             <div className="text-center py-10 text-slate-500 font-mono text-xs uppercase tracking-widest leading-relaxed">
-              No Properties Acquired
+              No Property Certificates Acquired
             </div>
           ) : (
             myProperties.map((prop) => {
               const tile = boardTiles[prop.tileIndex];
-              const flag = getTileFlag(tile.name, tile.group);
+              if (!tile) return null;
+              
+              const mortgageVal = tile.mortgageValue || Math.floor((tile.price || 0) / 2);
+              const unmortgageCost = Math.ceil(mortgageVal * 1.1);
+
               return (
                 <div
                   key={prop.tileIndex}
-                  className="bg-[#211B35] hover:bg-[#2A2345] rounded-xl px-3.5 py-3 flex items-center gap-3.5 text-white text-sm font-bold border border-[#2E284D]/40 transition-colors shadow-sm"
+                  className="p-2.5 bg-[#211B35] hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
                 >
-                  <span className="text-lg leading-none shrink-0">{flag}</span>
-                  <span className="truncate flex-1 text-slate-200">{tile.name}</span>
-                  {prop.isMortgaged && (
-                    <span className="text-[9px] font-mono text-red-400 bg-red-950/40 border border-red-900/30 px-1.5 py-0.5 rounded uppercase font-bold shrink-0">
-                      MTG
-                    </span>
-                  )}
+                  <div className="flex gap-3 items-center flex-1 min-w-0">
+                    <div className={`w-2.5 h-8 rounded-sm shrink-0 ${getGroupColor(tile.group)}`} />
+                    <div className="flex-1 min-w-0 truncate pr-2">
+                      <span className="text-xs font-bold text-white block uppercase truncate leading-tight mb-0.5">
+                        {tile.name}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 block truncate">
+                        {(() => {
+                          if (prop.isMortgaged) return 'MORTGAGED';
+                          if (tile.type === 'UTILITY') return 'DICE x RENT';
+                          let currentRent = tile.rent ? tile.rent[prop.houses] : 0;
+                          if (tile.type === 'STREET' && prop.houses === 0 && gameState.settings?.doubleRentOnCompleteSet) {
+                            const ownsFullSet = boardTiles.filter(t => t.group === tile.group).every(t => {
+                              const p = gameState.properties[t.index];
+                              return p && p.ownerId === prop.ownerId;
+                            });
+                            if (ownsFullSet) currentRent *= 2;
+                          } else if (tile.type === 'RAILROAD') {
+                            const count = Object.values(gameState.properties).filter(
+                              p => p.ownerId === prop.ownerId && boardTiles[p.tileIndex]?.type === 'RAILROAD'
+                            ).length;
+                            currentRent = tile.rent ? tile.rent[count - 1] || 25 : 25;
+                          }
+                          return `Rent: ৳${currentRent}`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1.5 shrink-0 flex-none">
+                    {prop.isMortgaged ? (
+                      <button
+                        onClick={() => {
+                          if (onUnmortgageProperty) onUnmortgageProperty(prop.tileIndex);
+                          else window.dispatchEvent(new CustomEvent('unmortgage_property', { detail: prop.tileIndex }));
+                        }}
+                        disabled={self.balance < unmortgageCost}
+                        className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
+                          self.balance >= unmortgageCost
+                            ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
+                            : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
+                        }`}
+                        title={`Unmortgage for ৳${unmortgageCost}`}
+                      >
+                        UNMTG ({unmortgageCost})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (onMortgageProperty) onMortgageProperty(prop.tileIndex);
+                          else window.dispatchEvent(new CustomEvent('mortgage_property', { detail: prop.tileIndex }));
+                        }}
+                        disabled={prop.houses > 0}
+                        className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
+                          prop.houses === 0
+                            ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-pointer'
+                            : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
+                        }`}
+                        title={`Mortgage for ৳${mortgageVal}`}
+                      >
+                        MTG ({mortgageVal})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        if (prop.houses === 0) {
+                          window.dispatchEvent(new CustomEvent('auction_property', { detail: prop.tileIndex }));
+                        }
+                      }}
+                      disabled={prop.houses > 0}
+                      className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
+                        prop.houses === 0
+                          ? 'text-purple-400 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500 cursor-pointer'
+                          : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
+                      }`}
+                      title="Auction Property"
+                    >
+                      AUC
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -462,11 +557,11 @@ export default function TradePanel({
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>${self.balance}</span>
+                    <span>৳{self.balance}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {offerCash} $
+                      {offerCash} ৳
                     </span>
                   </div>
                 </div>
@@ -498,7 +593,7 @@ export default function TradePanel({
                               <span>{flag}</span>
                               <span className="truncate">{tile.name}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">${getPropPrice(p.tileIndex)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
                           </div>
                         );
                       })
@@ -542,11 +637,11 @@ export default function TradePanel({
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>${gameState.players[receiverId]?.balance || 0}</span>
+                    <span>৳{gameState.players[receiverId]?.balance || 0}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {requestCash} $
+                      {requestCash} ৳
                     </span>
                   </div>
                 </div>
@@ -578,7 +673,7 @@ export default function TradePanel({
                               <span>{flag}</span>
                               <span className="truncate">{tile.name}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">${getPropPrice(p.tileIndex)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
                           </div>
                         );
                       })
@@ -682,7 +777,7 @@ export default function TradePanel({
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Offered Cash</span>
                   <div className="flex justify-center my-1.5">
                     <span className="bg-[#2D225C] text-[#A78BFA] text-sm font-mono font-extrabold px-3.5 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {pendingTrade.offer.offerCash} $
+                      {pendingTrade.offer.offerCash} ৳
                     </span>
                   </div>
                 </div>
@@ -705,7 +800,7 @@ export default function TradePanel({
                               <span>{flag}</span>
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">${getPropPrice(idx)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
                           </div>
                         );
                       })
@@ -737,7 +832,7 @@ export default function TradePanel({
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Requested Cash</span>
                   <div className="flex justify-center my-1.5">
                     <span className="bg-[#2D225C] text-[#A78BFA] text-sm font-mono font-extrabold px-3.5 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {pendingTrade.offer.requestCash} $
+                      {pendingTrade.offer.requestCash} ৳
                     </span>
                   </div>
                 </div>
@@ -760,7 +855,7 @@ export default function TradePanel({
                               <span>{flag}</span>
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">${getPropPrice(idx)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
                           </div>
                         );
                       })

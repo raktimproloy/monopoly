@@ -39,16 +39,18 @@ export default function ChatBox({ logs }: ChatBoxProps) {
         {/* Render logs chronologically (newest at bottom) */}
         {logs.slice().reverse().map((log, index) => {
           let colorClass = 'text-slate-400';
-          if (log.includes('bought') || log.includes('unmortgaged')) {
+          if (log.includes('bought') || log.includes('unmortgaged') || log.includes('[ACQUIRE]') || log.includes('[UPGRADE]')) {
             colorClass = 'text-cyber-blue';
-          } else if (log.includes('rolled')) {
+          } else if (log.includes('rolled') || log.includes('[NAV]')) {
             colorClass = 'text-slate-200';
-          } else if (log.includes('paid rent') || log.includes('tax')) {
+          } else if (log.includes('paid rent') || log.includes('tax') || log.includes('[TRANSFER]') || log.includes('[DOWNGRADE]') || log.includes('[LIQUIDATE]')) {
             colorClass = 'text-red-400';
-          } else if (log.includes('Jail') || log.includes('Go to Jail')) {
+          } else if (log.includes('Jail') || log.includes('Go to Jail') || log.includes('[ALERT]') || log.includes('[AUCTION]')) {
             colorClass = 'text-amber-400';
-          } else if (log.includes('Trade complete')) {
+          } else if (log.includes('Trade complete') || log.includes('[TRADE]')) {
             colorClass = 'text-emerald-400';
+          } else if (log.includes('[SYS]')) {
+            colorClass = 'text-slate-500';
           }
 
           return (

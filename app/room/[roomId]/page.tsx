@@ -9,6 +9,7 @@ import ChatBox from '../../../components/ChatBox';
 import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
+import ResizableSidebar from '../../../components/ResizableSidebar';
 import { Suspense } from 'react';
 
 function GameRoomContent() {
@@ -469,6 +470,7 @@ function GameRoomContent() {
         </section>
 
         {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas — highest priority) */}
+        {/* CRITICAL: flex-1 AND min-w-0 prevent Flexbox squeeze lock so the board can shrink when sidebar expands */}
         <section className="flex-1 flex items-center justify-center min-w-0 h-full shrink-0">
           <Board
             gameState={gameState}
@@ -492,9 +494,10 @@ function GameRoomContent() {
         </section>
 
         {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
-        <section className="w-72 shrink flex flex-col gap-3 h-full min-w-[220px] select-none overflow-hidden">
-          {/* Top Actions: Votekick and Bankrupt */}
-          <div className="flex justify-between items-center shrink-0">
+        <ResizableSidebar defaultWidth={480} minWidth={220} maxWidth={800}>
+          <div className="flex flex-col gap-3 h-full w-full select-none overflow-hidden">
+            {/* Top Actions: Votekick and Bankrupt */}
+            <div className="flex justify-between items-center shrink-0">
             <button
               onClick={() => {
                 // Future Votekick placeholder
@@ -539,7 +542,8 @@ function GameRoomContent() {
               onRespondToTrade={respondToTrade}
             />
           </div>
-        </section>
+          </div>
+        </ResizableSidebar>
       </div>
     </main>
   );

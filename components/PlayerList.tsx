@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from 'react';
 import { GameState, BoardTile } from '../../shared/types';
 // No icon imports needed since we use native emojis and custom SVGs
 
@@ -11,6 +12,13 @@ interface PlayerListProps {
 
 export default function PlayerList({ gameState, boardTiles, userId }: PlayerListProps) {
 
+  // Animation tracking states
+  const [floaters, setFloaters] = useState<Record<string, { id: number; diff: number }[]>>({});
+  const [displayBalances, setDisplayBalances] = useState<Record<string, number>>({});
+  
+  const prevBalances = useRef<Record<string, number>>({});
+  const prevGameState = useRef<GameState>(gameState);
+  const initialized = useRef(false);
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
@@ -25,6 +33,68 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       default: return 'bg-slate-700';
     }
   };
+
+  // Watch for balance changes to dispatch isolated floaters per player in the list
+  useEffect(() => {
+    if (!gameState || !gameState.players) return;
+
+    if (!initialized.current) {
+      const initialBalances: Record<string, number> = {};
+      Object.values(gameState.players).forEach(p => {
+        initialBalances[p.id] = p.balance;
+        prevBalances.current[p.id] = p.balance;
+      });
+      setDisplayBalances(initialBalances);
+      initialized.current = true;
+      return;
+    }
+
+    const prevState = prevGameState.current;
+    prevGameState.current = gameState;
+
+    // Calculate sync delay if the active player moved
+    const currentActiveId = gameState.currentTurnPlayerId;
+    const prevActivePos = prevState.players[currentActiveId]?.position;
+    const newActivePos = gameState.players[currentActiveId]?.position;
+    const activeMoved = prevActivePos !== undefined && prevActivePos !== newActivePos;
+    
+    const delay = activeMoved ? 2200 : 0;
+    const changes: { id: string, diff: number, newBalance: number }[] = [];
+
+    Object.values(gameState.players).forEach(p => {
+      const prev = prevBalances.current[p.id];
+      if (prev !== undefined && prev !== p.balance) {
+        changes.push({ id: p.id, diff: p.balance - prev, newBalance: p.balance });
+      }
+      prevBalances.current[p.id] = p.balance;
+    });
+
+    if (changes.length > 0) {
+      setTimeout(() => {
+        setDisplayBalances(curr => {
+          const next = { ...curr };
+          changes.forEach(c => { next[c.id] = c.newBalance; });
+          return next;
+        });
+
+        setFloaters(currFloaters => {
+          const newFloaters = { ...currFloaters };
+          changes.forEach(c => {
+            if (!newFloaters[c.id]) newFloaters[c.id] = [];
+            const fId = Math.random();
+            newFloaters[c.id] = [...newFloaters[c.id], { id: fId, diff: c.diff }];
+            
+            setTimeout(() => {
+              setFloaters(latest => ({
+                ...latest, [c.id]: latest[c.id]?.filter(f => f.id !== fId) || []
+              }));
+            }, 1500);
+          });
+          return newFloaters;
+        });
+      }, delay);
+    }
+  }, [gameState.players]);
 
   return (
     <div className="w-full p-2.5 glass-panel flex flex-col gap-2 select-none relative h-auto">
@@ -50,7 +120,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
           return (
             <div
               key={playerId}
-              className={`relative flex items-center justify-between p-1.5 rounded-lg transition-all duration-200 overflow-hidden ${
+              className={`relative flex items-center justify-between p-1.5 rounded-lg transition-all duration-200 ${
                 isCurrentTurn
                   ? 'bg-slate-900/60 border border-white/5 pl-2.5' 
                   : 'bg-transparent border border-transparent pl-2'
@@ -134,10 +204,20 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
               </div>
 
               {/* Right block: Balance */}
-              <div className="text-right shrink-0 ml-2">
-                <span className={`text-[13px] font-sans font-bold tracking-wide ${player.balance < 0 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-                  ${player.balance}
+              <div className="text-right shrink-0 ml-2 relative">
+                <span className={`text-[13px] font-sans font-bold tracking-wide ${(displayBalances[player.id] ?? player.balance) < 0 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+                  ৳{displayBalances[player.id] ?? player.balance}
                 </span>
+                
+                {/* Floating Money Animations */}
+                <div className="absolute bottom-full right-0 flex flex-col items-end pointer-events-none z-50 mb-1">
+                  {floaters[player.id]?.map(f => (
+                    <span key={f.id} className={`text-[10px] font-black animate-float-up whitespace-nowrap ${f.diff > 0 ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]' : 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]'}`}>
+                      {f.diff > 0 ? '+' : ''}৳{Math.abs(f.diff)}
+                    </span>
+                  ))}
+                </div>
+
                 {player.isBankrupt && (
                   <div className="text-[7px] font-mono text-red-500 font-bold uppercase tracking-wider mt-px">
                     BANKRUPT
