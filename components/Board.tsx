@@ -21,6 +21,7 @@ interface BoardProps {
   onSellHouse?: (tileIndex: number) => void;
   onSellProperty?: (tileIndex: number) => void;
   onAuctionProperty?: (tileIndex: number) => void;
+  onTeleportPlayer?: (targetTileIndex: number) => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -333,10 +334,13 @@ export default function Board({
   onSellHouse,
   onSellProperty,
   onAuctionProperty,
+  onTeleportPlayer,
   onPlaceBid,
 }: BoardProps) {
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [devMode, setDevMode] = useState<boolean>(false);
+  const [selectedDevTile, setSelectedDevTile] = useState<number | null>(null);
+  const [teleportTarget, setTeleportTarget] = useState<number>(0);
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
@@ -468,6 +472,26 @@ export default function Board({
         DEV: {devMode ? 'ON' : 'OFF'}
       </button>
 
+    {/* Dev Teleport UI */}
+    {devMode && isMyTurn && (
+      <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex items-center gap-2 p-2 bg-slate-900/90 backdrop-blur-md border border-purple-500/50 rounded-lg shadow-2xl animate-fade-in">
+        <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Target:</span>
+        <input 
+          type="number" 
+          min="0" max="39" 
+          value={teleportTarget} 
+          onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)} 
+          className="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+        />
+        <button 
+          onClick={() => onTeleportPlayer?.(teleportTarget)}
+          className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95"
+        >
+          Teleport
+        </button>
+      </div>
+    )}
+
       {/* 11x11 Grid Wrapper */}
       <div
         id="board-container"
@@ -559,8 +583,12 @@ export default function Board({
               key={tile.index}
               style={{ gridRow: coords.row, gridColumn: coords.col }}
               onClick={() => {
-                setSelectedTileIndex(tile.index);
-                onTileClick(tile.index);
+                if (devMode && isMyTurn) {
+                  setSelectedDevTile(prev => prev === tile.index ? null : tile.index);
+                } else {
+                  setSelectedTileIndex(tile.index);
+                  onTileClick(tile.index);
+                }
               }}
               className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible z-10 hover:z-[60] ${orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
                 }`}
@@ -670,6 +698,20 @@ export default function Board({
                     </div>
                   ) : null}
                 </div>
+              )}
+
+              {/* DEV MODE: Floating Teleport Button */}
+              {devMode && isMyTurn && selectedDevTile === tile.index && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTeleportPlayer?.(tile.index);
+                    setSelectedDevTile(null);
+                  }}
+                  className="absolute inset-0 m-auto w-fit h-fit z-50 bg-cyber-purple/90 border border-cyber-purple text-white text-[10px] font-bold px-3 py-1.5 rounded-sm shadow-[0_0_10px_rgba(216,180,248,0.5)] uppercase tracking-wider hover:bg-cyber-purple transition-all"
+                >
+                  TELEPORT
+                </button>
               )}
             </div>
           );

@@ -64,6 +64,7 @@ function GameRoomContent() {
     sellHouse,
     sellProperty,
     auctionProperty,
+    teleportPlayer,
     addBot,
     updateAppearance,
     resolveCard,
@@ -560,6 +561,7 @@ function GameRoomContent() {
             onSellHouse={sellHouse}
             onSellProperty={sellProperty}
             onAuctionProperty={auctionProperty}
+            onTeleportPlayer={teleportPlayer}
           />
         </section>
 

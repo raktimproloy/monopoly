@@ -232,6 +232,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const teleportPlayer = useCallback((targetTileIndex: number) => {
+    console.log('[Socket Emit] dev_teleport', { playerId: userId, targetIndex: targetTileIndex });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_teleport', { playerId: userId, targetIndex: targetTileIndex });
+    }
+  }, [userId]);
+
   const addBot = useCallback(() => {
     console.log('[Socket Emit] add_bot');
     if (socketRef.current) {
@@ -349,6 +356,7 @@ export function useSocket(
     sellHouse,
     sellProperty,
     auctionProperty,
+    teleportPlayer,
     placeBid,
     addBot,
     updateAppearance,
