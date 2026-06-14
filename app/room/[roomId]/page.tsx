@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
+import { useGameSounds } from '../../../hooks/useGameSounds';
 import Board from '../../../components/Board';
 import PlayerList from '../../../components/PlayerList';
 import ChatBox from '../../../components/ChatBox';
@@ -69,6 +70,9 @@ function GameRoomContent() {
     sellPardonCard,
     usePardonCard
   } = useSocket(roomId, playerName, userId, avatar);
+
+  // Initialize sound manager to listen to game events
+  useGameSounds(gameState, logs, userId);
 
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');

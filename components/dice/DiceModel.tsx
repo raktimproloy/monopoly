@@ -3,7 +3,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import * as THREE from 'three';
-import { playDiceBounceSound } from '../../utils/sound';
+import { soundManager } from '../../utils/soundManager';
 
 // Pre-create standard textures for the 6 faces on the client side
 let faceTextures: THREE.CanvasTexture[] = [];
@@ -146,7 +146,7 @@ export default function DiceModel({
         // Play the bounce sound exactly as they lock into place
         if (isRolling.current && Date.now() - lastSoundTime.current > 200) {
            lastSoundTime.current = Date.now();
-           try { playDiceBounceSound(0.6); } catch (e) {}
+           try { soundManager.playEventSound('DICE_ROLL', 0.6); } catch (e) {}
         }
         
         meshRef.current.position.set(index === 0 ? -1.0 : 1.0, 0.6, 0.0);

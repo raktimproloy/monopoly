@@ -792,23 +792,24 @@ export default function Board({
               onClick={() => {
                 const importantLogs = logs.filter(log => {
                   const l = log.toLowerCase();
-                  if (l.includes('bought')) return true;
-                  if (l.includes('paid rent')) return true;
-                  if (l.includes('paid ৳')) return true;
+                  if (l.includes('bought') || l.includes('কিনে') || l.includes('অধিগ্রহণ')) return true;
+                  if (l.includes('paid rent') || l.includes('ভাড়া')) return true;
+                  if (l.includes('paid ৳') || l.includes('জরিমানা') || l.includes('কর')) return true;
                   if (l.includes('tax')) return true;
-                  if (l.includes('collecting ৳200')) return true;
+                  if (l.includes('collecting ৳200') || l.includes('বোনাস')) return true;
                   if (l.includes('passing go')) return true;
-                  if (l.includes('jail')) return true;
-                  if (l.includes('bankrupt')) return true;
-                  if (l.includes('trade')) return true;
+                  if (l.includes('jail') || l.includes('জেল')) return true;
+                  if (l.includes('bankrupt') || l.includes('দেউলিয়া')) return true;
+                  if (l.includes('trade') || l.includes('চুক্তি')) return true;
                   if (l.includes('swapped')) return true;
-                  if (l.includes('mortgage')) return true;
+                  if (l.includes('mortgage') || l.includes('বন্ধক')) return true;
                   if (l.includes('game over')) return true;
                   if (l.includes('winner')) return true;
-                  if (l.includes('built')) return true;
-                  if (l.includes('broke')) return true;
-                  if (l.includes('liquidated')) return true;
-                  if (l.includes('auction')) return true;
+                  if (l.includes('built') || l.includes('তৈরি')) return true;
+                  if (l.includes('broke') || l.includes('ভেঙে')) return true;
+                  if (l.includes('liquidated') || l.includes('বিক্রি')) return true;
+                  if (l.includes('auction') || l.includes('নিলাম')) return true;
+                  if (l.includes('ভাগ্য পরীক্ষা') || l.includes('গুপ্তধন')) return true;
                   return false;
                 });
                 navigator.clipboard.writeText(importantLogs.join('\n'));
@@ -823,23 +824,24 @@ export default function Board({
                 // Whitelist: only show truly important game events
                 const importantLogs = logs.filter(log => {
                   const l = log.toLowerCase();
-                  if (l.includes('bought')) return true;
-                  if (l.includes('paid rent')) return true;
-                  if (l.includes('paid ৳')) return true;
+                  if (l.includes('bought') || l.includes('কিনে') || l.includes('অধিগ্রহণ')) return true;
+                  if (l.includes('paid rent') || l.includes('ভাড়া')) return true;
+                  if (l.includes('paid ৳') || l.includes('জরিমানা') || l.includes('কর')) return true;
                   if (l.includes('tax')) return true;
-                  if (l.includes('collecting ৳200')) return true;
+                  if (l.includes('collecting ৳200') || l.includes('বোনাস')) return true;
                   if (l.includes('passing go')) return true;
-                  if (l.includes('jail')) return true;
-                  if (l.includes('bankrupt')) return true;
-                  if (l.includes('trade')) return true;
+                  if (l.includes('jail') || l.includes('জেল')) return true;
+                  if (l.includes('bankrupt') || l.includes('দেউলিয়া')) return true;
+                  if (l.includes('trade') || l.includes('চুক্তি')) return true;
                   if (l.includes('swapped')) return true;
-                  if (l.includes('mortgage')) return true;
+                  if (l.includes('mortgage') || l.includes('বন্ধক')) return true;
                   if (l.includes('game over')) return true;
                   if (l.includes('winner')) return true;
-                  if (l.includes('built')) return true;
-                  if (l.includes('broke')) return true;
-                  if (l.includes('liquidated')) return true;
-                  if (l.includes('auction')) return true;
+                  if (l.includes('built') || l.includes('তৈরি')) return true;
+                  if (l.includes('broke') || l.includes('ভেঙে')) return true;
+                  if (l.includes('liquidated') || l.includes('বিক্রি')) return true;
+                  if (l.includes('auction') || l.includes('নিলাম')) return true;
+                  if (l.includes('ভাগ্য পরীক্ষা') || l.includes('গুপ্তধন')) return true;
 
                   // Tactical Tags
                   if (l.includes('[acquire]')) return true;
