@@ -133,8 +133,10 @@ function CopyIcon({ size = 12, className = "" }) {
   );
 }
 
-function PlayerToken({ player, gameState, userId }: { player: Player; gameState: GameState; userId: string }) {
-  const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
+function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: Player; gameState: GameState; userId: string; hoveredTileIndex: number | null }) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+  const [isVisible, setIsVisible] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [displayPosition, setDisplayPosition] = useState(player.position);
   const [displayBalance, setDisplayBalance] = useState(player.balance);
 
@@ -188,8 +190,8 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
 
         setStyle({
           transform: `translate(${left + tileRect.width / 2 + offsetX}px, ${top + tileRect.height / 2 + offsetY}px) translate(-50%, -50%)`,
-          opacity: 1,
         });
+        setIsVisible(true);
       }
     };
 
@@ -231,9 +233,16 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
   }, [player.balance, gameState]);
 
   const isFlipped = displayPosition > 10 && displayPosition < 30;
+  const isParentTileHovered = hoveredTileIndex === player.position;
+  const targetOpacity = !isVisible ? 0 : isHovered ? 1 : isParentTileHovered ? 0.3 : player.inJail ? 0.4 : 1;
 
   return (
-    <div style={{ ...style }} className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-40 pointer-events-none">
+    <div 
+      style={{ ...style, opacity: targetOpacity }} 
+      className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-[70] pointer-events-auto"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div
         style={{
           backgroundColor: player.avatar,
@@ -261,63 +270,6 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
   );
 }
 
-function AuctionUI({ auction, tile, highestBidder, onBid, myPlayer }: any) {
-  const [timeLeft, setTimeLeft] = useState(0);
-
-  useEffect(() => {
-    const updateTimer = () => {
-      const remaining = Math.max(0, Math.ceil((auction.endTime - Date.now()) / 1000));
-      setTimeLeft(remaining);
-    };
-    updateTimer();
-    const interval = setInterval(updateTimer, 500);
-    return () => clearInterval(interval);
-  }, [auction.endTime]);
-
-  return (
-    <div className="flex flex-col items-center text-center w-full max-w-[280px] md:max-w-sm pointer-events-auto">
-      <div className="text-lg md:text-xl font-sans font-bold text-white mb-1 uppercase tracking-widest">{tile?.name}</div>
-      <div className="text-xs md:text-sm text-slate-300 mb-4 font-mono">Starting Price: ৳{auction.currentBid}</div>
-
-      <div className="text-4xl md:text-5xl font-mono font-black text-white mb-3 tracking-widest shadow-neon-blue rounded-lg px-4 py-2 bg-slate-900/50 border border-cyber-blue/30">
-        00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
-      </div>
-
-      <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-4 w-full mb-4 shadow-2xl">
-        <div className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mb-1 font-orbitron">Current Bid</div>
-        <div className="text-3xl md:text-4xl font-black text-emerald-400 mb-3 drop-shadow-md">৳{auction.currentBid}</div>
-        <div className="text-xs md:text-sm font-bold text-slate-200 flex justify-center items-center gap-2">
-          {highestBidder ? (
-            <>
-              <span className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: highestBidder.avatar }} />
-              {highestBidder.name}
-            </>
-          ) : (
-            <span className="text-slate-500 italic font-mono">No bids yet</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-3 md:gap-4 w-full justify-center">
-        <button
-          onClick={() => onBid(10)}
-          disabled={myPlayer?.balance < auction.currentBid + 10 || auction.sellerId === myPlayer?.id}
-          className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-sm md:text-base py-3 px-2 rounded-xl flex-1 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          +৳10
-        </button>
-        <button
-          onClick={() => onBid(100)}
-          disabled={myPlayer?.balance < auction.currentBid + 100 || auction.sellerId === myPlayer?.id}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-sm md:text-base py-3 px-2 rounded-xl flex-1 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          +৳100
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function Board({
   gameState,
   boardTiles,
@@ -339,6 +291,7 @@ export default function Board({
   onDevRollDice,
   onPlaceBid,
 }: BoardProps) {
+  const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [devMode, setDevMode] = useState<boolean>(false);
   const [selectedDevTile, setSelectedDevTile] = useState<number | null>(null);
@@ -614,6 +567,8 @@ export default function Board({
               id={`tile-${tile.index}`}
               key={tile.index}
               style={{ gridRow: coords.row, gridColumn: coords.col }}
+              onMouseEnter={() => setHoveredTileIndex(tile.index)}
+              onMouseLeave={() => setHoveredTileIndex(null)}
               onClick={() => {
                 if (devMode && isMyTurn) {
                   setSelectedDevTile(prev => prev === tile.index ? null : tile.index);
@@ -647,6 +602,12 @@ export default function Board({
                         <>
                           {tile.name}
                           {tile.index === 0 && <div className="text-emerald-400 mt-1 md:mt-1.5 font-black text-[12px] md:text-[16px]">GO</div>}
+                          {tile.type === 'FREE_PARKING' && gameState.settings?.freeParkingCashPool && (
+                            <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse">
+                              <MoneyBagIcon size={12} className="mr-0.5" />
+                              ৳{gameState.freeParkingPool || 0}
+                            </div>
+                          )}
                         </>
                       );
                     }
@@ -700,15 +661,19 @@ export default function Board({
                 <div className="absolute inset-0 z-50 pointer-events-none">
                   {isOwned && propState.ownerId === userId ? (
                     <div className={`absolute ${hoverPositionClass} flex flex-wrap justify-center items-center gap-1.5 md:gap-2 pointer-events-auto transform scale-50 opacity-0 group-hover:scale-125 group-hover:opacity-100 transition-all duration-200 origin-center z-[100] ${tile.type === 'STREET' ? 'w-[60px] md:w-[80px]' : 'w-auto flex-nowrap'}`}>
-                      <button title={propState?.isMortgaged ? 'Unmortgage' : 'Mortgage'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                        {propState?.isMortgaged ? 'UNMTG' : 'MTG'}
-                      </button>
+                      {gameState.settings?.allowMortgage !== false && (
+                        <button title={propState?.isMortgaged ? 'Unmortgage' : 'Mortgage'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                          {propState?.isMortgaged ? 'UNMTG' : 'MTG'}
+                        </button>
+                      )}
                       <button title="Sell Property" onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
                         SELL
                       </button>
-                      <button title="Auction Property" onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-purple-500 hover:bg-purple-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                        AUC
-                      </button>
+                      {(!propState || !(propState as any).auctionFailed) && (
+                        <button title="Auction Property" onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-purple-500 hover:bg-purple-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                          AUC
+                        </button>
+                      )}
                       {tile.type === 'STREET' && (
                         <>
                           <button title="Build House" onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-blue-500 hover:bg-blue-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
@@ -816,7 +781,7 @@ export default function Board({
                       </button>
                     )}
 
-                    {canBuyCurrent && (
+                    {canBuyCurrent && gameState.settings?.allowUnpurchasedAuction !== false && !(gameState.properties[currentTileIndex] as any)?.auctionFailed && (
                       <button
                         onClick={() => onAuctionProperty?.(currentTileIndex)}
                         className="flex-1 min-w-[60px] sm:flex-none sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
@@ -836,7 +801,7 @@ export default function Board({
                 )}
 
                 {/* get free for $50 fine option */}
-                {activePlayer?.inJail && gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
+                {activePlayer?.inJail && gameState.turnStatus === 'MUST_ACT_OR_END' && isActionReady && (
                   <div className="flex gap-2 w-[80%] sm:w-auto mt-2 flex-wrap justify-center">
                     <button
                       onClick={onPayJailFine}
@@ -862,37 +827,6 @@ export default function Board({
 
           {/* Real-time Activity History Log — filtered to important events only */}
           <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0 group">
-            <button
-              onClick={() => {
-                const importantLogs = logs.filter(log => {
-                  const l = log.toLowerCase();
-                  if (l.includes('bought') || l.includes('কিনে') || l.includes('অধিগ্রহণ')) return true;
-                  if (l.includes('paid rent') || l.includes('ভাড়া')) return true;
-                  if (l.includes('paid ৳') || l.includes('জরিমানা') || l.includes('কর')) return true;
-                  if (l.includes('tax')) return true;
-                  if (l.includes('collecting ৳200') || l.includes('বোনাস')) return true;
-                  if (l.includes('passing go')) return true;
-                  if (l.includes('jail') || l.includes('জেল')) return true;
-                  if (l.includes('bankrupt') || l.includes('দেউলিয়া')) return true;
-                  if (l.includes('trade') || l.includes('চুক্তি')) return true;
-                  if (l.includes('swapped')) return true;
-                  if (l.includes('mortgage') || l.includes('বন্ধক')) return true;
-                  if (l.includes('game over')) return true;
-                  if (l.includes('winner')) return true;
-                  if (l.includes('built') || l.includes('তৈরি')) return true;
-                  if (l.includes('broke') || l.includes('ভেঙে')) return true;
-                  if (l.includes('liquidated') || l.includes('বিক্রি')) return true;
-                  if (l.includes('auction') || l.includes('নিলাম')) return true;
-                  if (l.includes('ভাগ্য পরীক্ষা') || l.includes('গুপ্তধন')) return true;
-                  return false;
-                });
-                navigator.clipboard.writeText(importantLogs.join('\n'));
-              }}
-              className="absolute top-1 right-2 z-30 p-1.5 md:p-2 bg-slate-800/80 text-slate-400 hover:text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm border border-white/10 shadow-lg"
-              title="Copy Logs"
-            >
-              <CopyIcon size={14} />
-            </button>
             <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2.5 scrollbar-thin select-none max-h-[120px] pb-10 text-[12px] md:text-[13px]">
               {(() => {
                 // Whitelist: only show truly important game events
@@ -953,51 +887,10 @@ export default function Board({
         {/* Dynamic Smooth Player Tokens Overlay */}
         {Object.values(gameState.players).map((p) => {
           if (p.isBankrupt) return null;
-          return <PlayerToken key={p.id} player={p} gameState={gameState} userId={userId} />;
+          return <PlayerToken key={p.id} player={p} gameState={gameState} userId={userId} hoveredTileIndex={hoveredTileIndex} />;
         })}
 
-        {/* Active Auction Overlay */}
-        {(gameState as any).activeAuction && (() => {
-          const auction = (gameState as any).activeAuction;
-          const tile = boardTiles[auction.propertyIndex];
-          const highestBidder = auction.highestBidderId ? gameState.players[auction.highestBidderId] : null;
 
-          const handleBid = (amount: number) => {
-            if (onPlaceBid) onPlaceBid(amount);
-            else window.dispatchEvent(new CustomEvent('place_bid', { detail: amount }));
-          };
-
-          const getGroupHexColor = (group: string | undefined): string => {
-            switch (group) {
-              case 'Brown': return '#B1EA40';
-              case 'Light Blue': return '#3FCEEB';
-              case 'Pink': return '#3FEB92';
-              case 'Orange': return '#EBA03F';
-              case 'Red': return '#FF9696';
-              case 'Yellow': return '#96FFFD';
-              case 'Green': return '#C396FF';
-              case 'Dark Blue': return '#FF96C9';
-              default: return '#fbbf24'; // amber-400 fallback
-            }
-          };
-
-          const tileColor = getGroupHexColor(tile?.group);
-
-          return (
-            <div
-              className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-2xl border"
-              style={{ borderColor: `${tileColor}4D`, boxShadow: `0 0 40px ${tileColor}33` }}
-            >
-              <h2
-                className="text-2xl md:text-3xl font-orbitron font-extrabold mb-4 animate-pulse uppercase"
-                style={{ color: tileColor, textShadow: `0 0 15px ${tileColor}80` }}
-              >
-                Auction Active!
-              </h2>
-              <AuctionUI auction={auction} tile={tile} highestBidder={highestBidder} onBid={handleBid} myPlayer={myPlayer} />
-            </div>
-          );
-        })()}
       </div>
 
       {/* Tile Detail Modal Overlay */}

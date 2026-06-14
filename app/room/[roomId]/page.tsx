@@ -10,6 +10,7 @@ import ChatBox from '../../../components/ChatBox';
 import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
 import CardReveal from '../../../components/CardReveal';
+import AuctionModal from '../../../components/AuctionModal';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -70,7 +71,8 @@ function GameRoomContent() {
     updateAppearance,
     resolveCard,
     sellPardonCard,
-    usePardonCard
+    usePardonCard,
+    placeBid
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
@@ -393,6 +395,44 @@ function GameRoomContent() {
                     className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                   />
                 </div>
+
+                {/* Unpurchased Property Auction Switch */}
+                <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
+                      UNPURCHASED PROPERTY AUCTION
+                    </label>
+                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
+                      If disabled, players can only buy or end turn. The auction option on unpurchased property is removed.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.allowUnpurchasedAuction}
+                    disabled={!isHost}
+                    onChange={(e) => handleSettingChange('allowUnpurchasedAuction', e.target.checked)}
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                  />
+                </div>
+
+                {/* Property Mortgage Switch */}
+                <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
+                      PROPERTY MORTGAGE
+                    </label>
+                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
+                      Allow players to mortgage their owned properties to the bank for emergency funds.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.allowMortgage}
+                    disabled={!isHost}
+                    onChange={(e) => handleSettingChange('allowMortgage', e.target.checked)}
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                  />
+                </div>
               </div>
             </div>
 
@@ -534,6 +574,16 @@ function GameRoomContent() {
           userId={userId}
           onResolve={resolveCard}
           onSellPardon={sellPardonCard}
+        />
+      )}
+
+      {/* Auction Modal Overlay */}
+      {gameState?.activeAuction && (
+        <AuctionModal
+          gameState={gameState}
+          boardTiles={boardTiles}
+          userId={userId}
+          onPlaceBid={placeBid}
         />
       )}
 

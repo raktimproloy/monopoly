@@ -56,20 +56,20 @@ const createDiceTextures = () => {
   return textures;
 };
 
-// Local vector mapping for standard box geometry faces:
-// index 0: +X (Right) -> 1
-// index 1: -X (Left)  -> 6
-// index 2: +Y (Top)   -> 3
-// index 3: -Y (Bottom)-> 4
-// index 4: +Z (Front) -> 5
-// index 5: -Z (Back)  -> 2
+// Local vector mapping for standard box geometry faces based on texture array:
+// index 0: +X (Right)  -> 1
+// index 1: -X (Left)   -> 2
+// index 2: +Y (Top)    -> 3
+// index 3: -Y (Bottom) -> 4
+// index 4: +Z (Front)  -> 5
+// index 5: -Z (Back)   -> 6
 const localVectors: Record<number, THREE.Vector3> = {
   1: new THREE.Vector3(1, 0, 0),
-  2: new THREE.Vector3(0, 0, -1),
+  2: new THREE.Vector3(-1, 0, 0),
   3: new THREE.Vector3(0, 1, 0),
   4: new THREE.Vector3(0, -1, 0),
   5: new THREE.Vector3(0, 0, 1),
-  6: new THREE.Vector3(-1, 0, 0)
+  6: new THREE.Vector3(0, 0, -1)
 };
 
 interface DiceModelProps {
