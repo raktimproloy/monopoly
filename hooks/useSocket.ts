@@ -239,6 +239,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devRollDice = useCallback((d1: number, d2: number) => {
+    console.log('[Socket Emit] dev_roll_dice', { playerId: userId, d1, d2 });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_roll_dice', { playerId: userId, d1, d2 });
+    }
+  }, [userId]);
+
   const addBot = useCallback(() => {
     console.log('[Socket Emit] add_bot');
     if (socketRef.current) {
@@ -357,6 +364,7 @@ export function useSocket(
     sellProperty,
     auctionProperty,
     teleportPlayer,
+    devRollDice,
     placeBid,
     addBot,
     updateAppearance,

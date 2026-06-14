@@ -65,6 +65,7 @@ function GameRoomContent() {
     sellProperty,
     auctionProperty,
     teleportPlayer,
+    devRollDice,
     addBot,
     updateAppearance,
     resolveCard,
@@ -562,6 +563,7 @@ function GameRoomContent() {
             onSellProperty={sellProperty}
             onAuctionProperty={auctionProperty}
             onTeleportPlayer={teleportPlayer}
+            onDevRollDice={devRollDice}
           />
         </section>
 

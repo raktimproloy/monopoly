@@ -22,6 +22,7 @@ interface BoardProps {
   onSellProperty?: (tileIndex: number) => void;
   onAuctionProperty?: (tileIndex: number) => void;
   onTeleportPlayer?: (targetTileIndex: number) => void;
+  onDevRollDice?: (d1: number, d2: number) => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -335,12 +336,15 @@ export default function Board({
   onSellProperty,
   onAuctionProperty,
   onTeleportPlayer,
+  onDevRollDice,
   onPlaceBid,
 }: BoardProps) {
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [devMode, setDevMode] = useState<boolean>(false);
   const [selectedDevTile, setSelectedDevTile] = useState<number | null>(null);
   const [teleportTarget, setTeleportTarget] = useState<number>(0);
+  const [devD1, setDevD1] = useState<number>(1);
+  const [devD2, setDevD2] = useState<number>(1);
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
@@ -474,21 +478,49 @@ export default function Board({
 
     {/* Dev Teleport UI */}
     {devMode && isMyTurn && (
-      <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex items-center gap-2 p-2 bg-slate-900/90 backdrop-blur-md border border-purple-500/50 rounded-lg shadow-2xl animate-fade-in">
-        <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase">Target:</span>
-        <input 
-          type="number" 
-          min="0" max="39" 
-          value={teleportTarget} 
-          onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)} 
-          className="w-16 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
-        />
-        <button 
-          onClick={() => onTeleportPlayer?.(teleportTarget)}
-          className="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95"
-        >
-          Teleport
-        </button>
+        <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex flex-col gap-2 p-2 bg-slate-900/90 backdrop-blur-md border border-purple-500/50 rounded-lg shadow-2xl animate-fade-in">
+          {/* Teleport Area */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Target:</span>
+            <input 
+              type="number" 
+              min="0" max="39" 
+              value={teleportTarget} 
+              onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)} 
+              className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+            />
+            <button 
+              onClick={() => onTeleportPlayer?.(teleportTarget)}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95 flex-1"
+            >
+              Teleport
+            </button>
+          </div>
+          
+          {/* Manual Dice Area */}
+          <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Roll:</span>
+            <input 
+              type="number" min="1" max="6" 
+              value={devD1} onChange={(e) => setDevD1(parseInt(e.target.value) || 1)} 
+              className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+            />
+            <input 
+              type="number" min="1" max="6" 
+              value={devD2} onChange={(e) => setDevD2(parseInt(e.target.value) || 1)} 
+              className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+            />
+            <button 
+              onClick={() => {
+                setIsActionReady(false);
+                onDevRollDice?.(devD1, devD2);
+                setTimeout(() => setIsActionReady(true), 2200);
+              }}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95 flex-1"
+            >
+              Force Roll
+            </button>
+          </div>
       </div>
     )}
 
