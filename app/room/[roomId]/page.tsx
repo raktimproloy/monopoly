@@ -9,7 +9,6 @@ import ChatBox from '../../../components/ChatBox';
 import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
-import ResizableSidebar from '../../../components/ResizableSidebar';
 import { Suspense } from 'react';
 
 function GameRoomContent() {
@@ -62,7 +61,8 @@ function GameRoomContent() {
     buildHouse,
     sellHouse,
     sellProperty,
-    auctionProperty
+    auctionProperty,
+    addBot
   } = useSocket(roomId, playerName, userId, avatar);
 
   const [guestName, setGuestName] = useState('');
@@ -299,10 +299,18 @@ function GameRoomContent() {
 
           {/* LEFT: Connected Players Slots */}
           <section className="w-80 shrink-0 flex flex-col gap-4 h-full glass-panel p-4 relative">
-            <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-2 mb-2">
-              <Users size={14} className="text-cyber-purple" />
-              CONNECTED NODES ({players.length})
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-2">
+                <Users size={14} className="text-cyber-purple" />
+                CONNECTED NODES ({players.length})
+              </h3>
+              <button
+                onClick={addBot}
+                className="px-2 py-1 bg-[#19162A]/80 border border-cyber-purple/50 text-cyber-purple hover:text-white hover:bg-cyber-purple/30 rounded text-[9px] font-orbitron font-bold tracking-wider transition-all"
+              >
+                + ADD BOT
+              </button>
+            </div>
 
             <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
               {players.map((p) => {
@@ -451,27 +459,11 @@ function GameRoomContent() {
       )}
 
       {/* Main UI Layout (Board-priority 3-column system) */}
-      <div className="flex-1 w-full p-3 overflow-hidden flex gap-3 min-h-0 relative z-10">
-
-        {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
-        <section className="w-72 shrink flex flex-col gap-3 h-full min-w-[220px] overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <PropertyManager
-              gameState={gameState}
-              boardTiles={boardTiles}
-              userId={userId}
-              onMortgageProperty={mortgageProperty}
-              onUnmortgageProperty={unmortgageProperty}
-            />
-          </div>
-          <div className="h-56 shrink-0">
-            <ChatBox logs={logs} />
-          </div>
-        </section>
+      <div className="flex-1 w-full p-2 md:p-3 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row gap-3 min-h-0 relative z-10">
 
         {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas — highest priority) */}
-        {/* CRITICAL: flex-1 AND min-w-0 prevent Flexbox squeeze lock so the board can shrink when sidebar expands */}
-        <section className="flex-1 flex items-center justify-center min-w-0 h-full shrink-0">
+        {/* CRITICAL: xl:flex-1 AND min-w-0 prevent Flexbox squeeze lock so the board can shrink when sidebar expands on desktop. shrink-0 on mobile prevents height collapse. */}
+        <section className="order-1 xl:order-2 shrink-0 xl:shrink xl:flex-1 w-full xl:w-auto block xl:flex xl:items-center xl:justify-center min-w-0 h-auto xl:h-full pt-2 xl:pt-0">
           <Board
             gameState={gameState}
             boardTiles={boardTiles}
@@ -493,9 +485,25 @@ function GameRoomContent() {
           />
         </section>
 
+        {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
+        <section className="order-2 xl:order-1 w-full xl:w-72 shrink-0 flex flex-col gap-3 h-[60vh] xl:h-full xl:min-w-[220px] overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <PropertyManager
+              gameState={gameState}
+              boardTiles={boardTiles}
+              userId={userId}
+              onMortgageProperty={mortgageProperty}
+              onUnmortgageProperty={unmortgageProperty}
+            />
+          </div>
+          <div className="h-56 shrink-0">
+            <ChatBox logs={logs} />
+          </div>
+        </section>
+
         {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
-        <ResizableSidebar defaultWidth={480} minWidth={220} maxWidth={800}>
-          <div className="flex flex-col gap-3 h-full w-full select-none overflow-hidden">
+        <div className="order-3 xl:order-3 w-full xl:w-[380px] shrink-0 h-[60vh] xl:h-full flex flex-col gap-3">
+          <div className="flex flex-col gap-3 h-full w-full select-none overflow-hidden bg-slate-900/40 xl:bg-[#0B0E14] xl:border-l border-slate-800 rounded-xl xl:rounded-none p-3 xl:p-0 xl:pl-3">
             {/* Top Actions: Votekick and Bankrupt */}
             <div className="flex justify-between items-center shrink-0">
             <button
@@ -543,7 +551,7 @@ function GameRoomContent() {
             />
           </div>
           </div>
-        </ResizableSidebar>
+        </div>
       </div>
     </main>
   );

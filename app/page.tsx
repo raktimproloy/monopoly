@@ -136,6 +136,31 @@ export default function Lobby() {
           </button>
         </form>
       </div>
+
+      {/* Clear DB Button */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+        <button
+          onClick={async () => {
+            if (window.confirm("WARNING: This will forcefully close all active game servers and wipe the database. Continue?")) {
+              try {
+                const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+                const res = await fetch(`${baseUrl}/api/clear-db`, { method: 'POST' });
+                if (res.ok) {
+                  alert("Servers shut down and database cleared successfully.");
+                } else {
+                  alert("Failed to clear database.");
+                }
+              } catch (err) {
+                console.error(err);
+                alert("Error connecting to server to clear DB.");
+              }
+            }
+          }}
+          className="px-6 py-2 bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-kalpurush tracking-widest uppercase hover:bg-red-900/80 hover:text-white transition-all rounded shadow-[0_0_15px_rgba(239,68,68,0.3)] active:scale-95 cursor-pointer"
+        >
+          SHUTDOWN SERVERS & CLEAR DB
+        </button>
+      </div>
     </div>
   );
 }

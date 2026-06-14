@@ -86,7 +86,7 @@ const getTileFlag = (name: string, group?: string) => {
   if (n.includes('tokyo') || n.includes('osaka') || n.includes('kyoto') || n.includes('japan')) return '🇯🇵';
   if (n.includes('madrid') || n.includes('barcelona') || n.includes('spain')) return '🇪🇸';
   if (n.includes('rio') || n.includes('sao paulo') || n.includes('brazil')) return '🇧🇷';
-  
+
   if (group) {
     switch (group) {
       case 'Brown': return '🇧🇷';
@@ -134,7 +134,7 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
   const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0 });
   const [displayPosition, setDisplayPosition] = useState(player.position);
   const [displayBalance, setDisplayBalance] = useState(player.balance);
-  
+
   const [floaters, setFloaters] = useState<{ id: number; diff: number }[]>([]);
   const prevBalance = useRef(player.balance);
   const prevGameState = useRef<GameState>(gameState);
@@ -212,7 +212,7 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
       const prevActivePos = prevState.players[currentActiveId]?.position;
       const newActivePos = gameState.players[currentActiveId]?.position;
       const activeMoved = prevActivePos !== undefined && prevActivePos !== newActivePos;
-      
+
       const delay = activeMoved ? 2200 : 0; // Wait for dice (1.5s) + move (0.7s)
 
       setTimeout(() => {
@@ -232,19 +232,19 @@ function PlayerToken({ player, gameState, userId }: { player: Player; gameState:
   return (
     <div style={{ ...style }} className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-40 pointer-events-none">
       <div
-        style={{ 
+        style={{
           backgroundColor: player.avatar,
-          boxShadow: isCurrentTurn 
-            ? `0 0 20px ${player.avatar}, inset 0 -2px 6px rgba(0,0,0,0.3)` 
-            : `0 4px 10px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)` 
+          boxShadow: isCurrentTurn
+            ? `0 0 20px ${player.avatar}, inset 0 -2px 6px rgba(0,0,0,0.3)`
+            : `0 4px 10px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)`
         }}
-        className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center overflow-hidden ${isCurrentTurn ? 'ring-2 ring-white/80 animate-player-pulse scale-110 z-50' : 'shadow-lg z-40'}`}
+        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center overflow-hidden ${isCurrentTurn ? 'ring-2 ring-white/80 animate-player-pulse scale-110 z-50' : 'shadow-lg z-40'}`}
         title={player.name}
       >
-        <img 
-          src="/images/rail-token.png" 
-          alt={`${player.name} Token`} 
-          className={`w-full h-full object-contain p-1.5 md:p-2 drop-shadow-sm transform transition-transform duration-300 ${isFlipped ? '-scale-x-100' : ''}`} 
+        <img
+          src="/images/rail-token.png"
+          alt={`${player.name} Token`}
+          className={`w-full h-full object-contain p-1 drop-shadow-sm transform transition-transform duration-300 ${isFlipped ? '-scale-x-100' : ''}`}
         />
       </div>
 
@@ -275,11 +275,11 @@ function AuctionUI({ auction, tile, highestBidder, onBid, myPlayer }: any) {
     <div className="flex flex-col items-center text-center w-full max-w-[280px] md:max-w-sm pointer-events-auto">
       <div className="text-lg md:text-xl font-sans font-bold text-white mb-1 uppercase tracking-widest">{tile?.name}</div>
       <div className="text-xs md:text-sm text-slate-300 mb-4 font-mono">Starting Price: ৳{auction.currentBid}</div>
-      
+
       <div className="text-4xl md:text-5xl font-mono font-black text-white mb-3 tracking-widest shadow-neon-blue rounded-lg px-4 py-2 bg-slate-900/50 border border-cyber-blue/30">
         00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
       </div>
-      
+
       <div className="bg-slate-900/90 border border-slate-700 rounded-xl p-4 w-full mb-4 shadow-2xl">
         <div className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mb-1 font-orbitron">Current Bid</div>
         <div className="text-3xl md:text-4xl font-black text-emerald-400 mb-3 drop-shadow-md">৳{auction.currentBid}</div>
@@ -335,6 +335,7 @@ export default function Board({
 }: BoardProps) {
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
   const [devMode, setDevMode] = useState<boolean>(false);
+  const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
   const myPlayer = gameState.players[userId];
@@ -373,9 +374,9 @@ export default function Board({
   const renderLogWithAvatars = (logText: string) => {
     const players = Object.values(gameState.players);
     const sortedPlayers = [...players].sort((a, b) => b.name.length - a.name.length);
-    
+
     let parts = [{ isPlayer: false, isTile: false, text: logText, player: null as any, tile: null as any }];
-    
+
     // Split by player names
     for (const player of sortedPlayers) {
       const newParts: typeof parts = [];
@@ -384,7 +385,7 @@ export default function Board({
           newParts.push(part);
           continue;
         }
-        
+
         const segments = part.text.split(player.name);
         for (let i = 0; i < segments.length; i++) {
           if (segments[i] !== '') {
@@ -407,7 +408,7 @@ export default function Board({
           newParts.push(part);
           continue;
         }
-        
+
         const segments = part.text.split(tile.name);
         for (let i = 0; i < segments.length; i++) {
           if (segments[i] !== '') {
@@ -450,26 +451,28 @@ export default function Board({
   };
 
   return (
-    <div className="relative aspect-square w-full max-w-[calc(100vh-32px)] max-h-full mx-auto bg-[#0B0E14] p-2 border border-slate-800/80 rounded-3xl shadow-2xl flex flex-col justify-between">
+    <div
+      className="relative mx-auto bg-[#0B0E14] p-1.5 md:p-2 border border-slate-800/80 rounded-xl md:rounded-3xl shadow-2xl flex flex-col justify-between w-full xl:w-auto h-auto xl:h-full max-w-full max-h-[calc(100vh-24px)]"
+      style={{ aspectRatio: '1 / 1' }}
+    >
       {/* Dev Mode Toggle Button */}
       <button
         onClick={() => setDevMode(!devMode)}
-        className={`absolute -top-3 left-4 md:-top-4 md:left-6 z-40 text-[9px] md:text-[11px] font-orbitron font-extrabold px-2.5 py-1 rounded-full shadow-lg transition-all border ${
-          devMode 
-            ? 'bg-purple-600 text-white border-purple-400 shadow-purple-500/50' 
-            : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300'
-        }`}
+        className={`absolute -top-3 left-4 md:-top-4 md:left-6 z-40 text-[9px] md:text-[11px] font-orbitron font-extrabold px-2.5 py-1 rounded-full shadow-lg transition-all border ${devMode
+          ? 'bg-purple-600 text-white border-purple-400 shadow-purple-500/50'
+          : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300'
+          }`}
       >
         DEV: {devMode ? 'ON' : 'OFF'}
       </button>
 
       {/* 11x11 Grid Wrapper */}
-      <div 
+      <div
         id="board-container"
         className="grid gap-1 w-full h-full"
         style={{
-          gridTemplateColumns: '1.6fr repeat(9, 1fr) 1.6fr',
-          gridTemplateRows: '1.6fr repeat(9, 1fr) 1.6fr'
+          gridTemplateColumns: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)',
+          gridTemplateRows: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)'
         }}
       >
         {boardTiles.map((tile) => {
@@ -495,7 +498,7 @@ export default function Board({
               if (owner) {
                 ownerAvatar = owner.avatar;
               }
-              
+
               if (!isMortgaged && tile.rent) {
                 if (tile.type === 'STREET') {
                   currentRent = tile.rent[houses] || 0;
@@ -557,18 +560,17 @@ export default function Board({
                 setSelectedTileIndex(tile.index);
                 onTileClick(tile.index);
               }}
-            className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible z-10 hover:z-[60] ${
-                orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
-              }`}
+              className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible z-10 hover:z-[60] ${orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
+                }`}
             >
               {/* Glassmorphism Inner Layout Wrapper */}
               <div className={`w-full h-full flex ${orientation === 'BOTTOM' ? 'flex-col-reverse' : 'flex-col'} items-center justify-between py-1.5 md:py-2 ${['LEFT', 'RIGHT'].includes(orientation) ? 'px-[10px] md:px-[16px]' : 'px-0.5'}`}>
-                
+
                 {/* 1. Price (Outer Edge) — hidden when owned */}
                 {orientation !== 'CORNER' && (
                   <div className="text-[7.5px] md:text-[10px] xl:text-[12px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[13px] md:h-[18px] w-full z-20 leading-none mt-0.5">
                     {!isOwned && tile.price && (
-                      <span className="bg-slate-950/80 border border-slate-500/50 px-1.5 md:px-2 py-[2px] rounded shadow-md backdrop-blur-sm flex items-center justify-center">
+                      <span className="drop-shadow-md text-slate-200 flex items-center justify-center">
                         ৳{tile.price}
                       </span>
                     )}
@@ -607,12 +609,11 @@ export default function Board({
               {tile.group && orientation !== 'CORNER' && (
                 <div className={`${colorIndicatorClass} ${getGroupColor(tile.group)} flex items-center justify-center overflow-hidden`}>
                   {divisionName && (
-                    <span 
-                      className={`${getGroupTextColor(tile.group)} font-bold whitespace-nowrap leading-none ${
-                        orientation === 'LEFT' ? '-rotate-90 text-[5.5px] md:text-[8px]' : 
-                        orientation === 'RIGHT' ? 'rotate-90 text-[5.5px] md:text-[8px]' : 
-                        'text-[5.5px] md:text-[8px]'
-                      }`}
+                    <span
+                      className={`${getGroupTextColor(tile.group)} font-bold whitespace-nowrap leading-none ${orientation === 'LEFT' ? '-rotate-90 text-[5.5px] md:text-[8px]' :
+                        orientation === 'RIGHT' ? 'rotate-90 text-[5.5px] md:text-[8px]' :
+                          'text-[5.5px] md:text-[8px]'
+                        }`}
                     >
                       {divisionName}
                     </span>
@@ -660,9 +661,9 @@ export default function Board({
                   ) : isOwned && propState.ownerId !== userId ? (
                     <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
                       {propState.isMortgaged ? 'Mortgaged' : (
-                        ['STREET', 'RAILROAD'].includes(tile.type) ? `Rent: ৳${currentRent}` : 
-                        tile.type === 'UTILITY' ? 'Dice x Rent' : 
-                        'Owned'
+                        ['STREET', 'RAILROAD'].includes(tile.type) ? `Rent: ৳${currentRent}` :
+                          tile.type === 'UTILITY' ? 'Dice x Rent' :
+                            'Owned'
                       )}
                     </div>
                   ) : null}
@@ -674,7 +675,7 @@ export default function Board({
 
         {/* Center Canvas Area - OPEN DIRECT DESIGN (No extra card framing overlay borders) */}
         <div className="col-start-2 col-end-11 row-start-2 row-end-11 flex flex-col items-center justify-center p-4 rounded-2xl m-3 relative overflow-hidden gap-3">
-          
+
           {/* 3D Physics Dice Display - Centered wrapper with standard height constraint */}
           <div className="w-full h-40 md:h-48 flex items-center justify-center relative shrink-0 transform-gpu perspective-1000">
             <DiceManager gameState={gameState} />
@@ -695,7 +696,7 @@ export default function Board({
             ) : (
               <div className="flex gap-4 items-center justify-center w-full">
                 {/* Extreme Case: Negative Balance Check */}
-                {gameState.turnStatus === 'BANKRUPTCY_PENDING' && (
+                {gameState.turnStatus === 'BANKRUPTCY_PENDING' && isActionReady && (
                   <div className="flex flex-col items-center gap-2 w-full px-4 animate-fade-in">
                     <span className="text-red-500 font-bold uppercase tracking-wider text-sm animate-pulse text-center text-shadow-neon-purple">
                       DEBT WARNING: NEGATIVE BALANCE
@@ -705,7 +706,7 @@ export default function Board({
                     </span>
                     <button
                       onClick={() => window.dispatchEvent(new CustomEvent('declare_bankruptcy'))}
-                      className="bg-red-600/80 border border-red-500 hover:bg-red-500 text-white font-orbitron font-extrabold text-[10px] md:text-xs px-4 py-2 rounded-xl mt-1 shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] cursor-pointer"
+                      className="bg-red-600/80 border border-red-500 hover:bg-red-500 text-white font-orbitron font-extrabold text-[9px] md:text-[11px] px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl mt-1 shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] cursor-pointer w-full sm:w-auto"
                     >
                       Declare Bankruptcy
                     </button>
@@ -713,57 +714,59 @@ export default function Board({
                 )}
 
                 {/* Roll the dice OR Conclude Turn */}
-                {gameState.turnStatus === 'MUST_ROLL' && (
+                {gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
                   <button
-                    onClick={onRollDice}
-                    className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-sm md:text-base px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                    onClick={() => {
+                      setIsActionReady(false);
+                      onRollDice();
+                      setTimeout(() => setIsActionReady(true), 2200);
+                    }}
+                    className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
                   >
-                    <DiceIcon size={16} className="stroke-white" />
+                    <DiceIcon size={14} className="stroke-white" />
                     Roll the dice
                   </button>
                 )}
 
-                {gameState.turnStatus === 'MUST_ACT_OR_END' && (
-                  <div className="flex gap-2 w-full justify-center flex-wrap">
+                {gameState.turnStatus === 'MUST_ACT_OR_END' && isActionReady && (
+                  <div className="flex gap-2 w-full px-2 sm:px-0 justify-center flex-wrap">
                     {canBuyCurrent && (
                       <button
                         onClick={() => onBuyProperty(currentTileIndex)}
-                        className="bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
+                        className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
                       >
-                        <CartIcon size={14} className="stroke-white" />
-                        Buy ৳{currentTile?.price}
+                        <CartIcon size={12} className="stroke-white shrink-0" />
+                        <span className="truncate">Buy ৳{currentTile?.price}</span>
                       </button>
                     )}
-                    
-                    <button
-                      onClick={onEndTurn}
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                    >
-                      <CheckIcon size={14} className="stroke-white" />
-                      End Turn
-                    </button>
 
                     {canBuyCurrent && (
                       <button
-                        onClick={() => { 
-                          onAuctionProperty?.(currentTileIndex);
-                        }}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-orbitron font-extrabold text-[10px] sm:text-xs md:text-base px-3 sm:px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center gap-1.5 md:gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                        onClick={() => onAuctionProperty?.(currentTileIndex)}
+                        className="flex-1 min-w-[60px] sm:flex-none sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                       >
                         Auction
                       </button>
                     )}
+
+                    <button
+                      onClick={onEndTurn}
+                      className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                    >
+                      <CheckIcon size={12} className="stroke-white shrink-0" />
+                      End Turn
+                    </button>
                   </div>
                 )}
 
                 {/* get free for $50 fine option */}
-                {activePlayer?.inJail && gameState.turnStatus === 'MUST_ROLL' && (
+                {activePlayer?.inJail && gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
                   <button
                     onClick={onPayJailFine}
-                    className="bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-sm md:text-base px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                    className="bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto mt-2"
                   >
-                    <MoneyBagIcon size={16} className="stroke-white" />
-                    get free for ৳50
+                    <MoneyBagIcon size={14} className="stroke-white" />
+                    Pay ৳50 Fine
                   </button>
                 )}
               </div>
@@ -824,7 +827,7 @@ export default function Board({
                   if (l.includes('broke')) return true;
                   if (l.includes('liquidated')) return true;
                   if (l.includes('auction')) return true;
-                  
+
                   // Tactical Tags
                   if (l.includes('[acquire]')) return true;
                   if (l.includes('[transfer]')) return true;
@@ -866,65 +869,65 @@ export default function Board({
 
         {/* Active Auction Overlay */}
         {(gameState as any).activeAuction && (() => {
-              const auction = (gameState as any).activeAuction;
-              const tile = boardTiles[auction.propertyIndex];
-              const highestBidder = auction.highestBidderId ? gameState.players[auction.highestBidderId] : null;
-              
-              const handleBid = (amount: number) => {
-                if (onPlaceBid) onPlaceBid(amount);
-                else window.dispatchEvent(new CustomEvent('place_bid', { detail: amount }));
-              };
+          const auction = (gameState as any).activeAuction;
+          const tile = boardTiles[auction.propertyIndex];
+          const highestBidder = auction.highestBidderId ? gameState.players[auction.highestBidderId] : null;
 
-              const getGroupHexColor = (group: string | undefined): string => {
-                switch (group) {
-                  case 'Brown': return '#B1EA40';
-                  case 'Light Blue': return '#3FCEEB';
-                  case 'Pink': return '#3FEB92';
-                  case 'Orange': return '#EBA03F';
-                  case 'Red': return '#FF9696';
-                  case 'Yellow': return '#96FFFD';
-                  case 'Green': return '#C396FF';
-                  case 'Dark Blue': return '#FF96C9';
-                  default: return '#fbbf24'; // amber-400 fallback
-                }
-              };
+          const handleBid = (amount: number) => {
+            if (onPlaceBid) onPlaceBid(amount);
+            else window.dispatchEvent(new CustomEvent('place_bid', { detail: amount }));
+          };
 
-              const tileColor = getGroupHexColor(tile?.group);
+          const getGroupHexColor = (group: string | undefined): string => {
+            switch (group) {
+              case 'Brown': return '#B1EA40';
+              case 'Light Blue': return '#3FCEEB';
+              case 'Pink': return '#3FEB92';
+              case 'Orange': return '#EBA03F';
+              case 'Red': return '#FF9696';
+              case 'Yellow': return '#96FFFD';
+              case 'Green': return '#C396FF';
+              case 'Dark Blue': return '#FF96C9';
+              default: return '#fbbf24'; // amber-400 fallback
+            }
+          };
 
-              return (
-                <div 
-                  className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-2xl border"
-                  style={{ borderColor: `${tileColor}4D`, boxShadow: `0 0 40px ${tileColor}33` }}
-                >
-                  <h2 
-                    className="text-2xl md:text-3xl font-orbitron font-extrabold mb-4 animate-pulse uppercase"
-                    style={{ color: tileColor, textShadow: `0 0 15px ${tileColor}80` }}
-                  >
-                    Auction Active!
-                  </h2>
-                  <AuctionUI auction={auction} tile={tile} highestBidder={highestBidder} onBid={handleBid} myPlayer={myPlayer} />
-                </div>
-              );
+          const tileColor = getGroupHexColor(tile?.group);
+
+          return (
+            <div
+              className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4 rounded-2xl border"
+              style={{ borderColor: `${tileColor}4D`, boxShadow: `0 0 40px ${tileColor}33` }}
+            >
+              <h2
+                className="text-2xl md:text-3xl font-orbitron font-extrabold mb-4 animate-pulse uppercase"
+                style={{ color: tileColor, textShadow: `0 0 15px ${tileColor}80` }}
+              >
+                Auction Active!
+              </h2>
+              <AuctionUI auction={auction} tile={tile} highestBidder={highestBidder} onBid={handleBid} myPlayer={myPlayer} />
+            </div>
+          );
         })()}
       </div>
 
       {/* Tile Detail Modal Overlay */}
       {selectedTileIndex !== null && (
-        <div 
+        <div
           className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-3xl p-4 transition-opacity duration-200"
           onClick={() => setSelectedTileIndex(null)}
         >
-          <div 
+          <div
             className="bg-slate-100 rounded-xl w-full max-w-[280px] md:max-w-[320px] flex flex-col overflow-hidden shadow-2xl border-2 border-slate-300 text-slate-900 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               className="absolute top-2 right-2 z-20 p-1.5 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
               onClick={() => setSelectedTileIndex(null)}
             >
               <XIcon size={14} />
             </button>
-            
+
             {(() => {
               const selTile = boardTiles[selectedTileIndex];
               const selProp = gameState.properties[selectedTileIndex];
@@ -939,11 +942,11 @@ export default function Board({
               let groupHasHouses = false;
               let minHouses = 0;
               let maxHouses = 0;
-              
+
               if (selTile.type === 'STREET' && selTile.group && isMyProp) {
                 const groupTiles = boardTiles.filter(t => t.group === selTile.group);
                 const groupProps = groupTiles.map(t => gameState.properties[t.index]);
-                
+
                 ownsFullSet = groupProps.every(p => p && p.ownerId === userId);
                 anyMortgaged = groupProps.some(p => p && p.isMortgaged);
                 groupHasHouses = groupProps.some(p => p && p.houses > 0);
@@ -998,7 +1001,7 @@ export default function Board({
                     </div>
                   ) : (
                     <div className="bg-slate-800 w-full pt-6 pb-4 text-center border-b-2 border-slate-900">
-                       <h3 className="text-white font-extrabold text-xl md:text-2xl font-sans leading-tight px-4">{selTile.name}</h3>
+                      <h3 className="text-white font-extrabold text-xl md:text-2xl font-sans leading-tight px-4">{selTile.name}</h3>
                     </div>
                   )}
 
@@ -1026,7 +1029,7 @@ export default function Board({
                             <span className={activeRentTier === 5 ? 'font-bold' : ''}>With HOTEL</span> <span className={`font-bold ${activeRentTier === 5 ? 'text-purple-700' : ''}`}>৳{selTile.rent[5]}</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>৳{selTile.mortgageValue}</span></div>
                         <div className="flex justify-between items-center text-slate-700"><span>Houses cost</span> <span>৳{selTile.houseCost} each</span></div>
                       </>
@@ -1047,7 +1050,7 @@ export default function Board({
                     {selTile.type === 'UTILITY' && (
                       <>
                         <div className="text-center text-xs mb-2 leading-relaxed text-slate-700">
-                          If one "Utility" is owned, rent is 4 times amount shown on dice.<br/>
+                          If one "Utility" is owned, rent is 4 times amount shown on dice.<br />
                           If both "Utilities" are owned, rent is 10 times amount shown on dice.
                         </div>
                         <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>৳{selTile.mortgageValue}</span></div>
@@ -1081,13 +1084,13 @@ export default function Board({
                           <>
                             <span className="text-[10px] md:text-xs text-emerald-600 uppercase tracking-wider font-bold">Available For Purchase</span>
                             <span className="font-black text-lg md:text-xl text-slate-900">৳{selTile.price}</span>
-                            
+
                             {devMode && (
-                              <button 
+                              <button
                                 className="mt-2 w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]"
-                                onClick={() => { 
-                                  onBuyProperty(selectedTileIndex); 
-                                  setSelectedTileIndex(null); 
+                                onClick={() => {
+                                  onBuyProperty(selectedTileIndex);
+                                  setSelectedTileIndex(null);
                                 }}
                               >
                                 Force Buy (Dev Mode)
@@ -1102,34 +1105,34 @@ export default function Board({
                   {/* ACTIONS FOOTER */}
                   {isMyProp && (
                     <div className="bg-slate-200 p-3 flex flex-col gap-2 border-t border-slate-300">
-                      
+
                       {/* Mortgage / Unmortgage */}
                       {!selProp.isMortgaged ? (
-                        <button 
+                        <button
                           className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center gap-1 ${canMortgageHere ? 'bg-red-500 hover:bg-red-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                           onClick={() => { if (canMortgageHere) { onMortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                         >
                           {canMortgageHere ? `Mortgage (+৳${selTile.mortgageValue})` : `Cannot Mortgage: ${mortgageDisabledReason}`}
                         </button>
                       ) : (
-                        <button 
+                        <button
                           className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-2 rounded-lg text-xs transition-colors shadow-md active:scale-[0.98]"
                           onClick={() => { onUnmortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); }}
                         >
                           Unmortgage (-৳${Math.ceil((selTile.mortgageValue || 0) * 1.1)})
                         </button>
                       )}
-                      
+
                       {/* Sell Property to Bank */}
-                      <button 
+                      <button
                         className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md ${canSellPropertyHere ? 'bg-amber-600 hover:bg-amber-700 text-white active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                         onClick={() => { if (canSellPropertyHere) { onSellProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                       >
-                        {canSellPropertyHere ? `Sell Property (+৳${selTile.mortgageValue || Math.floor((selTile.price||0)/2)})` : `Cannot Sell: Group Has Houses`}
+                        {canSellPropertyHere ? `Sell Property (+৳${selTile.mortgageValue || Math.floor((selTile.price || 0) / 2)})` : `Cannot Sell: Group Has Houses`}
                       </button>
 
                       {/* Auction Property */}
-                      <button 
+                      <button
                         className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md ${canSellPropertyHere ? 'bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                         onClick={() => { if (canSellPropertyHere) { onAuctionProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                       >
@@ -1139,7 +1142,7 @@ export default function Board({
                       {/* Build / Break Houses */}
                       {selTile.type === 'STREET' && !selProp.isMortgaged && (
                         <div className="grid grid-cols-2 gap-2 mt-1">
-                          <button 
+                          <button
                             className={`font-bold py-2 px-1 rounded-lg text-[10px] sm:text-xs transition-colors flex flex-col items-center justify-center leading-tight ${canBuildHere ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                             onClick={() => { if (canBuildHere) { onBuildHouse?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                           >
@@ -1156,7 +1159,7 @@ export default function Board({
                             )}
                           </button>
 
-                          <button 
+                          <button
                             className={`font-bold py-2 px-1 rounded-lg text-[10px] sm:text-xs transition-colors flex flex-col items-center justify-center leading-tight ${canSellHere ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                             onClick={() => { if (canSellHere) { onSellHouse?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                           >

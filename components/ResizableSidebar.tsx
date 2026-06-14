@@ -61,18 +61,13 @@ export default function ResizableSidebar({
   return (
     <div 
       style={{ 
-        width: `${width}px`, 
-        minWidth: `${width}px`, 
-        maxWidth: `${width}px`,
-        flexBasis: `${width}px`,
-        flexShrink: 0,
-        flexGrow: 0 
-      }} 
-      className="relative z-50 shrink-0 flex flex-col h-full transition-none bg-[#0B0E14] border-l border-slate-800" // z-50 ensures drag handle sits above the center board DOM nodes
+        '--sidebar-width': `${width}px`
+      } as React.CSSProperties} 
+      className="relative z-50 shrink-0 flex flex-col transition-none bg-[#0B0E14] border-slate-800 w-full xl:w-[var(--sidebar-width)] xl:min-w-[var(--sidebar-width)] xl:max-w-[var(--sidebar-width)] xl:flex-basis-[var(--sidebar-width)] xl:border-l h-[60vh] xl:h-full" // z-50 ensures drag handle sits above the center board DOM nodes
     >
       {/* Hover & Drag Handle */}
       <div
-        className="absolute top-0 -left-3 w-6 h-full cursor-ew-resize hover:bg-cyber-blue/10 z-[50] flex flex-col items-center justify-center group touch-none pointer-events-auto transition-colors"
+        className="hidden xl:flex absolute top-0 -left-3 w-6 h-full cursor-ew-resize hover:bg-cyber-blue/10 z-[50] flex-col items-center justify-center group touch-none pointer-events-auto transition-colors"
         onMouseDown={(e) => {
           e.preventDefault();
           isResizing.current = true;

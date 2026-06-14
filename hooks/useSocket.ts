@@ -144,6 +144,12 @@ export function useSocket(
       setPendingTrade((prev) => (prev && prev.tradeId === data.tradeId ? null : prev));
     });
 
+    // Handle server resets
+    socket.on('server_reset', () => {
+      alert("The database has been cleared and game servers have been shut down.");
+      window.location.href = '/';
+    });
+
     // Handle validation errors
     socket.on('error_message', (msg: string) => {
       setErrorMessage(msg);
@@ -244,6 +250,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const addBot = useCallback(() => {
+    console.log('[Socket Emit] add_bot');
+    if (socketRef.current) {
+      socketRef.current.emit('add_bot');
+    }
+  }, []);
+
   const payJailFine = useCallback(() => {
     console.log('[Socket Emit] pay_jail_fine', { playerId: userId });
     if (socketRef.current) {
@@ -330,6 +343,7 @@ export function useSocket(
     sellHouse,
     sellProperty,
     auctionProperty,
-    placeBid
+    placeBid,
+    addBot
   };
 }
