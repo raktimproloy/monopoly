@@ -85,7 +85,7 @@ export function useSocket(
     });
 
     // Handle state mutations
-    socket.on('state_updated', (data: { state: GameState; log: string }) => {
+    socket.on('state_updated', (data: { state: GameState; log: string; lastRoll?: [number, number] }) => {
       setGameState(data.state);
       const formattedLog = formatTelemetryLog(data.log);
       setLogs((prev) => [formattedLog, ...prev]);
