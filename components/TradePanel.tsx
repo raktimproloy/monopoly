@@ -159,6 +159,8 @@ export default function TradePanel({
   const [requestCash, setRequestCash] = useState<number>(0);
   const [selectedOfferProps, setSelectedOfferProps] = useState<number[]>([]);
   const [selectedRequestProps, setSelectedRequestProps] = useState<number[]>([]);
+  const [offerPardonCards, setOfferPardonCards] = useState<number>(0);
+  const [requestPardonCards, setRequestPardonCards] = useState<number>(0);
 
   // Expiration timer states
   const [useTimer, setUseTimer] = useState<boolean>(false);
@@ -198,6 +200,8 @@ export default function TradePanel({
     setRequestCash(0);
     setSelectedOfferProps([]);
     setSelectedRequestProps([]);
+    setOfferPardonCards(0);
+    setRequestPardonCards(0);
     setUseTimer(false);
     setTimerSeconds(120);
     setActiveModal('SELECT_COUNTERPARTY');
@@ -209,6 +213,8 @@ export default function TradePanel({
     setRequestCash(0);
     setSelectedOfferProps([]);
     setSelectedRequestProps([]);
+    setOfferPardonCards(0);
+    setRequestPardonCards(0);
     setUseTimer(false);
     setTimerSeconds(120);
     setActiveModal('CREATE_TRADE');
@@ -228,6 +234,8 @@ export default function TradePanel({
       requestCash,
       offerPropertyIndexes: selectedOfferProps,
       requestPropertyIndexes: selectedRequestProps,
+      offerPardonCards,
+      requestPardonCards,
       durationSeconds: useTimer ? timerSeconds : undefined
     });
     setActiveModal('NONE');
@@ -244,6 +252,8 @@ export default function TradePanel({
     setRequestCash(currentOffer.offerCash);
     setSelectedOfferProps(currentOffer.requestPropertyIndexes);
     setSelectedRequestProps(currentOffer.offerPropertyIndexes);
+    setOfferPardonCards(currentOffer.requestPardonCards || 0);
+    setRequestPardonCards(currentOffer.offerPardonCards || 0);
     setUseTimer(false);
     setTimerSeconds(120);
     setActiveModal('CREATE_TRADE');
@@ -349,15 +359,43 @@ export default function TradePanel({
       {/* 2. MY PROPERTIES CARD */}
       <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
         <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase block text-center border-b border-[#241F3C] pb-2.5">
-          My Properties ({myProperties.length})
+          My Assets ({myProperties.length + (self.getOutOfJailFreeCards || 0)})
         </span>
         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
-          {myProperties.length === 0 ? (
+          {myProperties.length === 0 && (self.getOutOfJailFreeCards || 0) === 0 ? (
             <div className="text-center py-10 text-slate-500 font-mono text-xs uppercase tracking-widest leading-relaxed">
-              No Property Certificates Acquired
+              No Assets Acquired
             </div>
           ) : (
-            myProperties.map((prop) => {
+            <>
+              {self.getOutOfJailFreeCards! > 0 && Array.from({ length: self.getOutOfJailFreeCards! }).map((_, i) => (
+                <div
+                  key={`pardon-${i}`}
+                  className="p-2.5 bg-[#211B35] hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
+                >
+                  <div className="flex gap-3 items-center flex-1 min-w-0">
+                    <div className="w-2.5 h-8 rounded-sm shrink-0 bg-yellow-400" />
+                    <div className="flex-1 min-w-0 truncate pr-2">
+                      <span className="text-xs font-bold text-white block uppercase truncate leading-tight mb-0.5">
+                        Get Out Of Jail Free
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 block truncate">
+                        Pardon Card
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0 flex-none">
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('sell_pardon_card'))}
+                      className="px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer"
+                      title="Sell to Bank for ৳50"
+                    >
+                      SELL ৳50
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {myProperties.map((prop) => {
               const tile = boardTiles[prop.tileIndex];
               if (!tile) return null;
               
@@ -451,7 +489,8 @@ export default function TradePanel({
                   </div>
                 </div>
               );
-            })
+            })}
+            </>
           )}
         </div>
       </div>
@@ -572,10 +611,27 @@ export default function TradePanel({
                     Offer properties
                   </span>
                   <div className="flex-1 overflow-y-auto max-h-[160px] pr-1 flex flex-col gap-2 py-1">
-                    {myTradableProps.length === 0 ? (
+                    {myTradableProps.length === 0 && (self.getOutOfJailFreeCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-1 block text-center">No tradable items</span>
                     ) : (
-                      myTradableProps.map((p) => {
+                      <>
+                      {(self.getOutOfJailFreeCards || 0) > 0 && (
+                        <div
+                          onClick={() => setOfferPardonCards(prev => prev >= self.getOutOfJailFreeCards! ? 0 : prev + 1)}
+                          className={`p-2.5 rounded-xl flex items-center justify-between text-sm font-bold cursor-pointer border transition-all ${
+                            offerPardonCards > 0
+                              ? 'bg-[#5B37E8]/25 border-[#7B5BF2] text-white shadow-[0_0_10px_rgba(123,91,242,0.15)]'
+                              : 'bg-[#1E1B2E]/55 border-[#2A2445] text-slate-300 hover:border-[#38315C]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 truncate mr-2">
+                            <span>🗝️</span>
+                            <span className="truncate">Pardon Card {offerPardonCards > 0 ? `(Selected: ${offerPardonCards})` : `(${self.getOutOfJailFreeCards} available)`}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
+                        </div>
+                      )}
+                      {myTradableProps.map((p) => {
                         const tile = boardTiles[p.tileIndex];
                         const flag = getTileFlag(tile.name, tile.group);
                         const isSelected = selectedOfferProps.includes(p.tileIndex);
@@ -596,7 +652,8 @@ export default function TradePanel({
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
                           </div>
                         );
-                      })
+                      })}
+                      </>
                     )}
                   </div>
                 </div>
@@ -652,10 +709,27 @@ export default function TradePanel({
                     Wanted properties
                   </span>
                   <div className="flex-1 overflow-y-auto max-h-[160px] pr-1 flex flex-col gap-2 py-1">
-                    {opponentTradableProps.length === 0 ? (
+                    {opponentTradableProps.length === 0 && (gameState.players[receiverId]?.getOutOfJailFreeCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-1 block text-center">No tradable items</span>
                     ) : (
-                      opponentTradableProps.map((p) => {
+                      <>
+                      {(gameState.players[receiverId]?.getOutOfJailFreeCards || 0) > 0 && (
+                        <div
+                          onClick={() => setRequestPardonCards(prev => prev >= gameState.players[receiverId].getOutOfJailFreeCards! ? 0 : prev + 1)}
+                          className={`p-2.5 rounded-xl flex items-center justify-between text-sm font-bold cursor-pointer border transition-all ${
+                            requestPardonCards > 0
+                              ? 'bg-[#5B37E8]/25 border-[#7B5BF2] text-white shadow-[0_0_10px_rgba(123,91,242,0.15)]'
+                              : 'bg-[#1E1B2E]/55 border-[#2A2445] text-slate-300 hover:border-[#38315C]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 truncate mr-2">
+                            <span>🗝️</span>
+                            <span className="truncate">Pardon Card {requestPardonCards > 0 ? `(Selected: ${requestPardonCards})` : `(${gameState.players[receiverId].getOutOfJailFreeCards} available)`}</span>
+                          </div>
+                          <span className="text-[10px] font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
+                        </div>
+                      )}
+                      {opponentTradableProps.map((p) => {
                         const tile = boardTiles[p.tileIndex];
                         const flag = getTileFlag(tile.name, tile.group);
                         const isSelected = selectedRequestProps.includes(p.tileIndex);
@@ -676,7 +750,8 @@ export default function TradePanel({
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
                           </div>
                         );
-                      })
+                      })}
+                      </>
                     )}
                   </div>
                 </div>
@@ -786,10 +861,20 @@ export default function TradePanel({
                 <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Offered Properties</span>
                   <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
-                    {pendingTrade.offer.offerPropertyIndexes.length === 0 ? (
+                    {pendingTrade.offer.offerPropertyIndexes.length === 0 && (pendingTrade.offer.offerPardonCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">No properties offered</span>
                     ) : (
-                      pendingTrade.offer.offerPropertyIndexes.map((idx) => {
+                      <>
+                      {(pendingTrade.offer.offerPardonCards || 0) > 0 && (
+                          <div className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]">
+                            <div className="flex items-center gap-1.5 truncate mr-2">
+                              <span>🗝️</span>
+                              <span className="truncate">Pardon Card x{pendingTrade.offer.offerPardonCards}</span>
+                            </div>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
+                          </div>
+                      )}
+                      {pendingTrade.offer.offerPropertyIndexes.map((idx) => {
                         const flag = getTileFlag(getPropName(idx));
                         return (
                           <div
@@ -803,7 +888,8 @@ export default function TradePanel({
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
                           </div>
                         );
-                      })
+                      })}
+                      </>
                     )}
                   </div>
                 </div>
@@ -841,10 +927,20 @@ export default function TradePanel({
                 <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Requested Properties</span>
                   <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
-                    {pendingTrade.offer.requestPropertyIndexes.length === 0 ? (
+                    {pendingTrade.offer.requestPropertyIndexes.length === 0 && (pendingTrade.offer.requestPardonCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">No properties requested</span>
                     ) : (
-                      pendingTrade.offer.requestPropertyIndexes.map((idx) => {
+                      <>
+                      {(pendingTrade.offer.requestPardonCards || 0) > 0 && (
+                          <div className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]">
+                            <div className="flex items-center gap-1.5 truncate mr-2">
+                              <span>🗝️</span>
+                              <span className="truncate">Pardon Card x{pendingTrade.offer.requestPardonCards}</span>
+                            </div>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
+                          </div>
+                      )}
+                      {pendingTrade.offer.requestPropertyIndexes.map((idx) => {
                         const flag = getTileFlag(getPropName(idx));
                         return (
                           <div
@@ -858,7 +954,8 @@ export default function TradePanel({
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
                           </div>
                         );
-                      })
+                      })}
+                      </>
                     )}
                   </div>
                 </div>

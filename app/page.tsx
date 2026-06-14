@@ -98,35 +98,6 @@ export default function Lobby() {
             </div>
           </div>
 
-          {/* Avatar Selector */}
-          <div>
-            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-3">
-              TACTICAL APP SIGNATURE (AVATAR COLOR)
-            </label>
-            <div className="flex justify-between items-center gap-3">
-              {AVATAR_COLORS.map((col) => (
-                <button
-                  key={col.hex}
-                  type="button"
-                  onClick={() => setSelectedAvatar(col.hex)}
-                  style={{ borderColor: selectedAvatar === col.hex ? col.hex : 'rgba(255,255,255,0.08)' }}
-                  className="flex-1 py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 active:scale-[0.95] cursor-pointer"
-                >
-                  <div
-                    style={{ backgroundColor: col.hex }}
-                    className="w-5 h-5 rounded-full border border-white/20"
-                  />
-                  <span
-                    style={{ color: selectedAvatar === col.hex ? col.hex : 'rgb(148, 163, 184)' }}
-                    className="text-[10px] font-kalpurush font-extrabold tracking-wider leading-none"
-                  >
-                    {col.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <button
             type="submit"
             className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-kalpurush font-bold tracking-widest text-base hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"

@@ -12,6 +12,7 @@ interface BoardProps {
   onRollDice: () => void;
   onEndTurn: () => void;
   onPayJailFine: () => void;
+  onUsePardonCard?: () => void;
   onBuyProperty: (tileIndex: number) => void;
   onTileClick: (index: number) => void;
   onMortgageProperty?: (tileIndex: number) => void;
@@ -323,6 +324,7 @@ export default function Board({
   onRollDice,
   onEndTurn,
   onPayJailFine,
+  onUsePardonCard,
   onBuyProperty,
   onTileClick,
   onMortgageProperty,
@@ -754,20 +756,31 @@ export default function Board({
                       className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                     >
                       <CheckIcon size={12} className="stroke-white shrink-0" />
-                      End Turn
+                      {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'Roll Again' : 'End Turn'}
                     </button>
                   </div>
                 )}
 
                 {/* get free for $50 fine option */}
                 {activePlayer?.inJail && gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
-                  <button
-                    onClick={onPayJailFine}
-                    className="bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto mt-2"
-                  >
-                    <MoneyBagIcon size={14} className="stroke-white" />
-                    Pay ৳50 Fine
-                  </button>
+                  <div className="flex gap-2 w-[80%] sm:w-auto mt-2 flex-wrap justify-center">
+                    <button
+                      onClick={onPayJailFine}
+                      className="bg-[#7B5BF2] hover:bg-[#6849E0] flex-1 min-w-[120px] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                    >
+                      <MoneyBagIcon size={14} className="stroke-white" />
+                      Pay ৳50 Fine
+                    </button>
+                    {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
+                      <button
+                        onClick={onUsePardonCard}
+                        className="bg-yellow-500 hover:bg-yellow-600 flex-1 min-w-[120px] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                      >
+                        <span className="text-lg">🗝️</span>
+                        Use Pardon
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}

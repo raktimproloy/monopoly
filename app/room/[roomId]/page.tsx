@@ -8,6 +8,7 @@ import PlayerList from '../../../components/PlayerList';
 import ChatBox from '../../../components/ChatBox';
 import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
+import CardReveal from '../../../components/CardReveal';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -62,12 +63,17 @@ function GameRoomContent() {
     sellHouse,
     sellProperty,
     auctionProperty,
-    addBot
+    addBot,
+    updateAppearance,
+    resolveCard,
+    sellPardonCard,
+    usePardonCard
   } = useSocket(roomId, playerName, userId, avatar);
 
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+  const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const AVATAR_COLORS = [
     { hex: '#8BA4F9', name: 'SOFT BLUE' },
@@ -101,23 +107,21 @@ function GameRoomContent() {
       setModalError('Please enter a player callsign.');
       return;
     }
-    if (!selectedAvatar) {
-      setModalError('Please select an appearance signature.');
-      return;
-    }
-
-    // Quick local verification
+    // Quick local verification for initial selection (server handles ultimate collisions now)
+    let finalAvatar = selectedAvatar || AVATAR_COLORS[0].hex;
     if (roomDetails?.players) {
       const takenColors = roomDetails.players.map(p => p.avatar.toLowerCase());
-      if (takenColors.includes(selectedAvatar.toLowerCase())) {
-        setModalError('This color signature has been taken by another operator. Please choose another.');
-        return;
+      if (takenColors.includes(finalAvatar.toLowerCase())) {
+        const available = AVATAR_COLORS.find(col => !takenColors.includes(col.hex.toLowerCase()));
+        if (available) {
+          finalAvatar = available.hex;
+        }
       }
     }
 
     // Update query parameters in URL to trigger join flow
     router.replace(
-      `/room/${roomId}?name=${encodeURIComponent(guestName.trim())}&uid=${userId}&avatar=${encodeURIComponent(selectedAvatar)}`
+      `/room/${roomId}?name=${encodeURIComponent(guestName.trim())}&uid=${userId}&avatar=${encodeURIComponent(finalAvatar)}`
     );
   };
 
@@ -168,61 +172,6 @@ function GameRoomContent() {
               />
             </div>
 
-            <div>
-              <label className="block text-[10px] font-orbitron text-slate-400 uppercase tracking-widest mb-3">
-                TACTICAL APP SIGNATURE (AVATAR COLOR)
-              </label>
-              <div className="flex justify-between items-center gap-3">
-                {AVATAR_COLORS.map((col) => {
-                  const isTaken = takenColors.includes(col.hex.toLowerCase());
-                  const isSelected = selectedAvatar === col.hex;
-
-                  return (
-                    <button
-                      key={col.hex}
-                      type="button"
-                      disabled={isTaken}
-                      onClick={() => {
-                        if (!isTaken) {
-                          setSelectedAvatar(col.hex);
-                          setModalError(null);
-                        }
-                      }}
-                      style={{
-                        borderColor: isSelected 
-                          ? col.hex 
-                          : isTaken 
-                            ? 'rgba(239, 68, 68, 0.1)' 
-                            : 'rgba(255, 255, 255, 0.08)'
-                      }}
-                      className={`flex-1 py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 relative ${
-                        isTaken 
-                          ? 'opacity-40 cursor-not-allowed border-red-950' 
-                          : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
-                      }`}
-                    >
-                      <div
-                        style={{ backgroundColor: col.hex }}
-                        className="w-5 h-5 rounded-full border border-white/20"
-                      />
-                      <span
-                        style={{
-                          color: isSelected 
-                            ? col.hex 
-                            : isTaken 
-                              ? '#ef4444' 
-                              : 'rgb(100, 116, 139)'
-                        }}
-                        className="text-[7px] font-orbitron font-extrabold tracking-wider leading-none"
-                      >
-                        {isTaken ? 'TAKEN' : col.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             <button
               type="submit"
               className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
@@ -241,10 +190,30 @@ function GameRoomContent() {
       <div className="min-h-screen w-full bg-[#0B0E14] flex flex-col items-center justify-center font-sans cyber-grid animate-pulse-slow">
         <div className="glass-panel p-8 max-w-sm w-full text-center relative border border-cyber-blue/30 shadow-[0_0_20px_rgba(139,164,249,0.05)]">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
-          <RotateCw className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />
+          {errorMessage ? (
+            <AlertOctagon className="w-10 h-10 text-red-500 mx-auto mb-4" />
+          ) : (
+            <RotateCw className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />
+          )}
           <h2 className="text-sm font-orbitron font-extrabold tracking-widest text-white uppercase">
-            CALIBRATING NETWORK
+            {errorMessage ? "CONNECTION REFUSED" : "CALIBRATING NETWORK"}
           </h2>
+          {errorMessage && (
+            <div className="mt-6 flex flex-col gap-4">
+              <div className="p-3 bg-red-950/80 border border-red-500/30 text-red-200 text-xs font-mono rounded text-left">
+                {errorMessage}
+              </div>
+              <button
+                onClick={() => {
+                  clearError();
+                  router.replace(`/room/${roomId}`);
+                }}
+                className="w-full py-3 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-xs hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all cursor-pointer"
+              >
+                RETURN TO GATEWAY
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -254,6 +223,7 @@ function GameRoomContent() {
   if (gameState.gameStatus === 'LOBBY') {
     const players = Object.values(gameState.players);
     const settings = gameState.settings;
+    const isHost = gameState.playerOrder[0] === userId;
 
     const handleSettingChange = (key: string, value: string | number | boolean) => {
       const updatedSettings = {
@@ -304,12 +274,14 @@ function GameRoomContent() {
                 <Users size={14} className="text-cyber-purple" />
                 CONNECTED NODES ({players.length})
               </h3>
-              <button
-                onClick={addBot}
-                className="px-2 py-1 bg-[#19162A]/80 border border-cyber-purple/50 text-cyber-purple hover:text-white hover:bg-cyber-purple/30 rounded text-[9px] font-orbitron font-bold tracking-wider transition-all"
-              >
-                + ADD BOT
-              </button>
+              {isHost && (
+                <button
+                  onClick={addBot}
+                  className="px-2 py-1 bg-[#19162A]/80 border border-cyber-purple/50 text-cyber-purple hover:text-white hover:bg-cyber-purple/30 rounded text-[9px] font-orbitron font-bold tracking-wider transition-all"
+                >
+                  + ADD BOT
+                </button>
+              )}
             </div>
 
             <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
@@ -329,9 +301,18 @@ function GameRoomContent() {
                         {p.name} {isMe && <span className="text-[8px] text-cyber-blue font-mono">(YOU)</span>}
                       </span>
                     </div>
-                    <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                      READY
-                    </span>
+                    {isMe ? (
+                      <button
+                        onClick={() => setShowAppearanceModal(true)}
+                        className="text-[8px] font-mono text-cyber-blue bg-cyber-blue/10 border border-cyber-blue/20 hover:bg-cyber-blue/20 hover:border-cyber-blue/40 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider cursor-pointer transition-all"
+                      >
+                        APPEARANCE
+                      </button>
+                    ) : (
+                      <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        READY
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -356,7 +337,8 @@ function GameRoomContent() {
                   <select
                     value={settings.startingCash}
                     onChange={(e) => handleSettingChange('startingCash', Number(e.target.value))}
-                    className="w-full mt-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded font-mono text-xs text-slate-200 outline-none cursor-pointer focus:border-cyber-blue"
+                    disabled={!isHost}
+                    className={`w-full mt-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded font-mono text-xs text-slate-200 outline-none ${isHost ? 'cursor-pointer focus:border-cyber-blue' : 'opacity-60 cursor-not-allowed'}`}
                   >
                     <option value={1000}>$1,000 (QUICK MATCH)</option>
                     <option value={1500}>$1,500 (STANDARD MONOPOLY)</option>
@@ -381,8 +363,9 @@ function GameRoomContent() {
                   <input
                     type="checkbox"
                     checked={settings.doubleRentOnCompleteSet}
+                    disabled={!isHost}
                     onChange={(e) => handleSettingChange('doubleRentOnCompleteSet', e.target.checked)}
-                    className="w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 cursor-pointer mt-1"
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                   />
                 </div>
 
@@ -399,8 +382,9 @@ function GameRoomContent() {
                   <input
                     type="checkbox"
                     checked={settings.freeParkingCashPool}
+                    disabled={!isHost}
                     onChange={(e) => handleSettingChange('freeParkingCashPool', e.target.checked)}
-                    className="w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 cursor-pointer mt-1"
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                   />
                 </div>
               </div>
@@ -408,24 +392,103 @@ function GameRoomContent() {
 
             {/* Start MATCH buttons */}
             <div className="flex flex-col items-center justify-center gap-3 mt-8">
-              <button
-                onClick={startGame}
-                className="w-full max-w-[280px] py-4 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
-              >
-                <Play size={14} className="fill-cyber-blue" />
-                COMPILES MATRIX & START
-              </button>
-              <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest animate-pulse mt-1">
-                {players.length < 2 ? 'Lobby needs minimum 2 players (CPU fallback active)' : 'Awaiting host activation'}
-              </span>
+              {isHost ? (
+                <>
+                  <button
+                    onClick={startGame}
+                    className="w-full max-w-[280px] py-4 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
+                  >
+                    <Play size={14} className="fill-cyber-blue" />
+                    COMPILES MATRIX & START
+                  </button>
+                  <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest animate-pulse mt-1">
+                    {players.length < 2 ? 'Lobby needs minimum 2 players (CPU fallback active)' : 'Awaiting host activation'}
+                  </span>
+                </>
+              ) : (
+                <div className="w-full max-w-[280px] py-4 glass-panel-light text-slate-500 border border-slate-800/50 font-orbitron font-bold tracking-widest text-sm flex items-center justify-center gap-2 bg-slate-900/20 select-none">
+                  AWAITING HOST TO START...
+                </div>
+              )}
             </div>
           </section>
 
-          {/* RIGHT: Tactical Telemetry Logs */}
+            {/* RIGHT: Tactical Telemetry Logs */}
           <section className="w-80 shrink-0 h-full min-w-0">
             <ChatBox logs={logs} />
           </section>
         </div>
+
+        {/* Appearance Modal */}
+        {showAppearanceModal && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="relative w-full max-w-sm p-6 glass-panel border border-cyber-blue/30 shadow-[0_0_30px_rgba(139,164,249,0.1)] bg-[#0B0E14]/95">
+              <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
+              <button 
+                onClick={() => setShowAppearanceModal(false)}
+                className="absolute top-3 right-3 text-slate-500 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+              
+              <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-white uppercase text-center mb-6">
+                UPDATE APPEARANCE
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-3">
+                {AVATAR_COLORS.map((col) => {
+                  const takenColors = gameState.players ? Object.values(gameState.players).map((p: any) => p.avatar.toLowerCase()) : [];
+                  const isTaken = takenColors.includes(col.hex.toLowerCase()) && col.hex.toLowerCase() !== gameState.players[userId]?.avatar?.toLowerCase();
+                  const isSelected = gameState.players[userId]?.avatar === col.hex;
+
+                  return (
+                    <button
+                      key={col.hex}
+                      disabled={isTaken}
+                      onClick={() => {
+                        if (!isTaken && !isSelected) {
+                          updateAppearance(col.hex);
+                          setShowAppearanceModal(false);
+                        }
+                      }}
+                      style={{
+                        borderColor: isSelected 
+                          ? col.hex 
+                          : isTaken 
+                            ? 'rgba(239, 68, 68, 0.1)' 
+                            : 'rgba(255, 255, 255, 0.08)'
+                      }}
+                      className={`py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 ${
+                        isTaken 
+                          ? 'opacity-40 cursor-not-allowed border-red-950' 
+                          : isSelected 
+                            ? 'cursor-default' 
+                            : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
+                      }`}
+                    >
+                      <div
+                        style={{ backgroundColor: col.hex }}
+                        className="w-5 h-5 rounded-full border border-white/20"
+                      />
+                      <span
+                        style={{
+                          color: isSelected 
+                            ? col.hex 
+                            : isTaken 
+                              ? '#ef4444' 
+                              : 'rgb(100, 116, 139)'
+                        }}
+                        className="text-[7px] font-orbitron font-extrabold tracking-wider leading-none mt-1"
+                      >
+                        {isTaken ? 'TAKEN' : isSelected ? 'CURRENT' : col.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -458,6 +521,16 @@ function GameRoomContent() {
         </div>
       )}
 
+      {/* Card Reveal Overlay */}
+      {gameState?.turnStatus === 'MUST_RESOLVE_CARD' && (
+        <CardReveal
+          gameState={gameState}
+          userId={userId}
+          onResolve={resolveCard}
+          onSellPardon={sellPardonCard}
+        />
+      )}
+
       {/* Main UI Layout (Board-priority 3-column system) */}
       <div className="flex-1 w-full p-2 md:p-3 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row gap-3 min-h-0 relative z-10">
 
@@ -472,6 +545,7 @@ function GameRoomContent() {
             onRollDice={rollDice}
             onEndTurn={endTurn}
             onPayJailFine={payJailFine}
+            onUsePardonCard={usePardonCard}
             onBuyProperty={buyProperty}
             onTileClick={(idx) => {
               // Can hook custom tile inspect actions here

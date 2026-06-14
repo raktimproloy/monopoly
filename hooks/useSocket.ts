@@ -21,6 +21,9 @@ export function useSocket(
     players: { id: string; name: string; avatar: string }[];
   } | null>(null);
 
+  // Allow dynamic avatar updates
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(avatar);
+
   const refetchRoomDetails = useCallback(() => {
     if (socketRef.current && roomId) {
       socketRef.current.emit('get_room_details', { roomId }, (response: any) => {
@@ -34,35 +37,7 @@ export function useSocket(
   // Intercept and rewrite incoming telemetry logs to tactical style
   const formatTelemetryLog = useCallback((log: string): string => {
     if (!log) return '';
-    let f = log;
-
-    // 1. Fix Currency Glitch (remove spaces/newlines between ৳ and numbers)
-    f = f.replace(/৳[\s\n]*(\d+)/g, '৳$1');
-
-    // Skip heavy regex parsing if the log was already pre-tagged by the server
-    if (f.startsWith('[')) return f;
-
-    // 2. Acquisition
-    const buyMatch = f.match(/(.+) bought (.+) for (৳\d+)/i);
-    if (buyMatch) {
-      return `[ACQUIRE] ${buyMatch[1]} secured ${buyMatch[2]} for ${buyMatch[3]}.`;
-    }
-
-    // 3. Rent / Transfer (handles "paid rent of ৳X to Y")
-    const rentMatch = f.match(/(?:Rent payment processed automatically:\s*)?(.+) paid rent of (৳\d+) to (.+)/i);
-    if (rentMatch) {
-      return `[TRANSFER] ${rentMatch[1]} paid ${rentMatch[2]} to ${rentMatch[3]} for access.`;
-    }
-
-    // 4. Movement
-    const moveMatch = f.match(/(.+) rolled \[(.+?)\] and moved from .+ to (.+)\./i);
-    if (moveMatch) {
-      const diceStr = moveMatch[2]; // e.g., "3, 4"
-      const diceTotal = diceStr.split(',').reduce((a, b) => a + parseInt(b.trim(), 10), 0);
-      return `[NAV] ${moveMatch[1]} rolled ${diceTotal} ➡️ Landed on ${moveMatch[3]}.`;
-    }
-
-    return f;
+    return log;
   }, []);
 
   useEffect(() => {
@@ -89,8 +64,8 @@ export function useSocket(
       });
 
       // Join game session only if playerName is provided
-      if (playerName && avatar) {
-        socket.emit('join_room', { roomId, name: playerName, avatar });
+      if (playerName && currentAvatar) {
+        socket.emit('join_room', { roomId, name: playerName, avatar: currentAvatar });
       }
     });
 
@@ -162,9 +137,16 @@ export function useSocket(
     return () => {
       socket.disconnect();
     };
-  }, [roomId, playerName, userId, avatar]);
+  }, [roomId, playerName, userId, currentAvatar]);
 
   // Actions
+  const updateAppearance = useCallback((newAvatar: string) => {
+    setCurrentAvatar(newAvatar);
+    if (socketRef.current && playerName) {
+      socketRef.current.emit('join_room', { roomId, name: playerName, avatar: newAvatar });
+    }
+  }, [roomId, playerName]);
+
   const rollDice = useCallback(() => {
     console.log('[Socket Emit] roll_dice', { playerId: userId });
     if (socketRef.current) {
@@ -292,6 +274,27 @@ export function useSocket(
     }
   }, [userId]);
 
+  const resolveCard = useCallback(() => {
+    console.log('[Socket Emit] resolve_card', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('resolve_card', { playerId: userId });
+    }
+  }, [userId]);
+
+  const sellPardonCard = useCallback(() => {
+    console.log('[Socket Emit] sell_pardon_card', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('sell_pardon_card', { playerId: userId });
+    }
+  }, [userId]);
+
+  const usePardonCard = useCallback(() => {
+    console.log('[Socket Emit] use_pardon_card', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('use_pardon_card', { playerId: userId });
+    }
+  }, [userId]);
+
   useEffect(() => {
     const handleCustomBid = (e: any) => {
       if (socketRef.current) {
@@ -302,12 +305,14 @@ export function useSocket(
     const handleCustomBankrupt = () => declareBankruptcy();
     const handleCustomMortgage = (e: any) => mortgageProperty(e.detail);
     const handleCustomUnmortgage = (e: any) => unmortgageProperty(e.detail);
+    const handleCustomSellPardon = () => sellPardonCard();
     
     window.addEventListener('place_bid', handleCustomBid);
     window.addEventListener('auction_property', handleCustomAuction);
     window.addEventListener('declare_bankruptcy', handleCustomBankrupt);
     window.addEventListener('mortgage_property', handleCustomMortgage);
     window.addEventListener('unmortgage_property', handleCustomUnmortgage);
+    window.addEventListener('sell_pardon_card', handleCustomSellPardon);
     
     return () => {
       window.removeEventListener('place_bid', handleCustomBid);
@@ -315,8 +320,9 @@ export function useSocket(
       window.removeEventListener('declare_bankruptcy', handleCustomBankrupt);
       window.removeEventListener('mortgage_property', handleCustomMortgage);
       window.removeEventListener('unmortgage_property', handleCustomUnmortgage);
+      window.removeEventListener('sell_pardon_card', handleCustomSellPardon);
     };
-  }, [userId, auctionProperty, declareBankruptcy, mortgageProperty, unmortgageProperty]);
+  }, [userId, auctionProperty, declareBankruptcy, mortgageProperty, unmortgageProperty, sellPardonCard]);
 
   return {
     isConnected,
@@ -344,6 +350,10 @@ export function useSocket(
     sellProperty,
     auctionProperty,
     placeBid,
-    addBot
+    addBot,
+    updateAppearance,
+    resolveCard,
+    sellPardonCard,
+    usePardonCard
   };
 }
