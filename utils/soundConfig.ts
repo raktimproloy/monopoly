@@ -8,18 +8,22 @@ export const SOUND_CONFIG = {
   isMuted: false,
 
   // Global volume (0.0 to 1.0)
-  globalVolume: 1.0,
+  globalVolume: 0.5,
 
   // Event to Audio File mapping
-  // Replace these paths with your own custom MP3s when you are ready.
-  // Example: 'GAME_START': '/sounds/my-custom-start.mp3'
   events: {
-    'GAME_START': '/sounds/start.wav',
-    'DICE_ROLL': '/sounds/dice-roll.wav',
-    'BUY_PROPERTY': '/sounds/buy.wav',
-    'BUILD_HOUSE': '/sounds/build.wav',
-    'RECEIVE_CARD': '/sounds/card.wav',
-    // Add more events here as needed
+    'GAME_START': '/sounds/Match Started.mp3',
+    'PLAYER_JOIN': '/sounds/Player Join.mp3',
+    'YOUR_TURN': '/sounds/Your Turn.mp3',
+    'DICE_ROLL': '/sounds/Dice Role.mp3',
+    'BUY_PROPERTY': '/sounds/Purchase.mp3',
+    'BUILD_HOUSE': '/sounds/Build House.mp3',
+    'BUILD_HOTEL': '/sounds/Build Hotel.mp3',
+    'TRADE_OPEN': '/sounds/Trade Open.mp3',
+    'TRADE_ACCEPT': '/sounds/Trade Accept.mp3',
+    'TRADE_DECLINED': '/sounds/Trade Declined.mp3',
+    'RECEIVE_CARD': '/sounds/Purchase.mp3', // Fallback for card
+    'CARD_FLIP': '/sounds/Card Flip.mp3'
   }
 };
 

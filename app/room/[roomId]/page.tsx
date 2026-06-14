@@ -11,6 +11,7 @@ import PropertyManager from '../../../components/PropertyManager';
 import TradePanel from '../../../components/TradePanel';
 import CardReveal from '../../../components/CardReveal';
 import AuctionModal from '../../../components/AuctionModal';
+import SoundControls from '../../../components/SoundControls';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -72,11 +73,12 @@ function GameRoomContent() {
     resolveCard,
     sellPardonCard,
     usePardonCard,
-    placeBid
+    placeBid,
+    devAddFunds
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
-  useGameSounds(gameState, logs, userId);
+  useGameSounds(gameState, logs, userId, pendingTrade);
 
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
@@ -270,6 +272,9 @@ function GameRoomContent() {
               </>
             )}
           </div>
+          <div className="ml-4 hidden md:block">
+            <SoundControls />
+          </div>
         </header>
 
         {/* Main Content Layout */}
@@ -459,7 +464,7 @@ function GameRoomContent() {
             </div>
           </section>
 
-            {/* RIGHT: Tactical Telemetry Logs */}
+          {/* RIGHT: Tactical Telemetry Logs */}
           <section className="w-80 shrink-0 h-full min-w-0">
             <ChatBox logs={logs} />
           </section>
@@ -470,17 +475,17 @@ function GameRoomContent() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="relative w-full max-w-sm p-6 glass-panel border border-cyber-blue/30 shadow-[0_0_30px_rgba(139,164,249,0.1)] bg-[#0B0E14]/95">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
-              <button 
+              <button
                 onClick={() => setShowAppearanceModal(false)}
                 className="absolute top-3 right-3 text-slate-500 hover:text-white cursor-pointer"
               >
                 ✕
               </button>
-              
+
               <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-white uppercase text-center mb-6">
                 UPDATE APPEARANCE
               </h3>
-              
+
               <div className="grid grid-cols-2 gap-3">
                 {AVATAR_COLORS.map((col) => {
                   const takenColors = gameState.players ? Object.values(gameState.players).map((p: any) => p.avatar.toLowerCase()) : [];
@@ -498,19 +503,18 @@ function GameRoomContent() {
                         }
                       }}
                       style={{
-                        borderColor: isSelected 
-                          ? col.hex 
-                          : isTaken 
-                            ? 'rgba(239, 68, 68, 0.1)' 
+                        borderColor: isSelected
+                          ? col.hex
+                          : isTaken
+                            ? 'rgba(239, 68, 68, 0.1)'
                             : 'rgba(255, 255, 255, 0.08)'
                       }}
-                      className={`py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 ${
-                        isTaken 
-                          ? 'opacity-40 cursor-not-allowed border-red-950' 
-                          : isSelected 
-                            ? 'cursor-default' 
+                      className={`py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 ${isTaken
+                          ? 'opacity-40 cursor-not-allowed border-red-950'
+                          : isSelected
+                            ? 'cursor-default'
                             : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
-                      }`}
+                        }`}
                     >
                       <div
                         style={{ backgroundColor: col.hex }}
@@ -518,10 +522,10 @@ function GameRoomContent() {
                       />
                       <span
                         style={{
-                          color: isSelected 
-                            ? col.hex 
-                            : isTaken 
-                              ? '#ef4444' 
+                          color: isSelected
+                            ? col.hex
+                            : isTaken
+                              ? '#ef4444'
                               : 'rgb(100, 116, 139)'
                         }}
                         className="text-[7px] font-orbitron font-extrabold tracking-wider leading-none mt-1"
@@ -614,6 +618,7 @@ function GameRoomContent() {
             onAuctionProperty={auctionProperty}
             onTeleportPlayer={teleportPlayer}
             onDevRollDice={devRollDice}
+            onDevAddFunds={devAddFunds}
           />
         </section>
 
@@ -636,52 +641,54 @@ function GameRoomContent() {
         {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
         <div className="order-3 xl:order-3 w-full xl:w-[380px] shrink-0 h-[60vh] xl:h-full flex flex-col gap-3">
           <div className="flex flex-col gap-3 h-full w-full select-none overflow-hidden bg-slate-900/40 xl:bg-[#0B0E14] xl:border-l border-slate-800 rounded-xl xl:rounded-none p-3 xl:p-0 xl:pl-3">
-            {/* Top Actions: Votekick and Bankrupt */}
+            {/* Top Actions: Sound Controls, Votekick and Bankrupt */}
             <div className="flex justify-between items-center shrink-0">
-            <button
-              onClick={() => {
-                // Future Votekick placeholder
-              }}
-              className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <UserX size={12} className="stroke-current" />
-              Votekick
-            </button>
-            <button
-              onClick={() => {
-                if (window.confirm("Are you sure you want to declare bankruptcy? You will surrender all assets and exit the game.")) {
-                  declareBankruptcy();
-                }
-              }}
-              disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
-              className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${
-                (gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
-                  ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
-                  : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
-              }`}
-            >
-              <Flag size={12} className="fill-current stroke-current" />
-              Bankrupt
-            </button>
-          </div>
+              <SoundControls />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    // Future Votekick placeholder
+                  }}
+                  className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                >
+                  <UserX size={12} className="stroke-current" />
+                  Votekick
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to declare bankruptcy? You will surrender all assets and exit the game.")) {
+                      declareBankruptcy();
+                    }
+                  }}
+                  disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
+                  className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${(gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
+                      ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
+                      : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
+                    }`}
+                >
+                  <Flag size={12} className="fill-current stroke-current" />
+                  Bankrupt
+                </button>
+              </div>
+            </div>
 
-          <div className="shrink-0 h-auto">
-            <PlayerList
-              gameState={gameState}
-              boardTiles={boardTiles}
-              userId={userId}
-            />
-          </div>
-          <div className="flex-1 min-h-0">
-            <TradePanel
-              gameState={gameState}
-              boardTiles={boardTiles}
-              userId={userId}
-              pendingTrade={pendingTrade}
-              onProposeTrade={proposeTrade}
-              onRespondToTrade={respondToTrade}
-            />
-          </div>
+            <div className="shrink-0 h-auto">
+              <PlayerList
+                gameState={gameState}
+                boardTiles={boardTiles}
+                userId={userId}
+              />
+            </div>
+            <div className="flex-1 min-h-0">
+              <TradePanel
+                gameState={gameState}
+                boardTiles={boardTiles}
+                userId={userId}
+                pendingTrade={pendingTrade}
+                onProposeTrade={proposeTrade}
+                onRespondToTrade={respondToTrade}
+              />
+            </div>
           </div>
         </div>
       </div>

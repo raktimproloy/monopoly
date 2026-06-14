@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { GameState } from '../../shared/types';
+import { soundManager } from '../utils/soundManager';
 
 interface CardRevealProps {
   gameState: GameState;
@@ -30,7 +31,10 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
       const showTimer = setTimeout(() => {
         setVisible(true);
         // Automatically flip the card after 1 second for dramatic effect
-        setTimeout(() => setFlipped(true), 1000);
+        setTimeout(() => {
+          setFlipped(true);
+          soundManager.playEventSound('CARD_FLIP');
+        }, 1000);
         // Allow resolving 1.5 seconds after flip so they have time to read
         setTimeout(() => setCanResolve(true), 2500);
       }, 2200);

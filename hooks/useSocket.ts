@@ -246,6 +246,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devAddFunds = useCallback((amount: number) => {
+    console.log('[Socket Emit] dev_add_funds', { playerId: userId, amount });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_add_funds', { playerId: userId, amount });
+    }
+  }, [userId]);
+
   const addBot = useCallback(() => {
     console.log('[Socket Emit] add_bot');
     if (socketRef.current) {
@@ -365,6 +372,7 @@ export function useSocket(
     auctionProperty,
     teleportPlayer,
     devRollDice,
+    devAddFunds,
     placeBid,
     addBot,
     updateAppearance,

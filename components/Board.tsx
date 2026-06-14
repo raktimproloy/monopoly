@@ -23,6 +23,7 @@ interface BoardProps {
   onAuctionProperty?: (tileIndex: number) => void;
   onTeleportPlayer?: (targetTileIndex: number) => void;
   onDevRollDice?: (d1: number, d2: number) => void;
+  onDevAddFunds?: (amount: number) => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -52,6 +53,22 @@ function CheckIcon({ size = 12, className = "" }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  );
+}
+
+function HouseIcon({ size = 10, className = "" }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 3L2 12h3v8h14v-8h3L12 3z"/>
+    </svg>
+  );
+}
+
+function HotelIcon({ size = 12, className = "" }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M7 19h10V4H7v15zm2-13h2v2H9V6zm4 0h2v2h-2V6zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zM3 21h18v2H3v-2z"/>
     </svg>
   );
 }
@@ -150,16 +167,33 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
   useEffect(() => {
     if (player.position !== displayPosition) {
       if (isCurrentTurn) {
-        // Delay moving until the dice roll animation finishes (1.5s)
-        const t = setTimeout(() => {
-          setDisplayPosition(player.position);
-        }, 1500);
-        return () => clearTimeout(t);
+        const diceSum = gameState.dice ? gameState.dice[0] + gameState.dice[1] : 0;
+        const expectedPos = (displayPosition + diceSum) % 40;
+        
+        let t1: ReturnType<typeof setTimeout>;
+        let t2: ReturnType<typeof setTimeout>;
+
+        if (player.position === 10 && player.inJail && expectedPos === 30 && displayPosition !== 30) {
+          // Delay for dice roll, move to 30 (Go To Jail), wait, then move to 10 (Jail)
+          t1 = setTimeout(() => {
+            setDisplayPosition(30);
+            t2 = setTimeout(() => {
+              setDisplayPosition(10);
+            }, 800);
+          }, 1500);
+          return () => { clearTimeout(t1); clearTimeout(t2); };
+        } else {
+          // Normal movement
+          t1 = setTimeout(() => {
+            setDisplayPosition(player.position);
+          }, 1500);
+          return () => clearTimeout(t1);
+        }
       } else {
         setDisplayPosition(player.position);
       }
     }
-  }, [player.position, displayPosition, isCurrentTurn]);
+  }, [player.position, displayPosition, isCurrentTurn, gameState.dice, player.inJail]);
 
   useEffect(() => {
     const updatePosition = () => {
@@ -289,6 +323,7 @@ export default function Board({
   onAuctionProperty,
   onTeleportPlayer,
   onDevRollDice,
+  onDevAddFunds,
   onPlaceBid,
 }: BoardProps) {
   const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
@@ -298,6 +333,7 @@ export default function Board({
   const [teleportTarget, setTeleportTarget] = useState<number>(0);
   const [devD1, setDevD1] = useState<number>(1);
   const [devD2, setDevD2] = useState<number>(1);
+  const [devAddFundsAmount, setDevAddFundsAmount] = useState<number>(1000);
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
@@ -474,6 +510,23 @@ export default function Board({
               Force Roll
             </button>
           </div>
+
+          {/* Add Funds Area */}
+          <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Funds:</span>
+            <input 
+              type="number" 
+              value={devAddFundsAmount} 
+              onChange={(e) => setDevAddFundsAmount(parseInt(e.target.value) || 0)} 
+              className="w-16 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+            />
+            <button 
+              onClick={() => onDevAddFunds?.(devAddFundsAmount)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(52,211,153,0.4)] active:scale-95 flex-1"
+            >
+              Add ৳
+            </button>
+          </div>
       </div>
     )}
 
@@ -546,13 +599,13 @@ export default function Board({
           // Purchased Player Color border
           let ownerIndicatorClass = 'hidden';
           if (orientation === 'TOP') {
-            ownerIndicatorClass = 'absolute top-0 left-1/2 -translate-x-1/2 w-[85%] h-[3px] md:h-[5px] rounded-b-sm z-10';
+            ownerIndicatorClass = 'absolute top-0 left-1/2 -translate-x-1/2 w-[85%] h-[6px] md:h-[10px] rounded-b-sm z-10';
           } else if (orientation === 'BOTTOM') {
-            ownerIndicatorClass = 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-[3px] md:h-[5px] rounded-t-sm z-10';
+            ownerIndicatorClass = 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-[6px] md:h-[10px] rounded-t-sm z-10';
           } else if (orientation === 'LEFT') {
-            ownerIndicatorClass = 'absolute left-0 top-1/2 -translate-y-1/2 h-[85%] w-[3px] md:w-[5px] rounded-r-sm z-10';
+            ownerIndicatorClass = 'absolute left-0 top-1/2 -translate-y-1/2 h-[85%] w-[6px] md:w-[10px] rounded-r-sm z-10';
           } else if (orientation === 'RIGHT') {
-            ownerIndicatorClass = 'absolute right-0 top-1/2 -translate-y-1/2 h-[85%] w-[3px] md:w-[5px] rounded-l-sm z-10';
+            ownerIndicatorClass = 'absolute right-0 top-1/2 -translate-y-1/2 h-[85%] w-[6px] md:w-[10px] rounded-l-sm z-10';
           }
 
           // Hover Overlay Positioning (inside board, front of cell)
@@ -617,12 +670,19 @@ export default function Board({
 
                 {/* 3. Houses indicator (Inner Edge Area) */}
                 {orientation !== 'CORNER' && (
-                  <div className="flex items-center gap-[2px] shrink-0 justify-center h-[10px] w-full pb-1 z-20">
-                    {houses > 0 && Array.from({ length: Math.min(houses, 4) }).map((_, i) => (
-                      <span key={i} className="w-[3px] h-[3px] rounded-full bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.6)]" />
-                    ))}
+                  <div className="flex items-center gap-[2px] shrink-0 justify-center h-[14px] w-full pb-1 z-20">
+                    {houses > 0 && houses < 5 && (
+                      <div className="flex items-center">
+                        <HouseIcon size={10} className="text-emerald-400 drop-shadow-[0_0_2px_rgba(52,211,153,0.8)]" />
+                        <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 leading-none ml-[2px]">
+                          {houses}
+                        </span>
+                      </div>
+                    )}
                     {houses === 5 && (
-                      <span className="w-[4px] h-[4px] rounded bg-red-400 shadow-[0_0_4px_rgba(248,113,113,0.6)]" />
+                      <div className="flex items-center">
+                        <HotelIcon size={12} className="text-red-500 drop-shadow-[0_0_2px_rgba(239,68,68,0.8)]" />
+                      </div>
                     )}
                   </div>
                 )}
@@ -659,7 +719,7 @@ export default function Board({
               {/* Quick Action / Info Hover Overlay */}
               {orientation !== 'CORNER' && (
                 <div className="absolute inset-0 z-50 pointer-events-none">
-                  {isOwned && propState.ownerId === userId ? (
+                  {isOwned && propState.ownerId === userId && isMyTurn ? (
                     <div className={`absolute ${hoverPositionClass} flex flex-wrap justify-center items-center gap-1.5 md:gap-2 pointer-events-auto transform scale-50 opacity-0 group-hover:scale-125 group-hover:opacity-100 transition-all duration-200 origin-center z-[100] ${tile.type === 'STREET' ? 'w-[60px] md:w-[80px]' : 'w-auto flex-nowrap'}`}>
                       {gameState.settings?.allowMortgage !== false && (
                         <button title={propState?.isMortgaged ? 'Unmortgage' : 'Mortgage'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
@@ -685,7 +745,7 @@ export default function Board({
                         </>
                       )}
                     </div>
-                  ) : isOwned && propState.ownerId !== userId ? (
+                  ) : isOwned ? (
                     <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
                       {propState.isMortgaged ? 'Mortgaged' : (
                         ['STREET', 'RAILROAD'].includes(tile.type) ? `Rent: ৳${currentRent}` :
@@ -755,7 +815,7 @@ export default function Board({
                 )}
 
                 {/* Roll the dice OR Conclude Turn */}
-                {gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
+                {gameState.turnStatus === 'MUST_ROLL' && !activePlayer?.inJail && isActionReady && (
                   <button
                     onClick={() => {
                       setIsActionReady(false);
@@ -790,6 +850,28 @@ export default function Board({
                       </button>
                     )}
 
+                    {/* get free for $50 fine option */}
+                    {activePlayer?.inJail && (
+                      <>
+                        <button
+                          onClick={onPayJailFine}
+                          className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                        >
+                          <MoneyBagIcon size={12} className="stroke-white shrink-0" />
+                          Pay ৳50 Fine
+                        </button>
+                        {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
+                          <button
+                            onClick={onUsePardonCard}
+                            className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                          >
+                            <span className="text-lg leading-none shrink-0">🗝️</span>
+                            Use Pardon
+                          </button>
+                        )}
+                      </>
+                    )}
+
                     <button
                       onClick={onEndTurn}
                       className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
@@ -797,28 +879,6 @@ export default function Board({
                       <CheckIcon size={12} className="stroke-white shrink-0" />
                       {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'Roll Again' : 'End Turn'}
                     </button>
-                  </div>
-                )}
-
-                {/* get free for $50 fine option */}
-                {activePlayer?.inJail && gameState.turnStatus === 'MUST_ACT_OR_END' && isActionReady && (
-                  <div className="flex gap-2 w-[80%] sm:w-auto mt-2 flex-wrap justify-center">
-                    <button
-                      onClick={onPayJailFine}
-                      className="bg-[#7B5BF2] hover:bg-[#6849E0] flex-1 min-w-[120px] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                    >
-                      <MoneyBagIcon size={14} className="stroke-white" />
-                      Pay ৳50 Fine
-                    </button>
-                    {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
-                      <button
-                        onClick={onUsePardonCard}
-                        className="bg-yellow-500 hover:bg-yellow-600 flex-1 min-w-[120px] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                      >
-                        <span className="text-lg">🗝️</span>
-                        Use Pardon
-                      </button>
-                    )}
                   </div>
                 )}
               </div>

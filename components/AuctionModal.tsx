@@ -50,6 +50,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
   if (!tile) return null;
 
   const highestBidder = auction.highestBidderId ? gameState.players[auction.highestBidderId] : null;
+  const progressColor = highestBidder?.avatar || '#4ADE80';
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm select-none p-4">
@@ -104,8 +105,12 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
               <div className="w-full h-3 bg-[#1E212A] rounded-full overflow-hidden">
                 <div 
                   ref={progressRef}
-                  className="h-full bg-[#4ADE80] transition-none ease-linear shadow-[0_0_10px_rgba(74,222,128,0.5)]"
-                  style={{ width: '100%' }}
+                  className="h-full transition-none ease-linear"
+                  style={{ 
+                    width: '100%',
+                    backgroundColor: progressColor,
+                    boxShadow: `0 0 10px ${progressColor}`
+                  }}
                 />
               </div>
             </div>

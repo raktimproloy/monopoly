@@ -5,10 +5,14 @@ import { soundManager } from '../utils/soundManager';
 export function useGameSounds(
   gameState: GameState | null,
   logs: string[],
-  userId: string
+  userId: string,
+  pendingTrade: { tradeId: string } | null
 ) {
   const prevGameStatus = useRef<string | null>(null);
+  const prevTurnPlayerId = useRef<string | null>(null);
   const prevLogsLength = useRef<number>(0);
+  const prevPlayersCount = useRef<number>(0);
+  const prevPendingTradeId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!gameState) return;
@@ -19,12 +23,30 @@ export function useGameSounds(
     }
     prevGameStatus.current = gameState.gameStatus;
 
-  }, [gameState]);
+    // Detect Your Turn
+    if (gameState.currentTurnPlayerId === userId && prevTurnPlayerId.current !== userId) {
+      soundManager.playEventSound('YOUR_TURN');
+    }
+    prevTurnPlayerId.current = gameState.currentTurnPlayerId;
+
+    // Detect Player Join
+    const currentPlayersCount = Object.keys(gameState.players).length;
+    if (currentPlayersCount > prevPlayersCount.current && prevPlayersCount.current > 0) {
+      soundManager.playEventSound('PLAYER_JOIN');
+    }
+    prevPlayersCount.current = currentPlayersCount;
+
+    // Detect Trade Open
+    if (pendingTrade && pendingTrade.tradeId !== prevPendingTradeId.current) {
+      soundManager.playEventSound('TRADE_OPEN');
+    }
+    prevPendingTradeId.current = pendingTrade ? pendingTrade.tradeId : null;
+
+  }, [gameState, userId, pendingTrade]);
 
   useEffect(() => {
     // Detect new events from logs
     if (logs.length > prevLogsLength.current) {
-      // Get the newly added logs (since logs are unshifted, new logs are at the beginning)
       const newLogsCount = logs.length - prevLogsLength.current;
       const newLogs = logs.slice(0, newLogsCount);
 
@@ -33,16 +55,22 @@ export function useGameSounds(
         
         const lowerLog = log.toLowerCase();
         
-        if (lowerLog.includes('bought') || lowerLog.includes('purchased') || lowerLog.includes('won auction') || lowerLog.includes('কিনে') || lowerLog.includes('অধিগ্রহণ')) {
+        if (lowerLog.includes('কিনেছেন') || lowerLog.includes('অধিগ্রহণ')) {
           soundManager.playEventSound('BUY_PROPERTY');
-        } else if (lowerLog.includes('built a house') || lowerLog.includes('built a hotel') || lowerLog.includes('তৈরি')) {
-          soundManager.playEventSound('BUILD_HOUSE');
-        } else if (lowerLog.includes('drew a chance') || lowerLog.includes('drew a community chest') || lowerLog.includes('drew a card') || lowerLog.includes('ভাগ্য পরীক্ষা') || lowerLog.includes('গুপ্তধন')) {
+        } else if (lowerLog.includes('বানিয়েছেন')) {
+          if (lowerLog.includes('hotel')) {
+            soundManager.playEventSound('BUILD_HOTEL');
+          } else {
+            soundManager.playEventSound('BUILD_HOUSE');
+          }
+        } else if (lowerLog.includes('ভাগ্য পরীক্ষা') || lowerLog.includes('গুপ্তধন')) {
           soundManager.playEventSound('RECEIVE_CARD');
-        } else if (lowerLog.includes('rolled')) {
-          // Dice sound is already handled procedurally in DiceModel.tsx but we'll integrate the MP3 there.
-          // However, if we wanted to play it from logs, we could do it here. 
-          // We will let DiceModel handle it for exact synchronization with the animation.
+        } else if (lowerLog.includes('চুক্তি সম্পন্ন')) {
+          soundManager.playEventSound('TRADE_ACCEPT');
+        } else if (lowerLog.includes('প্রস্তাব বাতিল')) {
+          soundManager.playEventSound('TRADE_DECLINED');
+        } else if (lowerLog.includes('রোল:')) {
+          soundManager.playEventSound('DICE_ROLL');
         }
       });
     }
@@ -50,6 +78,5 @@ export function useGameSounds(
     prevLogsLength.current = logs.length;
   }, [logs]);
 
-  // Export the manager in case components want to manually trigger sounds or mute
   return { soundManager };
 }

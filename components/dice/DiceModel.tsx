@@ -127,7 +127,7 @@ export default function DiceModel({
       }
 
       const elapsed = state.clock.getElapsedTime() - startTimer.current;
-      const ROLL_DURATION = 1.5;
+      const ROLL_DURATION = 0.8;
       const FLOAT_HEIGHT = 0.8; // Lowered to keep it fully visible inside the camera bounds
 
       if (elapsed < ROLL_DURATION) {
@@ -143,12 +143,6 @@ export default function DiceModel({
         meshRef.current.rotation.z = elapsed * 12 + index;
 
       } else {
-        // Play the bounce sound exactly as they lock into place
-        if (isRolling.current && Date.now() - lastSoundTime.current > 200) {
-           lastSoundTime.current = Date.now();
-           try { soundManager.playEventSound('DICE_ROLL', 0.6); } catch (e) {}
-        }
-        
         meshRef.current.position.set(index === 0 ? -1.0 : 1.0, 0.6, 0.0);
         meshRef.current.quaternion.copy(restingRotation);
         isRolling.current = false;
