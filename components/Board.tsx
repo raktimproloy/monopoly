@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { GameState, BoardTile, Player } from '../../shared/types';
 import DiceManager from './dice/DiceManager';
+import { TramFront } from 'lucide-react';
+import { toBanglaNum } from '../utils/format';
 
 interface BoardProps {
   gameState: GameState;
@@ -62,7 +64,7 @@ function CheckIcon({ size = 12, className = "" }) {
 function HouseIcon({ size = 10, className = "" }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 3L2 12h3v8h14v-8h3L12 3z"/>
+      <path d="M12 3L2 12h3v8h14v-8h3L12 3z" />
     </svg>
   );
 }
@@ -70,7 +72,7 @@ function HouseIcon({ size = 10, className = "" }) {
 function HotelIcon({ size = 12, className = "" }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M7 19h10V4H7v15zm2-13h2v2H9V6zm4 0h2v2h-2V6zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zM3 21h18v2H3v-2z"/>
+      <path d="M7 19h10V4H7v15zm2-13h2v2H9V6zm4 0h2v2h-2V6zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zm-4 4h2v2H9v-2zm4 0h2v2h-2v-2zM3 21h18v2H3v-2z" />
     </svg>
   );
 }
@@ -171,7 +173,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
       if (isCurrentTurn) {
         const diceSum = gameState.dice ? gameState.dice[0] + gameState.dice[1] : 0;
         const expectedPos = (displayPosition + diceSum) % 40;
-        
+
         let t1: ReturnType<typeof setTimeout>;
         let t2: ReturnType<typeof setTimeout>;
 
@@ -273,8 +275,8 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
   const targetOpacity = !isVisible ? 0 : isHovered ? 1 : isParentTileHovered ? 0.3 : player.inJail ? 0.4 : 1;
 
   return (
-    <div 
-      style={{ ...style, opacity: targetOpacity }} 
+    <div
+      style={{ ...style, opacity: targetOpacity }}
       className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-[70] pointer-events-auto"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -401,7 +403,7 @@ export default function Board({
       if (!wasSentToJailRef.current) {
         wasSentToJailRef.current = true;
         const timer = setTimeout(() => {
-           onEndTurn();
+          onEndTurn();
         }, 2200); // Wait for the piece animation
         return () => clearTimeout(timer);
       }
@@ -412,14 +414,14 @@ export default function Board({
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
-      case 'Brown': return 'bg-[#B1EA40]'; // Rongpur
-      case 'Light Blue': return 'bg-[#3FCEEB]'; // Borishal
-      case 'Pink': return 'bg-[#3FEB92]'; // Khulna
-      case 'Orange': return 'bg-[#EBA03F]'; // Rajshahi
-      case 'Red': return 'bg-[#FF9696]'; // Sylhet
-      case 'Yellow': return 'bg-[#96FFFD]'; // Chottogram
-      case 'Green': return 'bg-[#C396FF]'; // Moymonsingho
-      case 'Dark Blue': return 'bg-[#FF96C9]'; // Dhaka
+      case 'Brown': return 'bg-[#64748b]'; // Group 11 (Steel/Slate)
+      case 'Light Blue': return 'bg-[#06b6d4]'; // Group 6 (Cyan)
+      case 'Pink': return 'bg-[#d946ef]'; // Group 10 (Pink)
+      case 'Orange': return 'bg-[#f97316]'; // Group 2 (Orange)
+      case 'Red': return 'bg-[#ef4444]'; // Group 1 (Red)
+      case 'Yellow': return 'bg-[#eab308]'; // Group 3 (Yellow)
+      case 'Green': return 'bg-[#22c55e]'; // Group 5 (Green)
+      case 'Dark Blue': return 'bg-[#3b82f6]'; // Group 7 (Blue)
       default: return 'bg-slate-700';
     }
   };
@@ -510,7 +512,7 @@ export default function Board({
 
   return (
     <div
-      className="relative mx-auto bg-[#0B0E14] p-1.5 md:p-2 border border-slate-800/80 rounded-xl md:rounded-3xl shadow-2xl flex flex-col justify-between w-full xl:w-auto h-auto xl:h-full max-w-full max-h-[calc(100vh-24px)]"
+      className="relative mx-auto flex flex-col justify-between w-full xl:w-auto h-auto xl:h-full max-w-full max-h-[calc(100vh-24px)]"
       style={{ aspectRatio: '1 / 1' }}
     >
       {/* Dev Mode Toggle Button */}
@@ -521,44 +523,44 @@ export default function Board({
           : 'bg-slate-900 text-slate-500 border-slate-700 hover:text-slate-300'
           }`}
       >
-        DEV: {devMode ? 'ON' : 'OFF'}
+        ডেভ মোড: {devMode ? 'চালু' : 'বন্ধ'}
       </button>
 
-    {/* Dev Teleport UI */}
-    {devMode && isMyTurn && (
+      {/* Dev Teleport UI */}
+      {devMode && isMyTurn && (
         <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex flex-col gap-2 p-2 bg-slate-900/90 backdrop-blur-md border border-purple-500/50 rounded-lg shadow-2xl animate-fade-in">
           {/* Teleport Area */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Target:</span>
-            <input 
-              type="number" 
-              min="0" max="39" 
-              value={teleportTarget} 
-              onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)} 
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">টার্গেট:</span>
+            <input
+              type="number"
+              min="0" max="39"
+              value={teleportTarget}
+              onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)}
               className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
-            <button 
+            <button
               onClick={() => onTeleportPlayer?.(teleportTarget)}
               className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95 flex-1"
             >
-              Teleport
+              পাঠান
             </button>
           </div>
-          
+
           {/* Manual Dice Area */}
           <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
-            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Roll:</span>
-            <input 
-              type="number" min="1" max="6" 
-              value={devD1} onChange={(e) => setDevD1(parseInt(e.target.value) || 1)} 
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">ছক্কা:</span>
+            <input
+              type="number" min="1" max="6"
+              value={devD1} onChange={(e) => setDevD1(parseInt(e.target.value) || 1)}
               className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
-            <input 
-              type="number" min="1" max="6" 
-              value={devD2} onChange={(e) => setDevD2(parseInt(e.target.value) || 1)} 
+            <input
+              type="number" min="1" max="6"
+              value={devD2} onChange={(e) => setDevD2(parseInt(e.target.value) || 1)}
               className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
-            <button 
+            <button
               onClick={() => {
                 setIsActionReady(false);
                 onDevRollDice?.(devD1, devD2);
@@ -566,24 +568,24 @@ export default function Board({
               }}
               className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95 flex-1"
             >
-              Force Roll
+              মারুন
             </button>
           </div>
 
           {/* Add Funds Area */}
           <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
-            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">Funds:</span>
-            <input 
-              type="number" 
-              value={devAddFundsAmount} 
-              onChange={(e) => setDevAddFundsAmount(parseInt(e.target.value) || 0)} 
+            <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">টাকা:</span>
+            <input
+              type="number"
+              value={devAddFundsAmount}
+              onChange={(e) => setDevAddFundsAmount(parseInt(e.target.value) || 0)}
               className="w-16 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
-            <button 
+            <button
               onClick={() => onDevAddFunds?.(devAddFundsAmount)}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(52,211,153,0.4)] active:scale-95 flex-1"
             >
-              Add ৳
+              +টাকা
             </button>
           </div>
 
@@ -593,34 +595,34 @@ export default function Board({
               {countdownText}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase flex-1">Next Crash:</span>
-              <input 
-                type="number" min="1" max="60" 
-                value={devCrashDelay} onChange={(e) => setDevCrashDelay(parseInt(e.target.value) || 5)} 
+              <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase flex-1">ক্র্যাশ:</span>
+              <input
+                type="number" min="1" max="60"
+                value={devCrashDelay} onChange={(e) => setDevCrashDelay(parseInt(e.target.value) || 5)}
                 className="w-10 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
               />
-              <span className="text-[10px] text-slate-400">m</span>
-              <button 
+              <span className="text-[10px] text-slate-400">মিঃ</span>
+              <button
                 onClick={() => onDevSetNextCrash?.(devCrashDelay)}
                 className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95"
               >
-                Set
+                সেট
               </button>
             </div>
-            <button 
+            <button
               onClick={() => onDevForceCrash?.()}
               className="bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] active:scale-95 w-full"
             >
-              Force Market Crash Now
+              এখনই মার্কেট ক্র্যাশ করুন
             </button>
           </div>
-      </div>
-    )}
+        </div>
+      )}
 
       {/* 11x11 Grid Wrapper */}
       <div
         id="board-container"
-        className="grid gap-1 w-full h-full"
+        className="grid gap-0 w-full h-full border border-slate-700"
         style={{
           gridTemplateColumns: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)',
           gridTemplateRows: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)'
@@ -683,16 +685,16 @@ export default function Board({
             colorIndicatorClass = 'absolute -left-[8px] md:-left-[12px] top-1/2 -translate-y-1/2 h-[85%] w-[8px] md:w-[12px] rounded-l-md z-10 shadow-lg';
           }
 
-          // Purchased Player Color border
+          // Purchased Player Color border (OUTER EDGE, NO GLOW, EXTRA SPACE, NO ROUNDED, THICKER)
           let ownerIndicatorClass = 'hidden';
           if (orientation === 'TOP') {
-            ownerIndicatorClass = 'absolute top-0 left-1/2 -translate-x-1/2 w-[85%] h-[6px] md:h-[10px] rounded-b-sm z-10';
+            ownerIndicatorClass = 'absolute top-[3px] md:top-1 left-1/2 -translate-x-1/2 w-[75%] h-[12px] md:h-[15px] z-10';
           } else if (orientation === 'BOTTOM') {
-            ownerIndicatorClass = 'absolute bottom-0 left-1/2 -translate-x-1/2 w-[85%] h-[6px] md:h-[10px] rounded-t-sm z-10';
+            ownerIndicatorClass = 'absolute bottom-[3px] md:bottom-1 left-1/2 -translate-x-1/2 w-[75%] h-[12px] md:h-[15px] z-10';
           } else if (orientation === 'LEFT') {
-            ownerIndicatorClass = 'absolute left-0 top-1/2 -translate-y-1/2 h-[85%] w-[6px] md:w-[10px] rounded-r-sm z-10';
+            ownerIndicatorClass = 'absolute left-[3px] md:left-1 top-1/2 -translate-y-1/2 h-[75%] w-[12px] md:w-[15px] z-10';
           } else if (orientation === 'RIGHT') {
-            ownerIndicatorClass = 'absolute right-0 top-1/2 -translate-y-1/2 h-[85%] w-[6px] md:w-[10px] rounded-l-sm z-10';
+            ownerIndicatorClass = 'absolute right-[3px] md:right-1 top-1/2 -translate-y-1/2 h-[75%] w-[12px] md:w-[15px] z-10';
           }
 
           // Hover Overlay Positioning (inside board, front of cell)
@@ -717,7 +719,7 @@ export default function Board({
                   onTileClick(tile.index);
                 }
               }}
-              className={`relative rounded-lg bg-slate-800/40 backdrop-blur-md border border-white/10 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 shadow-inner overflow-visible z-10 hover:z-[60] ${orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
+              className={`relative rounded-none bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60] ${orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
                 }`}
             >
               {/* Glassmorphism Inner Layout Wrapper */}
@@ -730,11 +732,11 @@ export default function Board({
                       <span className="drop-shadow-md text-slate-200 flex items-center justify-center gap-1">
                         {gameState.marketCrash?.active ? (
                           <>
-                            <del className="text-red-400 text-[6px] md:text-[8px]">৳{tile.price}</del>
-                            <span className="text-emerald-400">৳{Math.floor(tile.price * 0.7)}</span>
+                            <del className="text-red-400 text-[6px] md:text-[8px]">৳{toBanglaNum(tile.price)}</del>
+                            <span className="text-emerald-400">৳{toBanglaNum(Math.floor(tile.price * 0.7))}</span>
                           </>
                         ) : (
-                          `৳${tile.price}`
+                          `৳${toBanglaNum(tile.price)}`
                         )}
                       </span>
                     )}
@@ -752,10 +754,18 @@ export default function Board({
                           {tile.type === 'FREE_PARKING' && gameState.settings?.freeParkingCashPool && (
                             <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse">
                               <MoneyBagIcon size={12} className="mr-0.5" />
-                              ৳{gameState.freeParkingPool || 0}
+                              ৳{toBanglaNum(gameState.freeParkingPool || 0)}
                             </div>
                           )}
                         </>
+                      );
+                    }
+                    if (tile.type === 'RAILROAD') {
+                      return (
+                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
+                          <TramFront size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-slate-300 drop-shadow-md" />
+                          {districtName}
+                        </span>
                       );
                     }
                     return <span className="font-extrabold text-white tracking-wide">{districtName}</span>;
@@ -769,7 +779,7 @@ export default function Board({
                       <div className="flex items-center">
                         <HouseIcon size={10} className="text-emerald-400 drop-shadow-[0_0_2px_rgba(52,211,153,0.8)]" />
                         <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 leading-none ml-[2px]">
-                          {houses}
+                          {toBanglaNum(houses)}
                         </span>
                       </div>
                     )}
@@ -804,7 +814,6 @@ export default function Board({
                   className={`${ownerIndicatorClass}`}
                   style={{
                     backgroundColor: ownerAvatar,
-                    boxShadow: `0 0 6px ${ownerAvatar}`,
                     opacity: isMortgaged ? 0.3 : 1
                   }}
                 />
@@ -816,37 +825,37 @@ export default function Board({
                   {isOwned && propState.ownerId === userId && isMyTurn ? (
                     <div className={`absolute ${hoverPositionClass} flex flex-wrap justify-center items-center gap-1.5 md:gap-2 pointer-events-auto transform scale-50 opacity-0 group-hover:scale-125 group-hover:opacity-100 transition-all duration-200 origin-center z-[100] ${tile.type === 'STREET' ? 'w-[60px] md:w-[80px]' : 'w-auto flex-nowrap'}`}>
                       {gameState.settings?.allowMortgage !== false && (
-                        <button title={propState?.isMortgaged ? 'Unmortgage' : 'Mortgage'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                          {propState?.isMortgaged ? 'UNMTG' : 'MTG'}
+                        <button title={propState?.isMortgaged ? 'বন্ধক ছাড়ান' : 'বন্ধক দিন'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                          {propState?.isMortgaged ? 'আন-মর্টগেজ' : 'মর্টগেজ'}
                         </button>
                       )}
-                      <button title="Sell Property" onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                        SELL
+                      <button title="জমি বিক্রি" onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                        বিক্রি
                       </button>
                       {(!propState || !(propState as any).auctionFailed) && (
-                        <button title="Auction Property" onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-purple-500 hover:bg-purple-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                          AUC
+                        <button title="নিলাম" onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-purple-500 hover:bg-purple-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                          নিলাম
                         </button>
                       )}
                       {tile.type === 'STREET' && (
                         <>
-                          <button title="Build House" onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-blue-500 hover:bg-blue-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                            +H
+                          <button title="বাড়ি বানান" onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-blue-500 hover:bg-blue-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                            +বাড়ি
                           </button>
-                          <button title="Break House" onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-orange-500 hover:bg-orange-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                            -H
+                          <button title="বাড়ি বেচুন" onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-orange-500 hover:bg-orange-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
+                            -বাড়ি
                           </button>
                         </>
                       )}
                     </div>
                   ) : isOwned ? (
                     <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
-                      {propState.isMortgaged ? 'Mortgaged' : (
+                      {propState.isMortgaged ? 'বন্ধক রাখা' : (
                         ['STREET', 'RAILROAD'].includes(tile.type) ? (
                           gameState.marketCrash?.active ? (
-                            <span className="flex gap-1 items-center">Rent: <del className="text-red-300 text-[8px] md:text-[10px]">৳{currentRent}</del> <span className="text-emerald-300">৳{Math.ceil(currentRent * 1.4)}</span></span>
+                            <span className="flex gap-1 items-center">ভাড়া: <del className="text-red-300 text-[8px] md:text-[10px]">৳{toBanglaNum(currentRent)}</del> <span className="text-emerald-300">৳{toBanglaNum(Math.ceil(currentRent * 1.4))}</span></span>
                           ) : (
-                            `Rent: ৳${currentRent}`
+                            `ভাড়া: ৳${toBanglaNum(currentRent)}`
                           )
                         ) :
                           tile.type === 'UTILITY' ? 'Dice x Rent' :
@@ -880,7 +889,7 @@ export default function Board({
           {gameState.marketCrash?.active && (
             <div className="absolute top-2 flex items-center gap-2 px-4 py-1.5 bg-red-950/80 border border-red-500/50 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.5)] z-50">
               <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse drop-shadow-[0_0_5px_rgba(239,68,68,1)]" />
-              <span className="text-red-400 font-orbitron font-bold text-xs uppercase tracking-widest animate-pulse">Market Crash Active</span>
+              <span className="text-red-400 font-orbitron font-bold text-xs uppercase tracking-widest animate-pulse">মার্কেট ক্র্যাশ চলছে</span>
             </div>
           )}
 
@@ -898,7 +907,7 @@ export default function Board({
                   className="w-4 h-4 rounded-full shrink-0 border border-white/10 shadow-sm"
                 />
                 <span className="text-sm font-sans font-bold text-slate-300">
-                  {activePlayer?.name || 'Operator'} is playing...
+                  {activePlayer?.name || 'Operator'}-এর টার্ন চলছে...
                 </span>
               </div>
             ) : (
@@ -907,16 +916,16 @@ export default function Board({
                 {gameState.turnStatus === 'BANKRUPTCY_PENDING' && isActionReady && (
                   <div className="flex flex-col items-center gap-2 w-full px-4 animate-fade-in">
                     <span className="text-red-500 font-bold uppercase tracking-wider text-sm animate-pulse text-center text-shadow-neon-purple">
-                      DEBT WARNING: NEGATIVE BALANCE
+                      সতর্কতা: আপনার ব্যালেন্স নেগেটিভ
                     </span>
                     <span className="text-[10px] md:text-xs text-slate-300 text-center leading-tight">
-                      You must raise funds to clear your debt (sell, mortgage, trade) or declare bankruptcy.
+                      আপনাকে অবশ্যই কিছু বিক্রি বা বন্ধক রেখে টাকা জোগাড় করতে হবে, না হলে দেউলিয়া ঘোষণা করতে হবে।
                     </span>
                     <button
                       onClick={() => window.dispatchEvent(new CustomEvent('declare_bankruptcy'))}
                       className="bg-red-600/80 border border-red-500 hover:bg-red-500 text-white font-orbitron font-extrabold text-[9px] md:text-[11px] px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl mt-1 shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] cursor-pointer w-full sm:w-auto"
                     >
-                      Declare Bankruptcy
+                      দেউলিয়া ঘোষণা করুন
                     </button>
                   </div>
                 )}
@@ -932,7 +941,7 @@ export default function Board({
                     className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
                   >
                     <DiceIcon size={14} className="stroke-white" />
-                    Roll the dice
+                    ছক্কা মারুন
                   </button>
                 )}
 
@@ -944,7 +953,7 @@ export default function Board({
                         className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
                       >
                         <CartIcon size={12} className="stroke-white shrink-0" />
-                        <span className="truncate">Buy ৳{currentTilePrice}</span>
+                        <span className="truncate">কিনুন ৳{toBanglaNum(currentTilePrice)}</span>
                       </button>
                     )}
 
@@ -953,7 +962,7 @@ export default function Board({
                         onClick={() => onAuctionProperty?.(currentTileIndex)}
                         className="flex-1 min-w-[60px] sm:flex-none sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-orange-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                       >
-                        Auction
+                        নিলাম
                       </button>
                     )}
 
@@ -965,7 +974,7 @@ export default function Board({
                           className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                         >
                           <MoneyBagIcon size={12} className="stroke-white shrink-0" />
-                          Pay ৳50 Fine
+                          ৳{toBanglaNum(50)} জরিমানা দিন
                         </button>
                         {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
                           <button
@@ -973,7 +982,7 @@ export default function Board({
                             className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                           >
                             <span className="text-lg leading-none shrink-0">🗝️</span>
-                            Use Pardon
+                            পার্ডন কার্ড ব্যবহার করুন
                           </button>
                         )}
                       </>
@@ -984,7 +993,7 @@ export default function Board({
                       className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                     >
                       <CheckIcon size={12} className="stroke-white shrink-0" />
-                      {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'Roll Again' : 'End Turn'}
+                      {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'আবার মারুন' : 'টার্ন শেষ'}
                     </button>
                   </div>
                 )}

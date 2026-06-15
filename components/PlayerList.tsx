@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { GameState, BoardTile } from '../../shared/types';
+import { toBanglaNum } from '../utils/format';
 // No icon imports needed since we use native emojis and custom SVGs
 
 interface PlayerListProps {
@@ -22,14 +23,14 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
-      case 'Brown': return 'bg-[#B1EA40]';
-      case 'Light Blue': return 'bg-[#3FCEEB]';
-      case 'Pink': return 'bg-[#3FEB92]';
-      case 'Orange': return 'bg-[#EBA03F]';
-      case 'Red': return 'bg-[#FF9696]';
-      case 'Yellow': return 'bg-[#96FFFD]';
-      case 'Green': return 'bg-[#C396FF]';
-      case 'Dark Blue': return 'bg-[#FF96C9]';
+      case 'Brown': return 'bg-[#64748b]'; // Group 11 (Steel/Slate)
+      case 'Light Blue': return 'bg-[#06b6d4]'; // Group 6 (Cyan)
+      case 'Pink': return 'bg-[#d946ef]'; // Group 10 (Pink)
+      case 'Orange': return 'bg-[#f97316]'; // Group 2 (Orange)
+      case 'Red': return 'bg-[#ef4444]'; // Group 1 (Red)
+      case 'Yellow': return 'bg-[#eab308]'; // Group 3 (Yellow)
+      case 'Green': return 'bg-[#22c55e]'; // Group 5 (Green)
+      case 'Dark Blue': return 'bg-[#3b82f6]'; // Group 7 (Blue)
       default: return 'bg-slate-700';
     }
   };
@@ -102,7 +103,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       
       <h3 className="text-[10px] font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-1.5">
         <UsersListIcon size={11} className="text-cyber-purple" />
-        OPERATOR NODES
+        খেলোয়াড় তালিকা
       </h3>
 
       <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
@@ -161,7 +162,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
                     {/* Me Badge */}
                     {isMe && (
                       <span className="text-[7px] font-mono text-cyber-blue bg-cyber-blue/10 border border-cyber-blue/20 px-1 py-px rounded font-bold uppercase">
-                        YOU
+                        আপনি
                       </span>
                     )}
 
@@ -178,7 +179,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
                     {/* Detained/Jail Icon */}
                     {player.inJail && !player.isBankrupt && (
                       <span title="Detained in Jail" className="text-[8px] bg-amber-950/70 border border-amber-800/30 text-amber-400 px-1 py-px rounded font-mono font-bold uppercase tracking-wider">
-                        JAIL
+                        জেলে
                       </span>
                     )}
                   </div>
@@ -206,21 +207,21 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
               {/* Right block: Balance */}
               <div className="text-right shrink-0 ml-2 relative">
                 <span className={`text-[13px] font-sans font-bold tracking-wide ${(displayBalances[player.id] ?? player.balance) < 0 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
-                  ৳{displayBalances[player.id] ?? player.balance}
+                  ৳{toBanglaNum(displayBalances[player.id] ?? player.balance)}
                 </span>
                 
                 {/* Floating Money Animations */}
                 <div className="absolute bottom-full right-0 flex flex-col items-end pointer-events-none z-50 mb-1">
                   {floaters[player.id]?.map(f => (
                     <span key={f.id} className={`text-[10px] font-black animate-float-up whitespace-nowrap ${f.diff > 0 ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]' : 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]'}`}>
-                      {f.diff > 0 ? '+' : ''}৳{Math.abs(f.diff)}
+                      {f.diff > 0 ? '+' : ''}৳{toBanglaNum(Math.abs(f.diff))}
                     </span>
                   ))}
                 </div>
 
                 {player.isBankrupt && (
                   <div className="text-[7px] font-mono text-red-500 font-bold uppercase tracking-wider mt-px">
-                    BANKRUPT
+                    দেউলিয়া
                   </div>
                 )}
               </div>

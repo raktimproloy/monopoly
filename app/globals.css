@@ -2,20 +2,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0B0E14;
-  --foreground: #F1F5F9;
-  --cyber-blue: #8BA4F9;
-  --cyber-purple: #D8B4F8;
+  --background: #13131b;
+  --foreground: #f8fafc;
+  --cyber-blue: #6366f1;
+  --cyber-purple: #d946ef;
   
   --font-orbitron: var(--font-orbitron), sans-serif;
-  --font-inter: var(--font-inter), sans-serif;
+  --font-hanken: var(--font-hanken), sans-serif;
 }
 
 @theme inline {
   --color-cyber-blue: var(--cyber-blue);
   --color-cyber-purple: var(--cyber-purple);
   --color-game-bg: var(--background);
-  --font-sans: 'Kalpurush', var(--font-inter);
+  --font-sans: var(--font-hanken), 'Kalpurush', sans-serif;
   --font-orbitron: var(--font-orbitron);
   --font-kalpurush: 'Kalpurush', sans-serif;
 }
@@ -23,7 +23,7 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Kalpurush', var(--font-inter);
+  font-family: var(--font-hanken), 'Kalpurush', sans-serif;
 }
 
 /* Premium iOS-Style Frosted Glassmorphism Panels */

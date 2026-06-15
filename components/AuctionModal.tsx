@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { GameState, BoardTile, Player } from '../../shared/types';
 import { Gavel } from 'lucide-react';
+import { toBanglaNum } from '../utils/format';
 
 interface AuctionModalProps {
   gameState: GameState;
@@ -15,7 +16,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
   const auction = gameState.activeAuction;
   
   const [timeLeft, setTimeLeft] = useState(0);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
         {/* Header */}
         <div className="flex flex-col items-center justify-center border-b border-white/5 pb-4">
           <span className="text-slate-400 font-orbitron text-sm uppercase tracking-widest mb-1 flex items-center gap-2">
-            Auction
+            নিলাম
           </span>
           <h2 className="text-3xl font-extrabold text-white flex items-center gap-3">
             {tile.type === 'RAILROAD' && '🚂'}
@@ -76,7 +77,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
             
             {/* Current Bid info */}
             <div className="flex flex-col gap-2">
-              <span className="text-sm text-slate-400 font-medium">Current bid</span>
+              <span className="text-sm text-slate-400 font-medium">বর্তমান ডাক</span>
               <div className="flex items-center gap-4">
                 {highestBidder ? (
                   <div
@@ -91,7 +92,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
                   </div>
                 )}
                 <span className="text-5xl font-black text-white">
-                  ৳{auction.currentBid}
+                  ৳{toBanglaNum(auction.currentBid)}
                 </span>
               </div>
             </div>
@@ -100,7 +101,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
             <div className="flex flex-col gap-1.5 mt-2">
               <div className="flex justify-between items-center text-xs text-slate-400">
                 <span></span>
-                <span className="flex items-center gap-1">Sold in {Math.ceil(timeLeft / 1000)}s <Gavel size={12} className="opacity-70" /></span>
+                <span className="flex items-center gap-1">বিক্রি হবে {toBanglaNum(Math.ceil(timeLeft / 1000))} সেঃ <Gavel size={12} className="opacity-70" /></span>
               </div>
               <div className="w-full h-3 bg-[#1E212A] rounded-full overflow-hidden">
                 <div 
@@ -117,7 +118,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
 
             {/* Bidding Actions */}
             <div className="flex flex-col gap-2 mt-4">
-              <span className="text-sm text-slate-400 font-medium">I'm bidding...</span>
+              <span className="text-sm text-slate-400 font-medium">ডাকুন...</span>
               <div className="grid grid-cols-3 gap-3">
                 {[2, 10, 50].map((amount) => {
                   const myBalance = gameState.players[userId]?.balance || 0;
@@ -132,8 +133,8 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
                       onClick={() => onPlaceBid(amount)}
                       className="bg-[#8B5CF6] hover:bg-[#7C3AED] disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl py-3 flex flex-col items-center justify-center transition-all shadow-lg active:scale-95"
                     >
-                      <span className="text-lg font-bold">৳{auction.currentBid + amount}</span>
-                      <span className="text-xs font-medium opacity-80">+৳{amount}</span>
+                      <span className="text-lg font-bold">৳{toBanglaNum(auction.currentBid + amount)}</span>
+                      <span className="text-xs font-medium opacity-80">+৳{toBanglaNum(amount)}</span>
                     </button>
                   );
                 })}
@@ -141,7 +142,7 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
             </div>
             {gameState.settings?.jailLoss && gameState.players[userId]?.inJail && (
               <span className="text-red-400 text-xs font-bold text-center">
-                You cannot bid while in jail (Jail Loss Rule).
+                জেলে থাকা অবস্থায় আপনি নিলামে অংশ নিতে পারবেন না।
               </span>
             )}
 
@@ -156,13 +157,13 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
                       <div className="w-4 h-4 rounded-full" style={{ backgroundColor: bidder?.avatar || '#555' }} />
                       <span className="text-white">{bidder?.name || 'Unknown'}</span>
                     </div>
-                    <span className="text-slate-300">bids ৳{bid.amount}</span>
+                    <span className="text-slate-300">ডাকলো ৳{toBanglaNum(bid.amount)}</span>
                   </div>
                 );
               })}
               {(!auction.bids || auction.bids.length === 0) && (
                 <div className="text-sm text-slate-500 italic text-center mt-4">
-                  No bids yet. Be the first!
+                  কোনো ডাক নেই। প্রথম ডাকুন!
                 </div>
               )}
             </div>
@@ -179,53 +180,53 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
             
             <div className="w-full flex flex-col gap-3 text-sm text-slate-300">
               <div className="flex justify-between border-b border-white/5 pb-1">
-                <span className="text-slate-500">when</span>
-                <span className="text-slate-500">get</span>
+                <span className="text-slate-500">কখন</span>
+                <span className="text-slate-500">পাবেন</span>
               </div>
               
               {tile.type === 'STREET' && tile.rent && (
                 <>
-                  <div className="flex justify-between"><span>Rent</span><span className="font-mono">৳{tile.rent[0]}</span></div>
-                  <div className="flex justify-between"><span>1 House</span><span className="font-mono">৳{tile.rent[1]}</span></div>
-                  <div className="flex justify-between"><span>2 Houses</span><span className="font-mono">৳{tile.rent[2]}</span></div>
-                  <div className="flex justify-between"><span>3 Houses</span><span className="font-mono">৳{tile.rent[3]}</span></div>
-                  <div className="flex justify-between"><span>4 Houses</span><span className="font-mono">৳{tile.rent[4]}</span></div>
-                  <div className="flex justify-between text-amber-400 mt-1 border-t border-white/5 pt-2"><span>Hotel</span><span className="font-mono">৳{tile.rent[5]}</span></div>
+                  <div className="flex justify-between"><span>ভাড়া</span><span className="font-mono">৳{toBanglaNum(tile.rent[0])}</span></div>
+                  <div className="flex justify-between"><span>১ বাড়ি</span><span className="font-mono">৳{toBanglaNum(tile.rent[1])}</span></div>
+                  <div className="flex justify-between"><span>২ বাড়ি</span><span className="font-mono">৳{toBanglaNum(tile.rent[2])}</span></div>
+                  <div className="flex justify-between"><span>৩ বাড়ি</span><span className="font-mono">৳{toBanglaNum(tile.rent[3])}</span></div>
+                  <div className="flex justify-between"><span>৪ বাড়ি</span><span className="font-mono">৳{toBanglaNum(tile.rent[4])}</span></div>
+                  <div className="flex justify-between text-amber-400 mt-1 border-t border-white/5 pt-2"><span>হোটেল</span><span className="font-mono">৳{toBanglaNum(tile.rent[5])}</span></div>
                   
                   <div className="mt-4 flex flex-col gap-1 text-xs text-slate-500">
-                    <div className="flex justify-between"><span>House Cost</span><span className="font-mono">৳{tile.houseCost}</span></div>
-                    <div className="flex justify-between"><span>Mortgage Value</span><span className="font-mono">৳{tile.mortgageValue}</span></div>
+                    <div className="flex justify-between"><span>বাড়ির দাম</span><span className="font-mono">৳{toBanglaNum(tile.houseCost)}</span></div>
+                    <div className="flex justify-between"><span>বন্ধকী মূল্য</span><span className="font-mono">৳{toBanglaNum(tile.mortgageValue)}</span></div>
                   </div>
                 </>
               )}
 
               {tile.type === 'RAILROAD' && (
                 <>
-                  <div className="flex justify-between"><span>1 Railroad owned</span><span className="font-mono">৳25</span></div>
-                  <div className="flex justify-between"><span>2 Railroads owned</span><span className="font-mono">৳50</span></div>
-                  <div className="flex justify-between"><span>3 Railroads owned</span><span className="font-mono">৳100</span></div>
-                  <div className="flex justify-between border-b border-white/5 pb-2"><span>4 Railroads owned</span><span className="font-mono">৳200</span></div>
-                  <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Mortgage Value</span><span className="font-mono">৳{tile.mortgageValue}</span></div>
+                  <div className="flex justify-between"><span>১টি রেলওয়ে</span><span className="font-mono">৳{toBanglaNum(25)}</span></div>
+                  <div className="flex justify-between"><span>২টি রেলওয়ে</span><span className="font-mono">৳{toBanglaNum(50)}</span></div>
+                  <div className="flex justify-between"><span>৩টি রেলওয়ে</span><span className="font-mono">৳{toBanglaNum(100)}</span></div>
+                  <div className="flex justify-between border-b border-white/5 pb-2"><span>৪টি রেলওয়ে</span><span className="font-mono">৳{toBanglaNum(200)}</span></div>
+                  <div className="mt-2 flex justify-between text-xs text-slate-500"><span>বন্ধকী মূল্য</span><span className="font-mono">৳{toBanglaNum(tile.mortgageValue)}</span></div>
                 </>
               )}
 
               {tile.type === 'UTILITY' && (
                 <>
                   <div className="text-left text-xs mb-2 leading-relaxed">
-                    If one Utility is owned, rent is 4x amount shown on dice.
+                    ১টি থাকলে ছক্কার মানের ৪ গুণ ভাড়া।
                   </div>
                   <div className="text-left text-xs border-b border-white/5 pb-2 leading-relaxed">
-                    If both Utilities are owned, rent is 10x amount shown on dice.
+                    ২টি থাকলে ছক্কার মানের ১০ গুণ ভাড়া।
                   </div>
-                  <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Mortgage Value</span><span className="font-mono">৳{tile.mortgageValue}</span></div>
+                  <div className="mt-2 flex justify-between text-xs text-slate-500"><span>বন্ধকী মূল্য</span><span className="font-mono">৳{toBanglaNum(tile.mortgageValue)}</span></div>
                 </>
               )}
 
             </div>
 
             <div className="mt-8 flex flex-col items-center text-slate-400">
-              <span className="text-xs">Base Price</span>
-              <span className="text-2xl font-bold text-white">৳{tile.price}</span>
+              <span className="text-xs">মূল দাম</span>
+              <span className="text-2xl font-bold text-white">৳{toBanglaNum(tile.price)}</span>
             </div>
             
           </div>

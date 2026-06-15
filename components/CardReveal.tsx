@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { GameState } from '../../shared/types';
 import { soundManager } from '../utils/soundManager';
+import { toBanglaNum } from '../utils/format';
 
 interface CardRevealProps {
   gameState: GameState;
@@ -74,7 +75,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
                   {isChance ? '?' : '🗝️'}
                 </div>
                 <div className="font-orbitron font-black text-2xl tracking-widest text-slate-300 uppercase">
-                  {isChance ? 'Chance' : 'Community Chest'}
+                  {isChance ? 'সুযোগ' : 'তহবিল'}
                 </div>
               </div>
             </div>
@@ -86,7 +87,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
             >
               
               <div className={`p-4 text-center font-orbitron font-black text-white uppercase tracking-widest shadow-md ${isChance ? 'bg-orange-500' : 'bg-blue-500'}`}>
-                {isChance ? 'Chance' : 'Community Chest'}
+                {isChance ? 'সুযোগ' : 'তহবিল'}
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -96,7 +97,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
 
                 {card.isSecret && (
                   <div className="mt-4 text-xs font-mono font-bold text-red-500 border border-red-500 px-3 py-1 rounded-full animate-pulse">
-                    SECRET CARD
+                    গোপন কার্ড
                   </div>
                 )}
               </div>
@@ -117,7 +118,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
                 disabled={!canResolve}
                 className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-orbitron font-black px-8 py-3 rounded-xl shadow-lg shadow-emerald-500/30 transition-all active:scale-95"
               >
-                RAKHE DAW
+                রেখে দিন
               </button>
               {onSellPardon && (
                 <button
@@ -129,7 +130,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
                   disabled={!canResolve}
                   className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-orbitron font-black px-6 py-3 rounded-xl shadow-lg shadow-amber-500/30 transition-all active:scale-95 flex items-center gap-2"
                 >
-                  SELL ৳50
+                  বিক্রি করুন ৳{toBanglaNum(50)}
                 </button>
               )}
             </>
@@ -139,7 +140,7 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
               disabled={!canResolve}
               className="bg-[#6F4FF0] hover:bg-[#5C3ED9] disabled:opacity-50 disabled:cursor-not-allowed text-white font-orbitron font-black px-12 py-3 rounded-xl shadow-lg shadow-[#6F4FF0]/30 transition-all active:scale-95 text-lg tracking-wider"
             >
-              OK
+              ঠিক আছে
             </button>
           )}
         </div>

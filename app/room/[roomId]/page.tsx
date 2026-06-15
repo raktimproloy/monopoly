@@ -88,10 +88,14 @@ function GameRoomContent() {
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const AVATAR_COLORS = [
-    { hex: '#8BA4F9', name: 'SOFT BLUE' },
-    { hex: '#D8B4F8', name: 'SOFT PURPLE' },
-    { hex: '#F98BA4', name: 'SOFT PINK' },
-    { hex: '#A4F98B', name: 'SOFT GREEN' }
+    { hex: '#6366f1', name: 'Indigo Neon' },
+    { hex: '#f43f5e', name: 'Rose Red' },
+    { hex: '#10b981', name: 'Emerald Green' },
+    { hex: '#f59e0b', name: 'Amber Gold' },
+    { hex: '#8b5cf6', name: 'Violet Pulse' },
+    { hex: '#06b6d4', name: 'Cyan Tech' },
+    { hex: '#ec4899', name: 'Pink Glow' },
+    { hex: '#d946ef', name: 'Fuchsia Flash' }
   ];
 
   // Auto-select first available avatar signature
@@ -208,7 +212,7 @@ function GameRoomContent() {
             <RotateCw className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />
           )}
           <h2 className="text-sm font-orbitron font-extrabold tracking-widest text-white uppercase">
-            {errorMessage ? "CONNECTION REFUSED" : "CALIBRATING NETWORK"}
+            {errorMessage ? "কানেকশন বাতিল" : "নেটওয়ার্ক কানেক্ট হচ্ছে"}
           </h2>
           {errorMessage && (
             <div className="mt-6 flex flex-col gap-4">
@@ -222,7 +226,7 @@ function GameRoomContent() {
                 }}
                 className="w-full py-3 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-xs hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all cursor-pointer"
               >
-                RETURN TO GATEWAY
+                লবিতে ফিরে যান
               </button>
             </div>
           )}
@@ -347,7 +351,7 @@ function GameRoomContent() {
                 {/* Starting cash selection */}
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex flex-col gap-2">
                   <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                    OPERATOR STARTING CASH
+                    শুরুর টাকা
                   </label>
                   <select
                     value={settings.startingCash}
@@ -355,13 +359,13 @@ function GameRoomContent() {
                     disabled={!isHost}
                     className={`w-full mt-1.5 px-3 py-2 bg-slate-900 border border-slate-800 rounded font-mono text-xs text-slate-200 outline-none ${isHost ? 'cursor-pointer focus:border-cyber-blue' : 'opacity-60 cursor-not-allowed'}`}
                   >
-                    <option value={1000}>$1,000 (QUICK MATCH)</option>
-                    <option value={1500}>$1,500 (STANDARD MONOPOLY)</option>
-                    <option value={2000}>$2,000 (RICH MODE)</option>
-                    <option value={2500}>$2,500 (HIGH STAKES)</option>
+                    <option value={1000}>৳১,০০০ (দ্রুত খেলা)</option>
+                    <option value={1500}>৳১,৫০০ (সাধারণ মনোপলি)</option>
+                    <option value={2000}>৳২,০০০ (বড় খেলা)</option>
+                    <option value={2500}>৳২,৫০০ (ঝুঁকিপূর্ণ খেলা)</option>
                   </select>
                   <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-normal">
-                    Starting cash allocation for all joined player accounts.
+                    সব খেলোয়াড়ের জন্য শুরুর টাকা।
                   </span>
                 </div>
 
@@ -369,10 +373,10 @@ function GameRoomContent() {
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                      DOUBLE RENT ON COMPLETE SET
+                      একই রঙের জায়গায় ডাবল ভাড়া
                     </label>
                     <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
-                      Doubles unimproved street rent when player owns the entire color group set.
+                      খেলোয়াড় যদি একই রঙের সব জায়গা কিনে নেয়, তবে সেগুলোতে দ্বিগুণ ভাড়া পাবে।
                     </span>
                   </div>
                   <input
@@ -388,10 +392,10 @@ function GameRoomContent() {
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                      FREE PARKING CASH POOL
+                      ফ্রি পার্কিং মানি পুল
                     </label>
                     <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
-                      Accumulates tax fines in a central pool, awarded to players landing on Free Parking.
+                      সকল জরিমানা এক জায়গায় জমা হবে এবং যে ফ্রি পার্কিংয়ে যাবে সে সব টাকা পাবে।
                     </span>
                   </div>
                   <input
@@ -407,10 +411,10 @@ function GameRoomContent() {
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                      UNPURCHASED PROPERTY AUCTION
+                      জায়গা নিলাম
                     </label>
                     <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
-                      If disabled, players can only buy or end turn. The auction option on unpurchased property is removed.
+                      যদি কেউ জায়গা না কিনে, তবে সেটি নিলামে উঠবে।
                     </span>
                   </div>
                   <input
@@ -426,10 +430,10 @@ function GameRoomContent() {
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                      PROPERTY MORTGAGE
+                      জায়গা বন্ধক
                     </label>
                     <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
-                      Allow players to mortgage their owned properties to the bank for emergency funds.
+                      জরুরি টাকার প্রয়োজনে খেলোয়াড়রা জায়গা বন্ধক রাখতে পারবে।
                     </span>
                   </div>
                   <input
@@ -445,10 +449,10 @@ function GameRoomContent() {
                 <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
                     <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
-                      JAIL LOSS RULES
+                      জেলে সব বন্ধ
                     </label>
                     <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
-                      If enabled, players in jail cannot collect rent, trade, auction, build, sell, or mortgage.
+                      চালু থাকলে, জেলে থাকা খেলোয়াড়রা ভাড়া, ট্রেড, নিলাম বা বাড়ি বানানো কিছুই করতে পারবে না।
                     </span>
                   </div>
                   <input
@@ -471,15 +475,15 @@ function GameRoomContent() {
                     className="w-full max-w-[280px] py-4 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-orbitron font-bold tracking-widest text-sm hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
                   >
                     <Play size={14} className="fill-cyber-blue" />
-                    COMPILES MATRIX & START
+                    খেলা শুরু করুন
                   </button>
                   <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest animate-pulse mt-1">
-                    {players.length < 2 ? 'Lobby needs minimum 2 players (CPU fallback active)' : 'Awaiting host activation'}
+                    {players.length < 2 ? 'কমপক্ষে ২ জন খেলোয়াড় লাগবে' : 'হোস্টের জন্য অপেক্ষা করা হচ্ছে'}
                   </span>
                 </>
               ) : (
                 <div className="w-full max-w-[280px] py-4 glass-panel-light text-slate-500 border border-slate-800/50 font-orbitron font-bold tracking-widest text-sm flex items-center justify-center gap-2 bg-slate-900/20 select-none">
-                  AWAITING HOST TO START...
+                  হোস্ট খেলা শুরু করবে...
                 </div>
               )}
             </div>
@@ -504,7 +508,7 @@ function GameRoomContent() {
               </button>
 
               <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-white uppercase text-center mb-6">
-                UPDATE APPEARANCE
+                রঙ পরিবর্তন করুন
               </h3>
 
               <div className="grid grid-cols-2 gap-3">
@@ -531,10 +535,10 @@ function GameRoomContent() {
                             : 'rgba(255, 255, 255, 0.08)'
                       }}
                       className={`py-3 rounded-lg border-2 bg-slate-950/40 flex flex-col items-center justify-center gap-1.5 transition-all duration-150 ${isTaken
-                          ? 'opacity-40 cursor-not-allowed border-red-950'
-                          : isSelected
-                            ? 'cursor-default'
-                            : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
+                        ? 'opacity-40 cursor-not-allowed border-red-950'
+                        : isSelected
+                          ? 'cursor-default'
+                          : 'cursor-pointer hover:border-slate-700 active:scale-[0.95]'
                         }`}
                     >
                       <div
@@ -585,7 +589,7 @@ function GameRoomContent() {
                 onClick={clearError}
                 className="text-[9px] font-orbitron font-bold text-red-400 hover:text-red-300 ml-2 animate-pulse"
               >
-                DISMISS
+                বাতিল
               </button>
             </div>
           </div>
@@ -675,7 +679,7 @@ function GameRoomContent() {
                   className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <UserX size={12} className="stroke-current" />
-                  Votekick
+                  কিক করুন
                 </button>
                 <button
                   onClick={() => {
@@ -685,12 +689,12 @@ function GameRoomContent() {
                   }}
                   disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
                   className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${(gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
-                      ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
-                      : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
+                    ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
+                    : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
                     }`}
                 >
                   <Flag size={12} className="fill-current stroke-current" />
-                  Bankrupt
+                  দেউলিয়া
                 </button>
               </div>
             </div>
@@ -727,7 +731,7 @@ export default function GameRoom() {
           <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
           <RotateCw className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />
           <h2 className="text-sm font-orbitron font-extrabold tracking-widest text-white uppercase">
-            CALIBRATING NETWORK
+            নেটওয়ার্ক কানেক্ট হচ্ছে
           </h2>
         </div>
       </div>

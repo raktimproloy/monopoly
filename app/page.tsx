@@ -5,10 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Terminal, Users, Sparkles } from 'lucide-react';
 
 const AVATAR_COLORS = [
-  { hex: '#8BA4F9', name: 'SOFT BLUE' },
-  { hex: '#D8B4F8', name: 'SOFT PURPLE' },
-  { hex: '#F98BA4', name: 'SOFT PINK' },
-  { hex: '#A4F98B', name: 'SOFT GREEN' }
+  { hex: '#6366f1', name: 'Indigo Neon' },
+  { hex: '#f43f5e', name: 'Rose Red' },
+  { hex: '#10b981', name: 'Emerald Green' },
+  { hex: '#f59e0b', name: 'Amber Gold' },
+  { hex: '#8b5cf6', name: 'Violet Pulse' },
+  { hex: '#06b6d4', name: 'Cyan Tech' },
+  { hex: '#ec4899', name: 'Pink Glow' },
+  { hex: '#d946ef', name: 'Fuchsia Flash' }
 ];
 
 export default function Lobby() {

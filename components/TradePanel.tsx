@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { GameState, BoardTile, TradeOfferPayload } from '../../shared/types';
+import { toBanglaNum } from '../utils/format';
 
 interface TradePanelProps {
   gameState: GameState;
@@ -116,14 +117,14 @@ const getTileFlag = (name: string, group?: string) => {
 
 const getGroupColor = (group: string | undefined): string => {
   switch (group) {
-    case 'Brown': return 'bg-[#B1EA40]';
-    case 'Light Blue': return 'bg-[#3FCEEB]';
-    case 'Pink': return 'bg-[#3FEB92]';
-    case 'Orange': return 'bg-[#EBA03F]';
-    case 'Red': return 'bg-[#FF9696]';
-    case 'Yellow': return 'bg-[#96FFFD]';
-    case 'Green': return 'bg-[#C396FF]';
-    case 'Dark Blue': return 'bg-[#FF96C9]';
+    case 'Brown': return 'bg-[#64748b]'; // Group 11 (Steel/Slate)
+    case 'Light Blue': return 'bg-[#06b6d4]'; // Group 6 (Cyan)
+    case 'Pink': return 'bg-[#d946ef]'; // Group 10 (Pink)
+    case 'Orange': return 'bg-[#f97316]'; // Group 2 (Orange)
+    case 'Red': return 'bg-[#ef4444]'; // Group 1 (Red)
+    case 'Yellow': return 'bg-[#eab308]'; // Group 3 (Yellow)
+    case 'Green': return 'bg-[#22c55e]'; // Group 5 (Green)
+    case 'Dark Blue': return 'bg-[#3b82f6]'; // Group 7 (Blue)
     default: return 'bg-slate-700';
   }
 };
@@ -303,10 +304,10 @@ export default function TradePanel({
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
             <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase">
-              Trades
+              ট্রেড
             </span>
             {isJailLossRestricted && (
-              <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider mt-0.5">Jail Loss Rule Active</span>
+              <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider mt-0.5">জেলে ট্রেড বন্ধ</span>
             )}
           </div>
           <button
@@ -319,7 +320,7 @@ export default function TradePanel({
             }`}
           >
             <PlusIcon size={12} className={isJailLossRestricted ? "stroke-slate-500" : "stroke-white"} />
-            Create
+            তৈরি করুন
           </button>
         </div>
 
@@ -362,7 +363,7 @@ export default function TradePanel({
             </div>
           ) : (
             <div className="text-center py-7 bg-[#121021]/50 border border-[#241F3C] rounded-xl text-slate-500 font-mono text-xs uppercase tracking-widest leading-relaxed">
-              No Active Proposals
+              কোনো প্রস্তাব নেই
             </div>
           )}
         </div>
@@ -596,7 +597,7 @@ export default function TradePanel({
                 {/* Cash slider */}
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex justify-between items-center text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                    <span>Give Cash</span>
+                    <span>নগদ দিন</span>
                   </div>
                   <input
                     type="range"
@@ -612,7 +613,7 @@ export default function TradePanel({
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {offerCash} ৳
+                      {toBanglaNum(offerCash)} ৳
                     </span>
                   </div>
                 </div>
@@ -620,7 +621,7 @@ export default function TradePanel({
                 {/* Properties to trade - OPEN DESIGN (no inner card backgrounds) */}
                 <div className="flex flex-col gap-2 flex-1 min-h-[160px]">
                   <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">
-                    Offer properties
+                    সম্পদ দিন
                   </span>
                   <div className="flex-1 overflow-y-auto max-h-[160px] pr-1 flex flex-col gap-2 py-1">
                     {myTradableProps.length === 0 && (self.getOutOfJailFreeCards || 0) === 0 ? (
@@ -638,7 +639,7 @@ export default function TradePanel({
                         >
                           <div className="flex items-center gap-1.5 truncate mr-2">
                             <span>🗝️</span>
-                            <span className="truncate">Pardon Card {offerPardonCards > 0 ? `(Selected: ${offerPardonCards})` : `(${self.getOutOfJailFreeCards} available)`}</span>
+                            <span className="truncate">পার্ডন কার্ড {offerPardonCards > 0 ? `(নির্বাচিত: ${toBanglaNum(offerPardonCards)})` : `(${toBanglaNum(self.getOutOfJailFreeCards)} টি আছে)`}</span>
                           </div>
                           <span className="text-[10px] font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
                         </div>
@@ -661,7 +662,7 @@ export default function TradePanel({
                               <span>{flag}</span>
                               <span className="truncate">{tile.name}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{toBanglaNum(getPropPrice(p.tileIndex))}</span>
                           </div>
                         );
                       })}
@@ -694,7 +695,7 @@ export default function TradePanel({
                 {/* Cash slider */}
                 <div className="flex flex-col gap-2 w-full">
                   <div className="flex justify-between items-center text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
-                    <span>Request Cash</span>
+                    <span>নগদ চান</span>
                   </div>
                   <input
                     type="range"
@@ -774,8 +775,8 @@ export default function TradePanel({
             <div className="border-t border-[#241F3C] pt-3.5 flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="flex flex-col">
-                  <span className="text-xs font-orbitron font-extrabold tracking-wider text-slate-300 uppercase">Trade Expiration Timer</span>
-                  <span className="text-[11px] text-slate-400 font-mono uppercase tracking-wide">Auto-closes trade proposal when countdown finishes</span>
+                  <span className="text-xs font-orbitron font-extrabold tracking-wider text-slate-300 uppercase">ট্রেড সময়সীমা</span>
+                  <span className="text-[11px] text-slate-400 font-mono uppercase tracking-wide">সময় শেষ হলে ট্রেড প্রস্তাব স্বয়ংক্রিয়ভাবে বাতিল হবে</span>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -821,7 +822,7 @@ export default function TradePanel({
                 className="bg-gradient-to-r from-[#7B5BF2] to-[#6F4FF0] hover:from-[#6A47E8] hover:to-[#5E3CCF] text-white flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-orbitron font-extrabold text-xs tracking-widest transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-[0_4px_15px_rgba(111,79,240,0.3)]"
               >
                 <SendIcon size={12} className="stroke-white" />
-                Send trade
+                ট্রেড পাঠান
               </button>
             </div>
           </div>
@@ -843,7 +844,7 @@ export default function TradePanel({
             {/* Header */}
             <div className="text-center border-b border-[#241F3C] pb-2">
               <h2 className="text-base font-orbitron font-extrabold tracking-widest text-[#C8B6FF] uppercase">
-                View trade
+                ট্রেড দেখুন
               </h2>
             </div>
 
@@ -994,7 +995,7 @@ export default function TradePanel({
                     className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md"
                   >
                     <CheckIcon size={12} className="stroke-white" />
-                    Confirm
+                    রাজি
                   </button>
                   <button
                     onClick={() => {
@@ -1004,14 +1005,14 @@ export default function TradePanel({
                     className="bg-[#4D3E97] hover:bg-[#3E3182] text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md"
                   >
                     <XIcon size={12} className="stroke-white" />
-                    Decline
+                    বাতিল
                   </button>
                   <button
                     onClick={handleNegotiate}
                     className="bg-[#7B5BF2] hover:bg-[#6849E0] text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md"
                   >
                     <PencilIcon size={12} className="stroke-white" />
-                    Negotiate
+                    আলোচনা করুন
                   </button>
                 </>
               ) : (
@@ -1027,7 +1028,7 @@ export default function TradePanel({
                   className="bg-[#4D3E97] hover:bg-[#3E3182] text-white flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md"
                 >
                   <XIcon size={12} className="stroke-white" />
-                  {userId === pendingTrade.offer.senderId ? 'Cancel Proposal' : 'Close'}
+                  {userId === pendingTrade.offer.senderId ? 'অফার বাতিল' : 'বন্ধ করুন'}
                 </button>
               )}
             </div>
