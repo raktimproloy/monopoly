@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { GameState, BoardTile, Player } from '../../shared/types';
 import DiceManager from './dice/DiceManager';
-import { TramFront } from 'lucide-react';
+import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 
 interface BoardProps {
@@ -728,7 +728,7 @@ export default function Board({
                 {/* 1. Price (Outer Edge) — hidden when owned */}
                 {orientation !== 'CORNER' && (
                   <div className="text-[7.5px] md:text-[10px] xl:text-[12px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[13px] md:h-[18px] w-full z-20 leading-none mt-0.5">
-                    {!isOwned && tile.price && (
+                    {!isOwned && !!tile.price && (
                       <span className="drop-shadow-md text-slate-200 flex items-center justify-center gap-1">
                         {gameState.marketCrash?.active ? (
                           <>
@@ -764,6 +764,39 @@ export default function Board({
                       return (
                         <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
                           <TramFront size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-slate-300 drop-shadow-md" />
+                          {districtName}
+                        </span>
+                      );
+                    }
+                    if (tile.type === 'CHEST') {
+                      return (
+                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
+                          <Gift size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-amber-300 drop-shadow-md" />
+                          {districtName}
+                        </span>
+                      );
+                    }
+                    if (tile.type === 'UTILITY') {
+                      if (districtName.includes('বিদ্যুৎ')) {
+                        return (
+                          <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
+                            <Lightbulb size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-yellow-400 drop-shadow-md" />
+                            {districtName}
+                          </span>
+                        );
+                      } else if (districtName.includes('পানি')) {
+                        return (
+                          <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
+                            <Droplet size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-blue-400 drop-shadow-md" />
+                            {districtName}
+                          </span>
+                        );
+                      }
+                    }
+                    if (tile.type === 'TAX') {
+                      return (
+                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
+                          <BanknoteArrowDown size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-red-400 drop-shadow-md" />
                           {districtName}
                         </span>
                       );
