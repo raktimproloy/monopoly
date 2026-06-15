@@ -23,7 +23,9 @@ export const SOUND_CONFIG = {
     'TRADE_ACCEPT': '/sounds/Trade Accept.mp3',
     'TRADE_DECLINED': '/sounds/Trade Declined.mp3',
     'RECEIVE_CARD': '/sounds/Purchase.mp3', // Fallback for card
-    'CARD_FLIP': '/sounds/Card Flip.mp3'
+    'CARD_FLIP': '/sounds/Card Flip.mp3',
+    'MONEY_TRANSACTION': '/sounds/Money.mp3',
+    'PRISON_SOUND': '/sounds/Prison.mp3'
   }
 };
 

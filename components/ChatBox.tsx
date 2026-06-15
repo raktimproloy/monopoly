@@ -26,16 +26,16 @@ export default function ChatBox({ logs }: ChatBoxProps) {
   };
 
   return (
-    <div className="w-full p-4 glass-panel flex flex-col gap-4 select-none relative h-full">
+    <div className="w-full p-4 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-full shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
 
 
-      <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-2">
-        <Terminal size={14} className="text-cyber-blue" />
+      <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">
+        <Terminal size={16} className="text-[#8B5CF6]" />
         TACTICAL TELEMETRY
       </h3>
 
       {/* Terminal logs list */}
-      <div className="flex-1 overflow-y-auto pr-1 bg-slate-950/50 rounded-lg border border-slate-900 p-3 flex flex-col gap-2 font-mono text-[10px] leading-relaxed text-slate-300">
+      <div className="flex-1 overflow-y-auto pr-1 bg-[#121021]/50 rounded-xl border border-[#241F3C] p-3 flex flex-col gap-2 font-mono text-[10px] leading-relaxed text-slate-300">
         {/* Render logs chronologically (newest at bottom) */}
         {logs.slice().reverse().map((log, index) => {
           let colorClass = 'text-slate-400';
@@ -72,14 +72,14 @@ export default function ChatBox({ logs }: ChatBoxProps) {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="SECURE CHANNEL OFFLINE"
-          className="flex-1 px-3 py-2 text-[11px] font-mono glass-input text-slate-500 placeholder-slate-600 cursor-not-allowed uppercase"
+          className="flex-1 px-3 py-2 text-[11px] font-mono bg-[#241F3E] border border-[#3A335E] rounded-lg text-slate-500 placeholder-slate-600 focus:outline-none focus:border-[#6F4FF0] transition-colors cursor-not-allowed uppercase"
         />
         <button
           type="submit"
           disabled
-          className="p-2 glass-panel-light text-slate-600 border border-slate-800/40 rounded-lg flex items-center justify-center cursor-not-allowed opacity-50"
+          className="p-2.5 bg-[#241F3E] text-slate-500 border border-[#3A335E] rounded-lg flex items-center justify-center cursor-not-allowed opacity-50 transition-colors"
         >
-          <Send size={12} />
+          <Send size={14} />
         </button>
       </form>
     </div>

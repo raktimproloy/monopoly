@@ -126,6 +126,34 @@ const getTileFlag = (name: string, group?: string) => {
   return '🏳️';
 };
 
+const getGroupTextColor = (group: string | undefined): string => {
+  switch (group) {
+    case 'Brown': return 'text-amber-50';
+    case 'Light Blue': return 'text-cyan-950';
+    case 'Pink': return 'text-fuchsia-950';
+    case 'Orange': return 'text-orange-950';
+    case 'Red': return 'text-red-50';
+    case 'Yellow': return 'text-yellow-950';
+    case 'Green': return 'text-emerald-950';
+    case 'Dark Blue': return 'text-blue-50';
+    default: return 'text-slate-300';
+  }
+};
+
+const getGroupColor = (group: string | undefined): string => {
+  switch (group) {
+    case 'Brown': return 'bg-amber-700 text-amber-50';
+    case 'Light Blue': return 'bg-cyan-400 text-cyan-950';
+    case 'Pink': return 'bg-fuchsia-400 text-fuchsia-950';
+    case 'Orange': return 'bg-orange-500 text-orange-950';
+    case 'Red': return 'bg-red-500 text-red-50';
+    case 'Yellow': return 'bg-yellow-400 text-yellow-950';
+    case 'Green': return 'bg-emerald-500 text-emerald-950';
+    case 'Dark Blue': return 'bg-blue-600 text-blue-50';
+    default: return 'bg-slate-700 text-slate-300';
+  }
+};
+
 function CartIcon({ size = 12, className = "" }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -216,9 +244,18 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
         let offsetX = 0;
         let offsetY = 0;
+        const orientation = getOrientation(displayPosition);
+        let multX = 0.5;
+        let multY = 0.5;
+
+        if (orientation === 'TOP') multY = 0.78;
+        if (orientation === 'BOTTOM') multY = 0.22;
+        if (orientation === 'LEFT') multX = 0.78;
+        if (orientation === 'RIGHT') multX = 0.22;
+
         if (totalOnTile > 1) {
           const angle = (indexOnTile / totalOnTile) * Math.PI * 2;
-          const radius = 16; // Increased radius to accommodate larger tokens
+          const radius = 10;
           offsetX = Math.cos(angle) * radius;
           offsetY = Math.sin(angle) * radius;
         }
@@ -227,7 +264,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
         const left = tileRect.left - boardRect.left;
 
         setStyle({
-          transform: `translate(${left + tileRect.width / 2 + offsetX}px, ${top + tileRect.height / 2 + offsetY}px) translate(-50%, -50%)`,
+          transform: `translate(${left + tileRect.width * multX + offsetX}px, ${top + tileRect.height * multY + offsetY}px) translate(-50%, -50%)`,
         });
         setIsVisible(true);
       }
@@ -288,14 +325,22 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
             ? `0 0 20px ${player.avatar}, inset 0 -2px 6px rgba(0,0,0,0.3)`
             : `0 4px 10px rgba(0,0,0,0.5), inset 0 -2px 4px rgba(0,0,0,0.3)`
         }}
-        className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center overflow-hidden ${isCurrentTurn ? 'ring-2 ring-white/80 animate-player-pulse scale-110 z-50' : 'shadow-lg z-40'}`}
+        className={`relative w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border border-white/10 overflow-hidden ${isCurrentTurn ? 'ring-2 ring-white/80 animate-player-pulse scale-110 z-50' : 'shadow-lg z-40'}`}
         title={player.name}
       >
-        <img
-          src="/images/rail-token.png"
-          alt={`${player.name} Token`}
-          className={`w-full h-full object-contain p-1 drop-shadow-sm transform transition-transform duration-300 ${isFlipped ? '-scale-x-100' : ''}`}
-        />
+        <div className={`w-full h-full absolute inset-0 transform transition-transform duration-300 ${isFlipped ? '-scale-x-100' : ''}`}>
+          {/* Eyes looking to the right */}
+          <div className="absolute top-[20%] right-[15%] flex gap-[1px] md:gap-[1.5px]">
+            {/* Left eye */}
+            <div className="w-[2.5px] h-[3.5px] sm:w-[3.5px] sm:h-[5px] md:w-[4.5px] md:h-[6px] lg:w-[5.5px] lg:h-[7.5px] bg-white rounded-full relative">
+              <div className="w-[1px] h-[1.5px] sm:w-[1.5px] sm:h-[2px] md:w-[2px] md:h-[2.5px] lg:w-[2.5px] lg:h-[3.5px] bg-black rounded-full absolute bottom-[10%] right-[10%]" />
+            </div>
+            {/* Right eye */}
+            <div className="w-[2.5px] h-[3.5px] sm:w-[3.5px] sm:h-[5px] md:w-[4.5px] md:h-[6px] lg:w-[5.5px] lg:h-[7.5px] bg-white rounded-full relative">
+              <div className="w-[1px] h-[1.5px] sm:w-[1.5px] sm:h-[2px] md:w-[2px] md:h-[2.5px] lg:w-[2.5px] lg:h-[3.5px] bg-black rounded-full absolute bottom-[10%] right-[10%]" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Balance Floaters originating from the Token */}
@@ -412,24 +457,6 @@ export default function Board({
     }
   }, [isMyTurn, myPlayer?.inJail, gameState.turnStatus, gameState.dice, onEndTurn]);
 
-  const getGroupColor = (group: string | undefined): string => {
-    switch (group) {
-      case 'Brown': return 'bg-[#64748b]'; // Group 11 (Steel/Slate)
-      case 'Light Blue': return 'bg-[#06b6d4]'; // Group 6 (Cyan)
-      case 'Pink': return 'bg-[#d946ef]'; // Group 10 (Pink)
-      case 'Orange': return 'bg-[#f97316]'; // Group 2 (Orange)
-      case 'Red': return 'bg-[#ef4444]'; // Group 1 (Red)
-      case 'Yellow': return 'bg-[#eab308]'; // Group 3 (Yellow)
-      case 'Green': return 'bg-[#22c55e]'; // Group 5 (Green)
-      case 'Dark Blue': return 'bg-[#3b82f6]'; // Group 7 (Blue)
-      default: return 'bg-slate-700';
-    }
-  };
-
-  const getGroupTextColor = (group: string | undefined): string => {
-    return 'text-black';
-  };
-
   // Helper to parse log rows dynamically and render avatars + city flags
   const renderLogWithAvatars = (logText: string) => {
     const players = Object.values(gameState.players);
@@ -528,7 +555,7 @@ export default function Board({
 
       {/* Dev Teleport UI */}
       {devMode && isMyTurn && (
-        <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex flex-col gap-2 p-2 bg-slate-900/90 backdrop-blur-md border border-purple-500/50 rounded-lg shadow-2xl animate-fade-in">
+        <div className="absolute top-8 left-4 md:top-10 md:left-6 z-50 flex flex-col gap-2 p-3 bg-[#13151A]/95 backdrop-blur-xl border-2 border-indigo-500/50 rounded-xl shadow-[0_0_20px_rgba(99,102,241,0.3)] animate-fade-in">
           {/* Teleport Area */}
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">টার্গেট:</span>
@@ -537,7 +564,7 @@ export default function Board({
               min="0" max="39"
               value={teleportTarget}
               onChange={(e) => setTeleportTarget(parseInt(e.target.value) || 0)}
-              className="w-12 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              className="w-12 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
             <button
               onClick={() => onTeleportPlayer?.(teleportTarget)}
@@ -553,12 +580,12 @@ export default function Board({
             <input
               type="number" min="1" max="6"
               value={devD1} onChange={(e) => setDevD1(parseInt(e.target.value) || 1)}
-              className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              className="w-8 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
             <input
               type="number" min="1" max="6"
               value={devD2} onChange={(e) => setDevD2(parseInt(e.target.value) || 1)}
-              className="w-8 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              className="w-8 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
             <button
               onClick={() => {
@@ -579,7 +606,7 @@ export default function Board({
               type="number"
               value={devAddFundsAmount}
               onChange={(e) => setDevAddFundsAmount(parseInt(e.target.value) || 0)}
-              className="w-16 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              className="w-16 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
             <button
               onClick={() => onDevAddFunds?.(devAddFundsAmount)}
@@ -599,7 +626,7 @@ export default function Board({
               <input
                 type="number" min="1" max="60"
                 value={devCrashDelay} onChange={(e) => setDevCrashDelay(parseInt(e.target.value) || 5)}
-                className="w-10 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+                className="w-10 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
               />
               <span className="text-[10px] text-slate-400">মিঃ</span>
               <button
@@ -622,10 +649,10 @@ export default function Board({
       {/* 11x11 Grid Wrapper */}
       <div
         id="board-container"
-        className="grid gap-0 w-full h-full border border-slate-700"
+        className="grid w-full h-full border-4 border-[#1e2a3d] rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] bg-slate-900/40"
         style={{
-          gridTemplateColumns: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)',
-          gridTemplateRows: 'minmax(0, 1.6fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.6fr)'
+          gridTemplateColumns: 'minmax(0, 1.8fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.8fr)',
+          gridTemplateRows: 'minmax(0, 1.8fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.8fr)'
         }}
       >
         {boardTiles.map((tile) => {
@@ -673,29 +700,6 @@ export default function Board({
           }
 
           // Universal layout positioning
-          // Region Color Indicator
-          let colorIndicatorClass = 'hidden';
-          if (orientation === 'TOP') {
-            colorIndicatorClass = 'absolute -bottom-[8px] md:-bottom-[12px] left-1/2 -translate-x-1/2 w-[85%] h-[8px] md:h-[12px] rounded-b-md z-10 shadow-lg';
-          } else if (orientation === 'BOTTOM') {
-            colorIndicatorClass = 'absolute -top-[8px] md:-top-[12px] left-1/2 -translate-x-1/2 w-[85%] h-[8px] md:h-[12px] rounded-t-md z-10 shadow-lg';
-          } else if (orientation === 'LEFT') {
-            colorIndicatorClass = 'absolute -right-[8px] md:-right-[12px] top-1/2 -translate-y-1/2 h-[85%] w-[8px] md:w-[12px] rounded-r-md z-10 shadow-lg';
-          } else if (orientation === 'RIGHT') {
-            colorIndicatorClass = 'absolute -left-[8px] md:-left-[12px] top-1/2 -translate-y-1/2 h-[85%] w-[8px] md:w-[12px] rounded-l-md z-10 shadow-lg';
-          }
-
-          // Purchased Player Color border (OUTER EDGE, NO GLOW, EXTRA SPACE, NO ROUNDED, THICKER)
-          let ownerIndicatorClass = 'hidden';
-          if (orientation === 'TOP') {
-            ownerIndicatorClass = 'absolute top-[3px] md:top-1 left-1/2 -translate-x-1/2 w-[75%] h-[12px] md:h-[15px] z-10';
-          } else if (orientation === 'BOTTOM') {
-            ownerIndicatorClass = 'absolute bottom-[3px] md:bottom-1 left-1/2 -translate-x-1/2 w-[75%] h-[12px] md:h-[15px] z-10';
-          } else if (orientation === 'LEFT') {
-            ownerIndicatorClass = 'absolute left-[3px] md:left-1 top-1/2 -translate-y-1/2 h-[75%] w-[12px] md:w-[15px] z-10';
-          } else if (orientation === 'RIGHT') {
-            ownerIndicatorClass = 'absolute right-[3px] md:right-1 top-1/2 -translate-y-1/2 h-[75%] w-[12px] md:w-[15px] z-10';
-          }
 
           // Hover Overlay Positioning (inside board, front of cell)
           let hoverPositionClass = 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2';
@@ -719,184 +723,224 @@ export default function Board({
                   onTileClick(tile.index);
                 }
               }}
-              className={`relative rounded-none bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60] ${orientation === 'CORNER' ? 'bg-slate-900/60 p-2 flex flex-col justify-center items-center' : ''
-                }`}
+              className={`relative rounded-md bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60]`}
             >
-              {/* Glassmorphism Inner Layout Wrapper */}
-              <div className={`w-full h-full flex ${orientation === 'BOTTOM' ? 'flex-col-reverse' : 'flex-col'} items-center justify-between py-1.5 md:py-2 ${['LEFT', 'RIGHT'].includes(orientation) ? 'px-[10px] md:px-[16px]' : 'px-0.5'}`}>
+              {/* ABSOLUTE REGION TABS - INWARD FACING */}
+              {tile.group && orientation !== 'CORNER' && (
+                <div className={
+                  orientation === 'LEFT' ? `absolute left-full top-[10%] h-[80%] w-[14px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                  orientation === 'RIGHT' ? `absolute right-full top-[10%] h-[80%] w-[14px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                  orientation === 'TOP' ? `absolute top-full left-[10%] w-[80%] h-[12px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                  `absolute bottom-full left-[10%] w-[80%] h-[12px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
+                } />
+              )}
 
-                {/* 1. Price (Outer Edge) — hidden when owned */}
-                {orientation !== 'CORNER' && (
-                  <div className="text-[7.5px] md:text-[10px] xl:text-[12px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[13px] md:h-[18px] w-full z-20 leading-none mt-0.5">
-                    {!isOwned && !!tile.price && (
-                      <span className="drop-shadow-md text-slate-200 flex items-center justify-center gap-1">
-                        {gameState.marketCrash?.active ? (
-                          <>
-                            <del className="text-red-400 text-[6px] md:text-[8px]">৳{toBanglaNum(tile.price)}</del>
-                            <span className="text-emerald-400">৳{toBanglaNum(Math.floor(tile.price * 0.7))}</span>
-                          </>
-                        ) : (
-                          `৳${toBanglaNum(tile.price)}`
-                        )}
+              {(() => {
+                const priceContent = !isOwned && !!tile.price ? (
+                  <span className="drop-shadow-md text-slate-200 text-[8px] md:text-[10px] xl:text-[12px] font-bold font-mono">
+                    {gameState.marketCrash?.active ? (
+                      <span className="flex flex-wrap justify-center items-center gap-[2px]">
+                        <del className="text-red-400 text-[6px] md:text-[8px] block md:inline leading-none mr-0.5">৳{toBanglaNum(tile.price)}</del>
+                        <span className="text-emerald-400 leading-none">৳{toBanglaNum(Math.floor(tile.price * 0.7))}</span>
                       </span>
+                    ) : (
+                      `৳${toBanglaNum(tile.price)}`
                     )}
-                  </div>
-                )}
+                  </span>
+                ) : null;
 
-                {/* 2. Name & Center Content */}
-                <div className={`font-bold leading-none text-white font-sans break-words text-center flex-1 flex flex-col items-center justify-center min-h-0 px-0.5 w-full ${orientation === 'CORNER' ? 'text-[10px] md:text-[14px] xl:text-[16px] uppercase' : 'text-[8px] md:text-[10px] xl:text-[12px]'}`}>
-                  {(() => {
-                    if (orientation === 'CORNER') {
-                      return (
-                        <>
-                          {tile.name}
-                          {tile.index === 0 && <div className="text-emerald-400 mt-1 md:mt-1.5 font-black text-[12px] md:text-[16px]">GO</div>}
-                          {tile.type === 'FREE_PARKING' && gameState.settings?.freeParkingCashPool && (
-                            <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse">
-                              <MoneyBagIcon size={12} className="mr-0.5" />
-                              ৳{toBanglaNum(gameState.freeParkingPool || 0)}
-                            </div>
-                          )}
-                        </>
-                      );
-                    }
-                    if (tile.type === 'RAILROAD') {
-                      return (
-                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
-                          <TramFront size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-slate-300 drop-shadow-md" />
-                          {districtName}
-                        </span>
-                      );
-                    }
-                    if (tile.type === 'CHEST') {
-                      return (
-                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
-                          <Gift size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-amber-300 drop-shadow-md" />
-                          {districtName}
-                        </span>
-                      );
-                    }
-                    if (tile.type === 'UTILITY') {
-                      if (districtName.includes('বিদ্যুৎ')) {
-                        return (
-                          <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
-                            <Lightbulb size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-yellow-400 drop-shadow-md" />
-                            {districtName}
-                          </span>
-                        );
-                      } else if (districtName.includes('পানি')) {
-                        return (
-                          <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
-                            <Droplet size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-blue-400 drop-shadow-md" />
-                            {districtName}
-                          </span>
-                        );
-                      }
-                    }
-                    if (tile.type === 'TAX') {
-                      return (
-                        <span className="font-extrabold text-white tracking-wide flex flex-col items-center justify-center gap-1">
-                          <BanknoteArrowDown size={['LEFT', 'RIGHT'].includes(orientation) ? 14 : 18} className="text-red-400 drop-shadow-md" />
-                          {districtName}
-                        </span>
-                      );
-                    }
-                    return <span className="font-extrabold text-white tracking-wide">{districtName}</span>;
-                  })()}
-                </div>
+                const iconNode = (() => {
+                  if (tile.type === 'RAILROAD') return <TramFront size={28} className="text-slate-300 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'CHEST') return <Gift size={28} className="text-amber-300 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'UTILITY') {
+                    if (districtName.includes('বিদ্যুৎ')) return <Lightbulb size={28} className="text-yellow-400 drop-shadow-md shrink-0" />;
+                    if (districtName.includes('পানি')) return <Droplet size={28} className="text-blue-400 drop-shadow-md shrink-0" />;
+                  }
+                  if (tile.type === 'TAX') return <BanknoteArrowDown size={28} className="text-red-400 drop-shadow-md shrink-0" />;
+                  return null;
+                })();
 
-                {/* 3. Houses indicator (Inner Edge Area) */}
-                {orientation !== 'CORNER' && (
-                  <div className="flex items-center gap-[2px] shrink-0 justify-center h-[14px] w-full pb-1 z-20">
-                    {houses > 0 && houses < 5 && (
-                      <div className="flex items-center">
+                const houseNode = houses > 0 ? (
+                  <div className="flex items-center justify-center shrink-0 z-20">
+                    {houses < 5 ? (
+                      <div className="flex items-center leading-none gap-[2px]">
                         <HouseIcon size={10} className="text-emerald-400 drop-shadow-[0_0_2px_rgba(52,211,153,0.8)]" />
-                        <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 leading-none ml-[2px]">
+                        <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 leading-none">
                           {toBanglaNum(houses)}
                         </span>
                       </div>
-                    )}
-                    {houses === 5 && (
-                      <div className="flex items-center">
-                        <HotelIcon size={12} className="text-red-500 drop-shadow-[0_0_2px_rgba(239,68,68,0.8)]" />
-                      </div>
+                    ) : (
+                      <HotelIcon size={12} className="text-red-500 drop-shadow-[0_0_2px_rgba(239,68,68,0.8)]" />
                     )}
                   </div>
-                )}
-              </div>
+                ) : null;
 
-              {/* Dynamic Overlapping Color Indicator (group color — outer edge) */}
-              {tile.group && orientation !== 'CORNER' && (
-                <div className={`${colorIndicatorClass} ${getGroupColor(tile.group)} flex items-center justify-center overflow-hidden`}>
-                  {divisionName && (
-                    <span
-                      className={`${getGroupTextColor(tile.group)} font-bold whitespace-nowrap leading-none ${orientation === 'LEFT' ? '-rotate-90 text-[5.5px] md:text-[8px]' :
-                        orientation === 'RIGHT' ? 'rotate-90 text-[5.5px] md:text-[8px]' :
-                          'text-[5.5px] md:text-[8px]'
-                        }`}
-                    >
-                      {divisionName}
-                    </span>
-                  )}
-                </div>
-              )}
+                if (orientation === 'CORNER') {
+                  return (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-1 md:p-2 bg-[#0B0E14]/90 text-center break-keep">
+                      <span className="font-bold text-[10px] md:text-[14px] xl:text-[16px] uppercase leading-tight text-white">{tile.name}</span>
+                      {tile.index === 0 && <div className="text-emerald-400 mt-1 md:mt-1.5 font-black text-[12px] md:text-[16px]">GO</div>}
+                      {tile.type === 'FREE_PARKING' && gameState.settings?.freeParkingCashPool && (
+                        <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse">
+                          <MoneyBagIcon size={12} className="mr-0.5" />
+                          ৳{toBanglaNum(gameState.freeParkingPool || 0)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
 
-              {/* Owner Avatar Color Bar (inner edge — shows who owns this property) */}
-              {ownerAvatar && orientation !== 'CORNER' && (
-                <div
-                  className={`${ownerIndicatorClass}`}
-                  style={{
-                    backgroundColor: ownerAvatar,
-                    opacity: isMortgaged ? 0.3 : 1
-                  }}
-                />
-              )}
+                if (orientation === 'TOP') {
+                  return (
+                    <div className="flex flex-col items-center p-1 gap-1.5 h-full w-full min-h-0">
+                      {/* Zone 1 (Outer Edge) */}
+                      <div className="h-3 w-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="h-full w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      </div>
+                      {/* Zone 2 (Text Line) */}
+                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        {priceContent}
+                      </div>
+                      {/* Zone 3 (Icon) */}
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center">
+                        {iconNode}
+                        {houseNode}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (orientation === 'BOTTOM') {
+                  return (
+                    <div className="flex flex-col items-center p-1 gap-1.5 h-full w-full min-h-0">
+                      {/* Zone 1 (Icon) */}
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center">
+                        {iconNode}
+                        {houseNode}
+                      </div>
+                      {/* Zone 2 (Text Line) */}
+                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
+                        {priceContent}
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                      </div>
+                      {/* Zone 3 (Outer Edge) */}
+                      <div className="h-3 w-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="h-full w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (orientation === 'LEFT') {
+                  return (
+                    <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
+                      {/* Zone 1 (Outer Edge) */}
+                      <div className="w-3 h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="w-full h-[75%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      </div>
+                      {/* Zone 2 (Text Line) */}
+                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
+                        {priceContent}
+                        <div className="my-auto w-full flex flex-col items-center justify-center">
+                          <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        </div>
+                      </div>
+                      {/* Zone 3 (Icon) */}
+                      <div className="w-5 shrink-0 flex items-center justify-center">
+                        {iconNode}
+                        {houseNode}
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (orientation === 'RIGHT') {
+                  return (
+                    <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
+                      {/* Zone 1 (Icon) */}
+                      <div className="w-5 shrink-0 flex items-center justify-center">
+                        {iconNode}
+                        {houseNode}
+                      </div>
+                      {/* Zone 2 (Text Line) */}
+                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
+                        {priceContent}
+                        <div className="my-auto w-full flex flex-col items-center justify-center">
+                          <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        </div>
+                      </div>
+                      {/* Zone 3 (Outer Edge) */}
+                      <div className="w-3 h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="w-full h-[75%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
 
               {/* Quick Action / Info Hover Overlay */}
               {orientation !== 'CORNER' && (
-                <div className="absolute inset-0 z-50 pointer-events-none">
-                  {isOwned && propState.ownerId === userId && isMyTurn ? (
-                    <div className={`absolute ${hoverPositionClass} flex flex-wrap justify-center items-center gap-1.5 md:gap-2 pointer-events-auto transform scale-50 opacity-0 group-hover:scale-125 group-hover:opacity-100 transition-all duration-200 origin-center z-[100] ${tile.type === 'STREET' ? 'w-[60px] md:w-[80px]' : 'w-auto flex-nowrap'}`}>
-                      {gameState.settings?.allowMortgage !== false && (
-                        <button title={propState?.isMortgaged ? 'বন্ধক ছাড়ান' : 'বন্ধক দিন'} onClick={(e) => { e.stopPropagation(); if (!propState?.isMortgaged) onMortgageProperty?.(tile.index); else onUnmortgageProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-red-500 hover:bg-red-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                          {propState?.isMortgaged ? 'আন-মর্টগেজ' : 'মর্টগেজ'}
-                        </button>
-                      )}
-                      <button title="জমি বিক্রি" onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-amber-500 hover:bg-amber-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                        বিক্রি
-                      </button>
-                      {(!propState || !(propState as any).auctionFailed) && (
-                        <button title="নিলাম" onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-purple-500 hover:bg-purple-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                          নিলাম
-                        </button>
-                      )}
-                      {tile.type === 'STREET' && (
+                <>
+                  {/* Rent Info Overlay (Other Player's Property) */}
+                  {isOwned && propState?.ownerId !== userId && (
+                    <div className="absolute inset-0 z-50 pointer-events-none">
+                      <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
+                        {propState.isMortgaged ? 'বন্ধক রাখা' : (
+                          ['STREET', 'RAILROAD'].includes(tile.type) ? (
+                            gameState.marketCrash?.active ? (
+                              <span className="flex gap-1 items-center">ভাড়া: <del className="text-red-300 text-[8px] md:text-[10px]">৳{toBanglaNum(currentRent)}</del> <span className="text-emerald-300">৳{toBanglaNum(Math.ceil(currentRent * 1.4))}</span></span>
+                            ) : (
+                              `ভাড়া: ৳${toBanglaNum(currentRent)}`
+                            )
+                          ) :
+                            tile.type === 'UTILITY' ? 'Dice x Rent' :
+                              'Owned'
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Floating Action Menu */}
+                  {propState?.ownerId === userId && (
+                    <div className={`absolute z-[100] flex flex-col gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto backdrop-blur-md bg-[#0B0E14]/90 p-2.5 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-max ${
+                      orientation === 'TOP' ? 'top-full left-1/2 -translate-x-1/2 mt-2 before:absolute before:-top-4 before:left-0 before:w-full before:h-4' :
+                      orientation === 'BOTTOM' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2 before:absolute before:-bottom-4 before:left-0 before:w-full before:h-4' :
+                      orientation === 'LEFT' ? 'left-full top-1/2 -translate-y-1/2 ml-2 before:absolute before:-left-4 before:top-0 before:w-4 before:h-full' :
+                      'right-full top-1/2 -translate-y-1/2 mr-2 before:absolute before:-right-4 before:top-0 before:w-4 before:h-full'
+                    }`}>
+                      
+                      {/* ONLY SHOW HOUSE CONTROLS IF IT IS A COLORED PROPERTY */}
+                      {tile.group && (
                         <>
-                          <button title="বাড়ি বানান" onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-blue-500 hover:bg-blue-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                            +বাড়ি
+                          <button onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all active:scale-95">
+                            Build House
                           </button>
-                          <button title="বাড়ি বেচুন" onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="w-6 h-6 md:w-8 md:h-8 rounded-full text-[6px] md:text-[8px] font-bold bg-orange-500 hover:bg-orange-400 text-white shadow-2xl border border-white/30 flex items-center justify-center transition-colors">
-                            -বাড়ি
+                          
+                          <button onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-orange-950/60 border border-orange-500/60 text-orange-400 text-[10px] font-bold uppercase tracking-wider hover:bg-orange-500 hover:text-white hover:shadow-[0_0_10px_rgba(249,115,22,0.5)] transition-all active:scale-95">
+                            Break House
                           </button>
                         </>
                       )}
+                      
+                      {/* THESE ALWAYS SHOW FOR ANY OWNED PROPERTY */}
+                      <button onClick={(e) => { e.stopPropagation(); onMortgageProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/60 text-amber-400 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-white hover:shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all active:scale-95">
+                        Mortgage
+                      </button>
+
+                      <button onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-rose-950/60 border border-rose-500/60 text-rose-400 text-[10px] font-bold uppercase tracking-wider hover:bg-rose-500 hover:text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)] transition-all active:scale-95">
+                        Sell
+                      </button>
+                      
+                      <button onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-fuchsia-950/60 border border-fuchsia-500/60 text-fuchsia-400 text-[10px] font-bold uppercase tracking-wider hover:bg-fuchsia-500 hover:text-white hover:shadow-[0_0_10px_rgba(217,70,239,0.5)] transition-all active:scale-95">
+                        Auction
+                      </button>
+                      
                     </div>
-                  ) : isOwned ? (
-                    <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
-                      {propState.isMortgaged ? 'বন্ধক রাখা' : (
-                        ['STREET', 'RAILROAD'].includes(tile.type) ? (
-                          gameState.marketCrash?.active ? (
-                            <span className="flex gap-1 items-center">ভাড়া: <del className="text-red-300 text-[8px] md:text-[10px]">৳{toBanglaNum(currentRent)}</del> <span className="text-emerald-300">৳{toBanglaNum(Math.ceil(currentRent * 1.4))}</span></span>
-                          ) : (
-                            `ভাড়া: ৳${toBanglaNum(currentRent)}`
-                          )
-                        ) :
-                          tile.type === 'UTILITY' ? 'Dice x Rent' :
-                            'Owned'
-                      )}
-                    </div>
-                  ) : null}
-                </div>
+                  )}
+                </>
               )}
 
               {/* DEV MODE: Floating Teleport Button */}
@@ -1088,7 +1132,7 @@ export default function Board({
             </div>
 
             {/* Opacity Fading overlay at the bottom fading into black/main grid bg */}
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0B0E14] via-[#0B0E14]/85 to-transparent pointer-events-none z-10" />
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#212f4d] via-[#212f4d]/85 to-transparent pointer-events-none z-10" />
           </div>
 
         </div>
@@ -1192,8 +1236,8 @@ export default function Board({
                   {/* HEADER */}
                   {selTile.type === 'STREET' && selTile.group ? (
                     <div className={`${getGroupColor(selTile.group)} w-full pt-6 pb-4 text-center border-b-2 border-slate-800`}>
-                      <h2 className={`${getGroupTextColor(selTile.group)} opacity-80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1`}>TITLE DEED</h2>
-                      <h3 className={`${getGroupTextColor(selTile.group)} font-extrabold text-xl md:text-2xl font-sans leading-tight px-4`}>{selTile.name}</h3>
+                      <h2 className="opacity-80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1">TITLE DEED</h2>
+                      <h3 className="font-extrabold text-xl md:text-2xl font-sans leading-tight px-4">{selTile.name}</h3>
                     </div>
                   ) : (
                     <div className="bg-slate-800 w-full pt-6 pb-4 text-center border-b-2 border-slate-900">

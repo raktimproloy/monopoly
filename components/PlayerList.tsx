@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { GameState, BoardTile } from '../../shared/types';
 import { toBanglaNum } from '../utils/format';
+import { soundManager } from '../utils/soundManager';
 // No icon imports needed since we use native emojis and custom SVGs
 
 interface PlayerListProps {
@@ -20,6 +21,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
   const prevBalances = useRef<Record<string, number>>({});
   const prevGameState = useRef<GameState>(gameState);
   const initialized = useRef(false);
+  const lastMoneySoundTime = useRef<number>(0);
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
@@ -70,8 +72,48 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       prevBalances.current[p.id] = p.balance;
     });
 
+    // --- LOCATION & STATUS AUDIO TRACKER ---
+    Object.values(gameState.players).forEach(player => {
+      const prevPlayer = prevState.players[player.id];
+      if (!prevPlayer) return;
+
+      // TRIGGER 1: Player gets sent to Jail (inJail changes from false -> true)
+      if (!prevPlayer.inJail && player.inJail) {
+        try {
+          soundManager.playEventSound('PRISON_SOUND');
+        } catch (err) {
+          console.warn("Prison sound failed:", err);
+        }
+      }
+
+      // TRIGGER 2: Player lands on "Obosor" (Position changes, and new tile is Obosor)
+      if (prevPlayer.position !== player.position) {
+        const landedTile = boardTiles[player.position];
+        // Match the tile by name (e.g., 'অবসর') or type if applicable
+        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'REST' || landedTile?.type === 'FREE_PARKING') {
+          try {
+            soundManager.playEventSound('PRISON_SOUND');
+          } catch (err) {
+            console.warn("Prison sound failed:", err);
+          }
+        }
+      }
+    });
+
     if (changes.length > 0) {
       setTimeout(() => {
+        // --- THROTTLED SOUND PLAYBACK ---
+        // Prevents double-playing when multiple balances change (e.g. paying rent)
+        const now = Date.now();
+        if (now - lastMoneySoundTime.current > 500) {
+          try {
+            soundManager.playEventSound('MONEY_TRANSACTION');
+            lastMoneySoundTime.current = now;
+          } catch (err) {
+            console.warn("Money sound failed to play:", err);
+          }
+        }
+
         setDisplayBalances(curr => {
           const next = { ...curr };
           changes.forEach(c => { next[c.id] = c.newBalance; });
@@ -98,15 +140,15 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
   }, [gameState.players]);
 
   return (
-    <div className="w-full p-2.5 glass-panel flex flex-col gap-2 select-none relative h-auto">
+    <div className="w-full p-4 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-auto shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
 
       
-      <h3 className="text-[10px] font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-1.5">
-        <UsersListIcon size={11} className="text-cyber-purple" />
+      <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">
+        <UsersListIcon size={16} className="text-[#8B5CF6]" />
         খেলোয়াড় তালিকা
       </h3>
 
-      <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
+      <div className="flex flex-col gap-2.5 overflow-y-auto pr-1">
         {gameState.playerOrder.map((playerId) => {
           const player = gameState.players[playerId];
           if (!player) return null;
@@ -121,15 +163,15 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
           return (
             <div
               key={playerId}
-              className={`relative flex items-center justify-between p-1.5 rounded-lg transition-all duration-200 ${
+              className={`relative flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 ${
                 isCurrentTurn
-                  ? 'bg-slate-900/60 border border-white/5 pl-2.5' 
-                  : 'bg-transparent border border-transparent pl-2'
-              } ${player.isBankrupt ? 'opacity-30' : ''}`}
+                  ? 'bg-[#241F3E] border border-[#4E467D] shadow-md pl-3.5' 
+                  : 'bg-[#121021]/50 border border-[#241F3C] pl-3'
+              } ${player.isBankrupt ? 'opacity-40 grayscale' : ''}`}
             >
               {/* Highlight Vertical Bar on left for active player */}
               {isCurrentTurn && (
-                <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-[#fbbf24] rounded-r shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-yellow-400 rounded-l shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
               )}
 
               {/* Left block: Avatar + Name + badges */}
