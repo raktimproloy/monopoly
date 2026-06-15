@@ -24,6 +24,8 @@ interface BoardProps {
   onTeleportPlayer?: (targetTileIndex: number) => void;
   onDevRollDice?: (d1: number, d2: number) => void;
   onDevAddFunds?: (amount: number) => void;
+  onDevForceCrash?: () => void;
+  onDevSetNextCrash?: (delayMinutes: number) => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -324,6 +326,8 @@ export default function Board({
   onTeleportPlayer,
   onDevRollDice,
   onDevAddFunds,
+  onDevForceCrash,
+  onDevSetNextCrash,
   onPlaceBid,
 }: BoardProps) {
   const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
@@ -334,6 +338,8 @@ export default function Board({
   const [devD1, setDevD1] = useState<number>(1);
   const [devD2, setDevD2] = useState<number>(1);
   const [devAddFundsAmount, setDevAddFundsAmount] = useState<number>(1000);
+  const [devCrashDelay, setDevCrashDelay] = useState<number>(5);
+  const [countdownText, setCountdownText] = useState<string>('');
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
@@ -343,13 +349,66 @@ export default function Board({
   const currentTileIndex = myPlayer?.position ?? -1;
   const currentTile = boardTiles[currentTileIndex];
   const currentTileState = gameState.properties[currentTileIndex];
+  let currentTilePrice = currentTile?.price || 0;
+  if (gameState.marketCrash?.active) {
+    currentTilePrice = Math.floor(currentTilePrice * 0.7);
+  }
+
   const canBuyCurrent =
     isMyTurn &&
     currentTile &&
     ['STREET', 'RAILROAD', 'UTILITY'].includes(currentTile.type) &&
     (!currentTileState || !currentTileState.ownerId) &&
-    (myPlayer?.balance ?? 0) >= (currentTile.price || 0) &&
+    (myPlayer?.balance ?? 0) >= currentTilePrice &&
     gameState.turnStatus === 'MUST_ACT_OR_END';
+
+  // Compute Market Crash countdown
+  useEffect(() => {
+    if (!devMode || !gameState.marketCrash) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (gameState.marketCrash.active && gameState.marketCrash.crashEndTime) {
+        const diff = gameState.marketCrash.crashEndTime - now;
+        if (diff > 0) {
+          const mins = Math.floor(diff / 60000);
+          const secs = Math.floor((diff % 60000) / 1000);
+          setCountdownText(`Ends in: ${mins}m ${secs}s`);
+        } else {
+          setCountdownText('Ending soon...');
+        }
+      } else if (!gameState.marketCrash.active && gameState.marketCrash.nextCrashTime) {
+        const diff = gameState.marketCrash.nextCrashTime - now;
+        if (diff > 0) {
+          const mins = Math.floor(diff / 60000);
+          const secs = Math.floor((diff % 60000) / 1000);
+          setCountdownText(`Next in: ${mins}m ${secs}s`);
+        } else {
+          setCountdownText('Starting soon...');
+        }
+      } else {
+        setCountdownText('No crash scheduled');
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [devMode, gameState.marketCrash]);
+
+  // Auto-end turn when sent to or staying in jail
+  const wasSentToJailRef = useRef(false);
+  useEffect(() => {
+    if (isMyTurn && myPlayer?.inJail && gameState.turnStatus === 'MUST_ACT_OR_END') {
+      if (!wasSentToJailRef.current) {
+        wasSentToJailRef.current = true;
+        const timer = setTimeout(() => {
+           onEndTurn();
+        }, 2200); // Wait for the piece animation
+        return () => clearTimeout(timer);
+      }
+    } else {
+      wasSentToJailRef.current = false;
+    }
+  }, [isMyTurn, myPlayer?.inJail, gameState.turnStatus, gameState.dice, onEndTurn]);
 
   const getGroupColor = (group: string | undefined): string => {
     switch (group) {
@@ -527,6 +586,34 @@ export default function Board({
               Add ৳
             </button>
           </div>
+
+          {/* Market Crash Area */}
+          <div className="flex flex-col gap-2 border-t border-purple-500/30 pt-2">
+            <div className="text-[10px] text-center text-red-400 font-orbitron tracking-widest font-bold">
+              {countdownText}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase flex-1">Next Crash:</span>
+              <input 
+                type="number" min="1" max="60" 
+                value={devCrashDelay} onChange={(e) => setDevCrashDelay(parseInt(e.target.value) || 5)} 
+                className="w-10 bg-slate-950 border border-slate-700 rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              />
+              <span className="text-[10px] text-slate-400">m</span>
+              <button 
+                onClick={() => onDevSetNextCrash?.(devCrashDelay)}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95"
+              >
+                Set
+              </button>
+            </div>
+            <button 
+              onClick={() => onDevForceCrash?.()}
+              className="bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] active:scale-95 w-full"
+            >
+              Force Market Crash Now
+            </button>
+          </div>
       </div>
     )}
 
@@ -640,8 +727,15 @@ export default function Board({
                 {orientation !== 'CORNER' && (
                   <div className="text-[7.5px] md:text-[10px] xl:text-[12px] font-mono font-bold text-white flex items-start justify-center shrink-0 h-[13px] md:h-[18px] w-full z-20 leading-none mt-0.5">
                     {!isOwned && tile.price && (
-                      <span className="drop-shadow-md text-slate-200 flex items-center justify-center">
-                        ৳{tile.price}
+                      <span className="drop-shadow-md text-slate-200 flex items-center justify-center gap-1">
+                        {gameState.marketCrash?.active ? (
+                          <>
+                            <del className="text-red-400 text-[6px] md:text-[8px]">৳{tile.price}</del>
+                            <span className="text-emerald-400">৳{Math.floor(tile.price * 0.7)}</span>
+                          </>
+                        ) : (
+                          `৳${tile.price}`
+                        )}
                       </span>
                     )}
                   </div>
@@ -748,7 +842,13 @@ export default function Board({
                   ) : isOwned ? (
                     <div className={`absolute ${hoverPositionClass} bg-red-500/95 backdrop-blur-md border border-red-400 text-white text-[10px] md:text-[12px] font-bold px-2.5 py-1 rounded-md shadow-2xl pointer-events-none transform scale-50 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-200 origin-center whitespace-nowrap z-[100]`}>
                       {propState.isMortgaged ? 'Mortgaged' : (
-                        ['STREET', 'RAILROAD'].includes(tile.type) ? `Rent: ৳${currentRent}` :
+                        ['STREET', 'RAILROAD'].includes(tile.type) ? (
+                          gameState.marketCrash?.active ? (
+                            <span className="flex gap-1 items-center">Rent: <del className="text-red-300 text-[8px] md:text-[10px]">৳{currentRent}</del> <span className="text-emerald-300">৳{Math.ceil(currentRent * 1.4)}</span></span>
+                          ) : (
+                            `Rent: ৳${currentRent}`
+                          )
+                        ) :
                           tile.type === 'UTILITY' ? 'Dice x Rent' :
                             'Owned'
                       )}
@@ -776,6 +876,13 @@ export default function Board({
 
         {/* Center Canvas Area - OPEN DIRECT DESIGN (No extra card framing overlay borders) */}
         <div className="col-start-2 col-end-11 row-start-2 row-end-11 flex flex-col items-center justify-center p-4 rounded-2xl m-3 relative overflow-hidden gap-3">
+
+          {gameState.marketCrash?.active && (
+            <div className="absolute top-2 flex items-center gap-2 px-4 py-1.5 bg-red-950/80 border border-red-500/50 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.5)] z-50">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse drop-shadow-[0_0_5px_rgba(239,68,68,1)]" />
+              <span className="text-red-400 font-orbitron font-bold text-xs uppercase tracking-widest animate-pulse">Market Crash Active</span>
+            </div>
+          )}
 
           {/* 3D Physics Dice Display - Centered wrapper with standard height constraint */}
           <div className="w-full h-40 md:h-48 flex items-center justify-center relative shrink-0 transform-gpu perspective-1000">
@@ -837,7 +944,7 @@ export default function Board({
                         className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-cyan-500 hover:bg-cyan-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-cyan-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer animate-pulse-slow"
                       >
                         <CartIcon size={12} className="stroke-white shrink-0" />
-                        <span className="truncate">Buy ৳{currentTile?.price}</span>
+                        <span className="truncate">Buy ৳{currentTilePrice}</span>
                       </button>
                     )}
 
@@ -1000,25 +1107,30 @@ export default function Board({
               const currentHouses = selProp?.houses || 0;
               const hasEnoughMoney = (myPlayer?.balance || 0) >= houseCost;
 
-              const canBuildHere = ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
-              const canSellHere = currentHouses > 0 && currentHouses === maxHouses;
-              const canMortgageHere = !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
+              const isJailRestricted = gameState.settings?.jailLoss && myPlayer?.inJail;
+
+              const canBuildHere = !isJailRestricted && ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
+              const canSellHere = !isJailRestricted && currentHouses > 0 && currentHouses === maxHouses;
+              const canMortgageHere = !isJailRestricted && !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
 
               let buildDisabledReason = "";
-              if (!ownsFullSet) buildDisabledReason = "Requires Full Set";
+              if (isJailRestricted) buildDisabledReason = "Jail Loss Active";
+              else if (!ownsFullSet) buildDisabledReason = "Requires Full Set";
               else if (anyMortgaged) buildDisabledReason = "Group is Mortgaged";
               else if (currentHouses > minHouses) buildDisabledReason = "Build Evenly";
               else if (currentHouses >= 5) buildDisabledReason = "Max Upgrades Built";
               else if (!hasEnoughMoney) buildDisabledReason = "Insufficient Funds";
 
               let sellDisabledReason = "";
-              if (currentHouses === 0) sellDisabledReason = "No Houses To Break";
+              if (isJailRestricted) sellDisabledReason = "Jail Loss Active";
+              else if (currentHouses === 0) sellDisabledReason = "No Houses To Break";
               else if (currentHouses < maxHouses) sellDisabledReason = "Break Evenly";
 
-              const canSellPropertyHere = !groupHasHouses;
+              const canSellPropertyHere = !isJailRestricted && !groupHasHouses;
 
               let mortgageDisabledReason = "";
-              if (selProp?.isMortgaged) mortgageDisabledReason = "Already Mortgaged";
+              if (isJailRestricted) mortgageDisabledReason = "Jail Loss Active";
+              else if (selProp?.isMortgaged) mortgageDisabledReason = "Already Mortgaged";
               else if (currentHouses > 0) mortgageDisabledReason = "Has Houses";
               else if (groupHasHouses) mortgageDisabledReason = "Group Has Houses";
 
@@ -1125,7 +1237,14 @@ export default function Board({
                         ) : (
                           <>
                             <span className="text-[10px] md:text-xs text-emerald-600 uppercase tracking-wider font-bold">Available For Purchase</span>
-                            <span className="font-black text-lg md:text-xl text-slate-900">৳{selTile.price}</span>
+                            {gameState.marketCrash?.active ? (
+                              <div className="flex gap-2 items-center justify-center">
+                                <del className="text-red-500/70 text-sm">৳{selTile.price}</del>
+                                <span className="font-black text-lg md:text-xl text-emerald-500">৳{Math.floor((selTile.price || 0) * 0.7)}</span>
+                              </div>
+                            ) : (
+                              <span className="font-black text-lg md:text-xl text-slate-900">৳{selTile.price}</span>
+                            )}
 
                             {devMode && (
                               <button

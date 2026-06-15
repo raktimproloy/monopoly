@@ -147,10 +147,12 @@ export default function TradePanel({
 }: TradePanelProps) {
   const self = gameState.players[userId];
 
-  // Active counterparties (not me, not bankrupt)
+  // Active counterparties (not me, not bankrupt, not in jail if jailLoss is active)
   const counterparties = Object.values(gameState.players).filter(
-    (p) => p.id !== userId && !p.isBankrupt
+    (p) => p.id !== userId && !p.isBankrupt && !(gameState.settings?.jailLoss && p.inJail)
   );
+
+  const isJailLossRestricted = gameState.settings?.jailLoss && self.inJail;
 
   // Modals state: 'NONE' | 'SELECT_COUNTERPARTY' | 'CREATE_TRADE' | 'VIEW_TRADE'
   const [activeModal, setActiveModal] = useState<'NONE' | 'SELECT_COUNTERPARTY' | 'CREATE_TRADE' | 'VIEW_TRADE'>('NONE');
@@ -299,14 +301,24 @@ export default function TradePanel({
       {/* 1. TRADES LIST CARD */}
       <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
         <div className="flex justify-between items-center">
-          <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase">
-            Trades
-          </span>
+          <div className="flex flex-col">
+            <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase">
+              Trades
+            </span>
+            {isJailLossRestricted && (
+              <span className="text-[9px] text-red-400 font-bold uppercase tracking-wider mt-0.5">Jail Loss Rule Active</span>
+            )}
+          </div>
           <button
             onClick={handleOpenCreateModal}
-            className="bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] hover:from-[#7C3AED] hover:to-[#4F46E5] text-white flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold font-orbitron transition-all duration-200 active:scale-[0.96] shadow-[0_2px_10px_rgba(139,92,246,0.25)] cursor-pointer"
+            disabled={isJailLossRestricted}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-extrabold font-orbitron transition-all duration-200 shadow-[0_2px_10px_rgba(139,92,246,0.25)] ${
+              isJailLossRestricted
+                ? 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-[#8B5CF6] to-[#6366F1] hover:from-[#7C3AED] hover:to-[#4F46E5] text-white active:scale-[0.96] cursor-pointer'
+            }`}
           >
-            <PlusIcon size={12} className="stroke-white" />
+            <PlusIcon size={12} className={isJailLossRestricted ? "stroke-slate-500" : "stroke-white"} />
             Create
           </button>
         </div>
@@ -443,9 +455,9 @@ export default function TradePanel({
                           if (onUnmortgageProperty) onUnmortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('unmortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={self.balance < unmortgageCost}
+                        disabled={self.balance < unmortgageCost || isJailLossRestricted}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          self.balance >= unmortgageCost
+                          self.balance >= unmortgageCost && !isJailLossRestricted
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -459,9 +471,9 @@ export default function TradePanel({
                           if (onMortgageProperty) onMortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('mortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={prop.houses > 0}
+                        disabled={prop.houses > 0 || isJailLossRestricted}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          prop.houses === 0
+                          prop.houses === 0 && !isJailLossRestricted
                             ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -476,9 +488,9 @@ export default function TradePanel({
                           window.dispatchEvent(new CustomEvent('auction_property', { detail: prop.tileIndex }));
                         }
                       }}
-                      disabled={prop.houses > 0}
+                      disabled={prop.houses > 0 || isJailLossRestricted}
                       className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                        prop.houses === 0
+                        prop.houses === 0 && !isJailLossRestricted
                           ? 'text-purple-400 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500 cursor-pointer'
                           : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                       }`}

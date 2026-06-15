@@ -253,6 +253,20 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devForceCrash = useCallback(() => {
+    console.log('[Socket Emit] dev_force_crash', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_force_crash', { playerId: userId });
+    }
+  }, [userId]);
+
+  const devSetNextCrash = useCallback((delayMinutes: number) => {
+    console.log('[Socket Emit] dev_set_next_crash', { playerId: userId, delayMinutes });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_set_next_crash', { playerId: userId, delayMinutes });
+    }
+  }, [userId]);
+
   const addBot = useCallback(() => {
     console.log('[Socket Emit] add_bot');
     if (socketRef.current) {
@@ -373,6 +387,8 @@ export function useSocket(
     teleportPlayer,
     devRollDice,
     devAddFunds,
+    devForceCrash,
+    devSetNextCrash,
     placeBid,
     addBot,
     updateAppearance,

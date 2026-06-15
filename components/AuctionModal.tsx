@@ -121,13 +121,14 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
               <div className="grid grid-cols-3 gap-3">
                 {[2, 10, 50].map((amount) => {
                   const myBalance = gameState.players[userId]?.balance || 0;
+                  const isJailRestricted = gameState.settings?.jailLoss && gameState.players[userId]?.inJail;
                   const canAfford = myBalance >= auction.currentBid + amount;
                   const isMyProperty = auction.sellerId === userId || auction.initiatorId === userId;
                   
                   return (
                     <button
                       key={amount}
-                      disabled={!canAfford || isMyProperty || timeLeft <= 0}
+                      disabled={!canAfford || isMyProperty || timeLeft <= 0 || isJailRestricted}
                       onClick={() => onPlaceBid(amount)}
                       className="bg-[#8B5CF6] hover:bg-[#7C3AED] disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl py-3 flex flex-col items-center justify-center transition-all shadow-lg active:scale-95"
                     >
@@ -138,6 +139,11 @@ export default function AuctionModal({ gameState, boardTiles, userId, onPlaceBid
                 })}
               </div>
             </div>
+            {gameState.settings?.jailLoss && gameState.players[userId]?.inJail && (
+              <span className="text-red-400 text-xs font-bold text-center">
+                You cannot bid while in jail (Jail Loss Rule).
+              </span>
+            )}
 
             {/* Bid History */}
             <div className="flex flex-col gap-2 mt-4 h-32 overflow-y-auto pr-2 custom-scrollbar mask-image-bottom">

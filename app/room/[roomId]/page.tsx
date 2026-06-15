@@ -74,7 +74,9 @@ function GameRoomContent() {
     sellPardonCard,
     usePardonCard,
     placeBid,
-    devAddFunds
+    devAddFunds,
+    devForceCrash,
+    devSetNextCrash
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
@@ -438,6 +440,25 @@ function GameRoomContent() {
                     className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                   />
                 </div>
+
+                {/* Jail Loss Switch */}
+                <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
+                      JAIL LOSS RULES
+                    </label>
+                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
+                      If enabled, players in jail cannot collect rent, trade, auction, build, sell, or mortgage.
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!settings.jailLoss}
+                    disabled={!isHost}
+                    onChange={(e) => handleSettingChange('jailLoss', e.target.checked)}
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                  />
+                </div>
               </div>
             </div>
 
@@ -619,6 +640,8 @@ function GameRoomContent() {
             onTeleportPlayer={teleportPlayer}
             onDevRollDice={devRollDice}
             onDevAddFunds={devAddFunds}
+            onDevForceCrash={devForceCrash}
+            onDevSetNextCrash={devSetNextCrash}
           />
         </section>
 
