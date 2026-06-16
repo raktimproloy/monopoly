@@ -71,6 +71,8 @@ export function useGameSounds(
           soundManager.playEventSound('TRADE_DECLINED');
         } else if (lowerLog.includes('রোল:')) {
           soundManager.playEventSound('DICE_ROLL');
+        } else if (lowerLog.includes('বিড:')) {
+          soundManager.playEventSound('MONEY_TRANSACTION');
         }
       });
     }

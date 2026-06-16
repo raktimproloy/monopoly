@@ -102,14 +102,14 @@ function GameRoomContent() {
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const AVATAR_COLORS = [
-    { hex: '#6366f1', name: 'Indigo Neon' },
-    { hex: '#f43f5e', name: 'Rose Red' },
-    { hex: '#10b981', name: 'Emerald Green' },
-    { hex: '#f59e0b', name: 'Amber Gold' },
+    { hex: '#ffffff', name: 'Titanium White' },
     { hex: '#8b5cf6', name: 'Violet Pulse' },
-    { hex: '#06b6d4', name: 'Cyan Tech' },
-    { hex: '#ec4899', name: 'Pink Glow' },
-    { hex: '#d946ef', name: 'Fuchsia Flash' }
+    { hex: '#14b8a6', name: 'Cyber Teal' },
+    { hex: '#a3e635', name: 'Radioactive Lime' },
+    { hex: '#d946ef', name: 'Fuchsia Flash' },
+    { hex: '#94a3b8', name: 'Steel Gray' },
+    { hex: '#e0b0ff', name: 'Neon Mauve' },
+    { hex: '#00fa9a', name: 'Spring Mint' }
   ];
 
   // Auto-select first available avatar signature

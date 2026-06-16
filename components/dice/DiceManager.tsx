@@ -24,12 +24,14 @@ export default function DiceManager({ gameState }: DiceManagerProps) {
 
     const wasMustRoll = prevTurnStatus.current === 'MUST_ROLL';
     const isMustActOrEnd = gameState.turnStatus === 'MUST_ACT_OR_END';
+    const isMustResolveCard = gameState.turnStatus === 'MUST_RESOLVE_CARD';
     const doubleRollIncreased = gameState.doubleRollCount > prevDoubleCount.current;
     const isSamePlayer = gameState.currentTurnPlayerId === prevPlayer.current;
 
     // Detect if a roll event occurred
     const rolled = isSamePlayer && (
       (wasMustRoll && isMustActOrEnd) ||
+      (wasMustRoll && isMustResolveCard) ||
       (wasMustRoll && doubleRollIncreased)
     );
 

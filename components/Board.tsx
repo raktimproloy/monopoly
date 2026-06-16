@@ -492,21 +492,24 @@ export default function Board({
     return () => clearInterval(interval);
   }, [devMode, gameState.marketCrash, gameState.trafficPolice]);
 
-  // Auto-end turn when sent to or staying in jail
-  const wasSentToJailRef = useRef(false);
+  // Auto-end turn when sent to or staying in jail, or landing on FREE_PARKING
+  const wasAutoEndedRef = useRef(false);
   useEffect(() => {
-    if (isMyTurn && myPlayer?.inJail && gameState.turnStatus === 'MUST_ACT_OR_END') {
-      if (!wasSentToJailRef.current) {
-        wasSentToJailRef.current = true;
+    const isJail = myPlayer?.inJail;
+    const isFreeParking = myPlayer?.position === 20; // 20 is Free Parking
+
+    if (isMyTurn && (isJail || isFreeParking) && gameState.turnStatus === 'MUST_ACT_OR_END') {
+      if (!wasAutoEndedRef.current) {
+        wasAutoEndedRef.current = true;
         const timer = setTimeout(() => {
           onEndTurn();
         }, 2200); // Wait for the piece animation
         return () => clearTimeout(timer);
       }
     } else {
-      wasSentToJailRef.current = false;
+      wasAutoEndedRef.current = false;
     }
-  }, [isMyTurn, myPlayer?.inJail, gameState.turnStatus, gameState.dice, onEndTurn]);
+  }, [isMyTurn, myPlayer?.inJail, myPlayer?.position, gameState.turnStatus, gameState.dice, onEndTurn]);
 
   // Helper to parse log rows dynamically and render avatars + city flags
   const renderLogWithAvatars = (logText: string) => {
@@ -863,10 +866,10 @@ export default function Board({
               {/* ABSOLUTE REGION TABS - INWARD FACING */}
               {tile.group && orientation !== 'CORNER' && (
                 <div className={
-                  orientation === 'LEFT' ? `absolute left-full top-[10%] h-[80%] w-[14px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                    orientation === 'RIGHT' ? `absolute right-full top-[10%] h-[80%] w-[14px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                      orientation === 'TOP' ? `absolute top-full left-[10%] w-[80%] h-[12px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                        `absolute bottom-full left-[10%] w-[80%] h-[12px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
+                  orientation === 'LEFT' ? `absolute left-full top-[20%] h-[60%] w-[11px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                    orientation === 'RIGHT' ? `absolute right-full top-[20%] h-[60%] w-[11px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                      orientation === 'TOP' ? `absolute top-full left-[20%] w-[60%] h-[9px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                        `absolute bottom-full left-[20%] w-[60%] h-[9px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
                 } />
               )}
 
@@ -948,7 +951,7 @@ export default function Board({
                       {/* Zone 1 (Outer Edge - Purchase Bar OR Money) */}
                       <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
                         {isOwned ? (
-                          <div className="h-2.5 md:h-3 w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                          <div className="h-3 md:h-3.5 w-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
                         ) : (
                           priceContent
                         )}
@@ -981,7 +984,7 @@ export default function Board({
                       {/* Zone 3 (Outer Edge - Purchase Bar OR Money) */}
                       <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
                         {isOwned ? (
-                          <div className="h-2.5 md:h-3 w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                          <div className="h-3 md:h-3.5 w-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
                         ) : (
                           priceContent
                         )}
@@ -994,8 +997,8 @@ export default function Board({
                   return (
                     <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
                       {/* Zone 1 (Outer Edge) */}
-                      <div className="w-3 h-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="w-full h-[75%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      <div className="w-3.5 md:w-4 h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="w-full h-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
                       </div>
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
@@ -1025,8 +1028,8 @@ export default function Board({
                         <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
-                      <div className="w-3 h-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="w-full h-[75%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      <div className="w-3.5 md:w-4 h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <div className="w-full h-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
                       </div>
                     </div>
                   );
@@ -1407,7 +1410,7 @@ export default function Board({
                   {/* HEADER */}
                   {selTile.type === 'STREET' && selTile.group ? (
                     <div className={`${getGroupColor(selTile.group)} w-full pt-6 pb-4 text-center border-b-2 border-slate-800`}>
-                      <h2 className="opacity-80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1">TITLE DEED</h2>
+                      <h2 className="opacity-80 font-bold uppercase tracking-[0.2em] text-[10px] md:text-xs font-sans mb-1">দলিলাপাত্র</h2>
                       <h3 className="font-extrabold text-xl md:text-2xl font-sans leading-tight px-4">{selTile.name}</h3>
                     </div>
                   ) : (
@@ -1422,55 +1425,55 @@ export default function Board({
                       <>
                         <div className="flex flex-col gap-1 w-full">
                           <div className={`flex justify-between items-center transition-all ${activeRentTier === 0 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-700'}`}>
-                            <span className={activeRentTier === 0 ? 'font-bold' : ''}>RENT</span> <span className={`font-bold ${activeRentTier === 0 ? 'text-purple-700' : 'text-slate-900'}`}>৳{selTile.rent[0]}</span>
+                            <span className={activeRentTier === 0 ? 'font-bold' : ''}>খালি জায়গার ভাড়া</span> <span className={`font-bold ${activeRentTier === 0 ? 'text-purple-700' : 'text-slate-900'}`}>৳{toBanglaNum(selTile.rent[0])}</span>
                           </div>
                           <div className={`flex justify-between items-center transition-all ${activeRentTier === 1 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
-                            <span className={activeRentTier === 1 ? 'font-bold' : ''}>With 1 House</span> <span className={activeRentTier === 1 ? 'font-black text-purple-700' : ''}>৳{selTile.rent[1]}</span>
+                            <span className={activeRentTier === 1 ? 'font-bold' : ''}>১টি বাড়ি থাকলে</span> <span className={activeRentTier === 1 ? 'font-black text-purple-700' : ''}>৳{toBanglaNum(selTile.rent[1])}</span>
                           </div>
                           <div className={`flex justify-between items-center transition-all ${activeRentTier === 2 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
-                            <span className={activeRentTier === 2 ? 'font-bold' : ''}>With 2 Houses</span> <span className={activeRentTier === 2 ? 'font-black text-purple-700' : ''}>৳{selTile.rent[2]}</span>
+                            <span className={activeRentTier === 2 ? 'font-bold' : ''}>২টি বাড়ি থাকলে</span> <span className={activeRentTier === 2 ? 'font-black text-purple-700' : ''}>৳{toBanglaNum(selTile.rent[2])}</span>
                           </div>
                           <div className={`flex justify-between items-center transition-all ${activeRentTier === 3 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
-                            <span className={activeRentTier === 3 ? 'font-bold' : ''}>With 3 Houses</span> <span className={activeRentTier === 3 ? 'font-black text-purple-700' : ''}>৳{selTile.rent[3]}</span>
+                            <span className={activeRentTier === 3 ? 'font-bold' : ''}>৩টি বাড়ি থাকলে</span> <span className={activeRentTier === 3 ? 'font-black text-purple-700' : ''}>৳{toBanglaNum(selTile.rent[3])}</span>
                           </div>
                           <div className={`flex justify-between items-center transition-all ${activeRentTier === 4 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}>
-                            <span className={activeRentTier === 4 ? 'font-bold' : ''}>With 4 Houses</span> <span className={activeRentTier === 4 ? 'font-black text-purple-700' : ''}>৳{selTile.rent[4]}</span>
+                            <span className={activeRentTier === 4 ? 'font-bold' : ''}>৪টি বাড়ি থাকলে</span> <span className={activeRentTier === 4 ? 'font-black text-purple-700' : ''}>৳{toBanglaNum(selTile.rent[4])}</span>
                           </div>
                           <div className={`flex justify-between items-center mt-1 pt-2 border-t border-slate-300 transition-all ${activeRentTier === 5 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-800'}`}>
-                            <span className={activeRentTier === 5 ? 'font-bold' : ''}>With HOTEL</span> <span className={`font-bold ${activeRentTier === 5 ? 'text-purple-700' : ''}`}>৳{selTile.rent[5]}</span>
+                            <span className={activeRentTier === 5 ? 'font-bold' : ''}>হোটেল থাকলে</span> <span className={`font-bold ${activeRentTier === 5 ? 'text-purple-700' : ''}`}>৳{toBanglaNum(selTile.rent[5])}</span>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>৳{selTile.mortgageValue}</span></div>
-                        <div className="flex justify-between items-center text-slate-700"><span>Houses cost</span> <span>৳{selTile.houseCost} each</span></div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>বন্ধকী মূল্য</span> <span>৳{toBanglaNum(selTile.mortgageValue || 0)}</span></div>
+                        <div className="flex justify-between items-center text-slate-700"><span>বাড়ি বানানোর খরচ</span> <span>প্রতিটি ৳{toBanglaNum(selTile.houseCost || 0)}</span></div>
                       </>
                     )}
 
                     {selTile.type === 'RAILROAD' && selTile.rent && (
                       <>
                         <div className="flex flex-col gap-1 w-full">
-                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 0 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>Rent</span> <span className={activeRailroadTier === 0 ? 'font-black text-purple-700' : ''}>৳25</span></div>
-                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 1 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 2 R.R.'s are owned</span> <span className={activeRailroadTier === 1 ? 'font-black text-purple-700' : ''}>৳50</span></div>
-                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 2 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 3 R.R.'s are owned</span> <span className={activeRailroadTier === 2 ? 'font-black text-purple-700' : ''}>৳100</span></div>
-                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 3 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>If 4 R.R.'s are owned</span> <span className={activeRailroadTier === 3 ? 'font-black text-purple-700' : ''}>৳200</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 0 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>১টি স্টেশন থাকলে</span> <span className={activeRailroadTier === 0 ? 'font-black text-purple-700' : ''}>৳২৫</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 1 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>২টি স্টেশন থাকলে</span> <span className={activeRailroadTier === 1 ? 'font-black text-purple-700' : ''}>৳৫০</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 2 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>৩টি স্টেশন থাকলে</span> <span className={activeRailroadTier === 2 ? 'font-black text-purple-700' : ''}>৳১০০</span></div>
+                          <div className={`flex justify-between items-center transition-all ${activeRailroadTier === 3 ? 'ring-2 ring-purple-500 bg-purple-500/15 rounded px-1.5 py-0.5 -mx-1.5 shadow-sm text-slate-900' : 'text-slate-600'}`}><span>৪টি স্টেশন থাকলে</span> <span className={activeRailroadTier === 3 ? 'font-black text-purple-700' : ''}>৳২০০</span></div>
                         </div>
-                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>৳{selTile.mortgageValue}</span></div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>বন্ধকী মূল্য</span> <span>৳{toBanglaNum(selTile.mortgageValue || 0)}</span></div>
                       </>
                     )}
 
                     {selTile.type === 'UTILITY' && (
                       <>
                         <div className="text-center text-xs mb-2 leading-relaxed text-slate-700">
-                          If one "Utility" is owned, rent is 4 times amount shown on dice.<br />
-                          If both "Utilities" are owned, rent is 10 times amount shown on dice.
+                          যেকোনো ১টি ইউটিলিটি থাকলে ডাইসের মোট যোগফলের ৪ গুণ ভাড়া।<br />
+                          উভয় ইউটিলিটি থাকলে ডাইসের মোট যোগফলের ১০ গুণ ভাড়া।
                         </div>
-                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>Mortgage Value</span> <span>৳{selTile.mortgageValue}</span></div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-300 text-slate-700"><span>বন্ধকী মূল্য</span> <span>৳{toBanglaNum(selTile.mortgageValue || 0)}</span></div>
                       </>
                     )}
 
                     {!selTile.price && (
                       <div className="text-center text-slate-500 py-4 italic">
-                        Special Action Tile
+                        বিশেষ ঘর
                       </div>
                     )}
 
@@ -1479,28 +1482,28 @@ export default function Board({
                       <div className="mt-4 p-3 bg-slate-200 rounded-lg flex flex-col items-center justify-center gap-1 border border-slate-300">
                         {owner ? (
                           <>
-                            <span className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">Owned By</span>
+                            <span className="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider">বর্তমান মালিক</span>
                             <div className="flex items-center gap-2">
                               <span style={{ backgroundColor: owner.avatar }} className="w-4 h-4 rounded-full border border-slate-400" />
                               <span className="font-bold text-slate-900">{owner.name}</span>
                             </div>
-                            {selProp.isMortgaged && <span className="text-xs text-red-500 font-bold mt-1">MORTGAGED</span>}
+                            {selProp.isMortgaged && <span className="text-xs text-red-500 font-bold mt-1">বন্ধক রাখা হয়েছে</span>}
                             {!selProp.isMortgaged && selProp.houses > 0 && (
                               <span className="text-xs text-emerald-600 font-bold mt-1">
-                                {selProp.houses === 5 ? 'HOTEL BUILT' : `${selProp.houses} HOUSES BUILT`}
+                                {selProp.houses === 5 ? 'হোটেল তৈরি আছে' : `${toBanglaNum(selProp.houses)}টি বাড়ি তৈরি আছে`}
                               </span>
                             )}
                           </>
                         ) : (
                           <>
-                            <span className="text-[10px] md:text-xs text-emerald-600 uppercase tracking-wider font-bold">Available For Purchase</span>
+                            <span className="text-[10px] md:text-xs text-emerald-600 uppercase tracking-wider font-bold">কেনার জন্য উন্মুক্ত</span>
                             {gameState.marketCrash?.active ? (
                               <div className="flex gap-2 items-center justify-center">
-                                <del className="text-red-500/70 text-sm">৳{selTile.price}</del>
-                                <span className="font-black text-lg md:text-xl text-emerald-500">৳{Math.floor((selTile.price || 0) * 0.7)}</span>
+                                <del className="text-red-500/70 text-sm">৳{toBanglaNum(selTile.price || 0)}</del>
+                                <span className="font-black text-lg md:text-xl text-emerald-500">৳{toBanglaNum(Math.floor((selTile.price || 0) * 0.7))}</span>
                               </div>
                             ) : (
-                              <span className="font-black text-lg md:text-xl text-slate-900">৳{selTile.price}</span>
+                              <span className="font-black text-lg md:text-xl text-slate-900">৳{toBanglaNum(selTile.price || 0)}</span>
                             )}
 
                             {devMode && (

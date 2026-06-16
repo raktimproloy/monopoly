@@ -73,17 +73,14 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
     });
 
     // --- LOCATION & STATUS AUDIO TRACKER ---
+    const eventsToPlay: string[] = [];
     Object.values(gameState.players).forEach(player => {
       const prevPlayer = prevState.players[player.id];
       if (!prevPlayer) return;
 
       // TRIGGER 1: Player gets sent to Jail (inJail changes from false -> true)
       if (!prevPlayer.inJail && player.inJail) {
-        try {
-          soundManager.playEventSound('PRISON_SOUND');
-        } catch (err) {
-          console.warn("Prison sound failed:", err);
-        }
+        eventsToPlay.push('PRISON_SOUND');
       }
 
       // TRIGGER 2: Player lands on "Obosor" (Position changes, and new tile is Obosor)
@@ -91,14 +88,22 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
         const landedTile = boardTiles[player.position];
         // Match the tile by name (e.g., 'অবসর') or type if applicable
         if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'REST' || landedTile?.type === 'FREE_PARKING') {
-          try {
-            soundManager.playEventSound('PRISON_SOUND');
-          } catch (err) {
-            console.warn("Prison sound failed:", err);
-          }
+          eventsToPlay.push('PRISON_SOUND');
         }
       }
     });
+
+    if (eventsToPlay.length > 0) {
+      setTimeout(() => {
+        eventsToPlay.forEach(event => {
+          try {
+            soundManager.playEventSound(event as any);
+          } catch (err) {
+            console.warn("Prison sound failed:", err);
+          }
+        });
+      }, delay);
+    }
 
     if (changes.length > 0) {
       setTimeout(() => {
