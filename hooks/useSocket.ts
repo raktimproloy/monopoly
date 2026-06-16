@@ -267,6 +267,20 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devForcePolice = useCallback(() => {
+    console.log('[Socket Emit] dev_force_police', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_force_police', { playerId: userId });
+    }
+  }, [userId]);
+
+  const devSetNextPolice = useCallback((delayMinutes: number) => {
+    console.log('[Socket Emit] dev_set_next_police', { playerId: userId, delayMinutes });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_set_next_police', { playerId: userId, delayMinutes });
+    }
+  }, [userId]);
+
   const devGivePowerCard = useCallback(() => {
     console.log('[Socket Emit] dev_give_power_card', { playerId: userId, cardType: 'BECOME_A_DON' });
     if (socketRef.current) {
@@ -417,6 +431,8 @@ export function useSocket(
     devAddFunds,
     devForceCrash,
     devSetNextCrash,
+    devForcePolice,
+    devSetNextPolice,
     placeBid,
     addBot,
     updateAppearance,

@@ -1,109 +1,228 @@
-import React, { useState } from 'react';
-import { GameState } from '../../../shared/types';
-import { X, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { GameState, BoardTile } from '../../../shared/types';
+import { X, ShieldAlert, ChevronRight, Home, Building2, Crosshair } from 'lucide-react';
+import { toBanglaNum } from '../utils/format';
 
 interface UseDonModalProps {
   state: GameState;
+  boardTiles: BoardTile[];
   playerId: string;
   onClose: () => void;
   onConfirm: (targetTileIndex: number) => void;
 }
 
-export default function UseDonModal({ state, playerId, onClose, onConfirm }: UseDonModalProps) {
+const getGroupColor = (group: string | undefined): string => {
+  switch (group) {
+    case 'Brown': return 'bg-amber-700';
+    case 'Light Blue': return 'bg-cyan-400';
+    case 'Pink': return 'bg-fuchsia-400';
+    case 'Orange': return 'bg-orange-500';
+    case 'Red': return 'bg-red-500';
+    case 'Yellow': return 'bg-yellow-400';
+    case 'Green': return 'bg-emerald-500';
+    case 'Dark Blue': return 'bg-blue-600';
+    default: return 'bg-slate-700';
+  }
+};
+
+export default function UseDonModal({ state, boardTiles, playerId, onClose, onConfirm }: UseDonModalProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [selectedTile, setSelectedTile] = useState<string>('');
+  const [selectedTile, setSelectedTile] = useState<number | null>(null);
 
   const otherPlayers = Object.values(state.players).filter(p => p.id !== playerId && !p.isBankrupt);
   
-  // Get properties for the selected player
   const targetProperties = Object.values(state.properties).filter(p => p.ownerId === selectedPlayer);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedTile) {
-      onConfirm(parseInt(selectedTile, 10));
+  const handleConfirm = () => {
+    if (selectedTile !== null) {
+      onConfirm(selectedTile);
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-[#0B0E14] border border-red-500/40 rounded-xl shadow-[0_0_30px_rgba(220,38,38,0.3)] w-full max-w-md overflow-hidden relative">
+  const calculateRent = (p: any, tile: BoardTile) => {
+    if (p.isMortgaged) return 0;
+    if (tile.type === 'UTILITY') return 'DICE x RENT'; // Special case
+    
+    let currentRent = tile.rent ? tile.rent[p.houses] : 0;
+    if (tile.type === 'STREET' && p.houses === 0 && state.settings?.doubleRentOnCompleteSet) {
+      const ownsFullSet = boardTiles.filter(t => t.group === tile.group).every(t => {
+        const prop = state.properties[t.index];
+        return prop && prop.ownerId === p.ownerId;
+      });
+      if (ownsFullSet) currentRent *= 2;
+    } else if (tile.type === 'RAILROAD') {
+      const count = Object.values(state.properties).filter(
+        prop => prop.ownerId === p.ownerId && boardTiles[prop.tileIndex]?.type === 'RAILROAD'
+      ).length;
+      currentRent = tile.rent ? tile.rent[count - 1] || 25 : 25;
+    }
+    return currentRent;
+  };
+
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200">
+      <div className="max-w-3xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-2xl relative animate-in zoom-in-95 fade-in duration-200">
+        
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors bg-[#231F3B] hover:bg-[#2F294F] w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
+        >
+          <X size={14} />
+        </button>
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-950/80 to-[#0B0E14] p-4 flex justify-between items-center border-b border-red-500/20">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="text-red-500" size={24} />
-            <h2 className="text-lg font-black text-red-100 tracking-wider">BECOME A DON</h2>
+        <div className="flex items-center gap-3 border-b border-[#241F3C] pb-3">
+          <div className="bg-[#241F3C] p-2 rounded-lg">
+            <Crosshair className="text-[#A78BFA]" size={24} />
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={20} />
+          <div>
+            <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-[#C8B6FF] uppercase">
+              Become a Don
+            </h2>
+            <p className="text-xs text-slate-400 font-mono">Select a player and hijack their property for 3 rounds.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6 items-start h-[400px]">
+          
+          {/* Left Column: Player Selection */}
+          <div className="flex flex-col gap-3 h-full overflow-hidden">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Select Target Player</span>
+            <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 custom-scrollbar">
+              {otherPlayers.length === 0 ? (
+                <div className="text-center py-7 text-slate-500 font-mono text-xs uppercase tracking-wider">
+                  No active players
+                </div>
+              ) : (
+                otherPlayers.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPlayer(p.id);
+                      setSelectedTile(null);
+                    }}
+                    className={`rounded-xl py-3 px-3 flex items-center gap-3 text-white font-extrabold text-sm transition-all cursor-pointer w-full text-left shadow-sm border ${
+                      selectedPlayer === p.id 
+                      ? 'bg-[#5B37E8]/25 border-[#7B5BF2]' 
+                      : 'bg-[#241F3C] border-[#2E284D] hover:bg-[#2F294F] hover:border-[#4C3D8B]'
+                    }`}
+                  >
+                    <div
+                      style={{ backgroundColor: p.avatar }}
+                      className="relative w-8 h-8 rounded-full shrink-0 border border-white/10"
+                    />
+                    <div className="flex flex-col overflow-hidden flex-1">
+                      <span className="truncate text-slate-200">{p.name}</span>
+                      <span className="text-[10px] font-mono text-slate-400">Balance: ৳{toBanglaNum(p.balance)}</span>
+                    </div>
+                    {selectedPlayer === p.id && <ChevronRight size={16} className="text-[#A78BFA] shrink-0" />}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Properties Selection */}
+          <div className="flex flex-col gap-3 h-full overflow-hidden md:border-l md:border-[#241F3C] md:pl-6">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              {selectedPlayer ? "Select Property to Hijack" : "Awaiting Player Selection"}
+            </span>
+            
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-2">
+              {!selectedPlayer ? (
+                <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs uppercase tracking-widest text-center border-2 border-dashed border-[#241F3C] rounded-xl p-6">
+                  Select a player from the left<br/>to view their properties
+                </div>
+              ) : targetProperties.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-slate-500 font-mono text-xs uppercase tracking-widest text-center border-2 border-dashed border-[#241F3C] rounded-xl p-6">
+                  This player has no properties
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {targetProperties.map(p => {
+                    const tile = boardTiles[p.tileIndex];
+                    if (!tile) return null;
+                    const isSelected = selectedTile === p.tileIndex;
+                    const rent = calculateRent(p, tile);
+                    const isMortgaged = p.isMortgaged;
+
+                    return (
+                      <div
+                        key={p.tileIndex}
+                        onClick={() => setSelectedTile(p.tileIndex)}
+                        className={`relative rounded-xl overflow-hidden border cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-[#5B37E8]/20 border-[#7B5BF2] scale-[1.02] z-10'
+                            : 'bg-[#1E1B2E] border-[#2E284D] hover:border-[#4C3D8B] hover:bg-[#251f38]'
+                        }`}
+                      >
+                        {/* Top Color Strip */}
+                        <div className={`h-2 w-full ${getGroupColor(tile.group)}`} />
+                        
+                        <div className="p-3 flex flex-col gap-2">
+                          <h3 className="text-xs font-bold text-white truncate uppercase tracking-wider" title={tile.name}>
+                            {tile.name}
+                          </h3>
+                          
+                          <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center gap-1 text-slate-400">
+                              {p.houses === 5 ? (
+                                <Building2 size={12} className="text-red-400" />
+                              ) : p.houses > 0 ? (
+                                Array.from({length: p.houses}).map((_, i) => <Home key={i} size={12} className="text-emerald-400" />)
+                              ) : (
+                                <span className="text-[9px] font-mono">NO HOUSES</span>
+                              )}
+                            </div>
+                            
+                            <div className="text-right">
+                              <span className="block text-[8px] text-slate-500 font-mono uppercase tracking-widest leading-tight">Rent</span>
+                              <span className={`text-[11px] font-bold font-mono ${isMortgaged ? 'text-red-400' : 'text-emerald-400'}`}>
+                                {isMortgaged ? 'MORTGAGED' : typeof rent === 'number' ? `৳${toBanglaNum(rent)}` : rent}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {isSelected && (
+                          <div className="absolute top-2 right-2 w-3 h-3 bg-[#7B5BF2] rounded-full border border-[#131122]" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="border-t border-[#241F3C] pt-4 flex justify-end gap-3 mt-1">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-[#241F3C] transition-colors cursor-pointer"
+          >
+            CANCEL
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={selectedTile === null}
+            className="bg-gradient-to-r from-[#7B5BF2] to-[#6F4FF0] hover:from-[#6A47E8] hover:to-[#5E3CCF] text-white px-6 py-2.5 rounded-xl font-orbitron font-extrabold text-xs tracking-widest transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-md flex items-center gap-2"
+          >
+            <Crosshair size={14} />
+            HIJACK SELECTED
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5">
-          <p className="text-slate-300 text-sm mb-4 leading-relaxed">
-            Select another player's property to hijack. You will collect all rent for this property for the next 3 rounds. The owner cannot upgrade or sell it during this time.
-          </p>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Target Player</label>
-              <select 
-                className="w-full bg-[#1e293b] border border-slate-600 rounded-lg p-2.5 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                value={selectedPlayer}
-                onChange={(e) => {
-                  setSelectedPlayer(e.target.value);
-                  setSelectedTile('');
-                }}
-                required
-              >
-                <option value="" disabled>Select a player...</option>
-                {otherPlayers.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wider">Target Property</label>
-              <select 
-                className="w-full bg-[#1e293b] border border-slate-600 rounded-lg p-2.5 text-white text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 disabled:opacity-50"
-                value={selectedTile}
-                onChange={(e) => setSelectedTile(e.target.value)}
-                required
-                disabled={!selectedPlayer || targetProperties.length === 0}
-              >
-                <option value="" disabled>
-                  {!selectedPlayer ? 'Select a player first' : targetProperties.length === 0 ? 'Player has no properties' : 'Select a property...'}
-                </option>
-                {targetProperties.map(p => (
-                  <option key={p.tileIndex} value={p.tileIndex}>
-                    {/* Assuming frontend has tile names mapped, or we just show index. Actually, we don't have boardTiles here directly without passing them. Let's just use Tile # */}
-                    Tile #{p.tileIndex} (Houses: {p.houses})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-800">
-              <button 
-                type="button" 
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit"
-                disabled={!selectedTile}
-                className="px-6 py-2 rounded-lg text-sm font-bold bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                HIJACK PROPERTY
-              </button>
-            </div>
-          </form>
-        </div>
       </div>
     </div>
   );
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
 import { useGameSounds } from '../../../hooks/useGameSounds';
@@ -81,6 +81,8 @@ function GameRoomContent() {
     devAddFunds,
     devForceCrash,
     devSetNextCrash,
+    devForcePolice,
+    devSetNextPolice,
     devGivePowerCard,
     usePowerCard,
     takeLoan,
@@ -90,6 +92,9 @@ function GameRoomContent() {
   // Initialize sound manager to listen to game events
   useGameSounds(gameState, logs, userId, pendingTrade);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [devShowPoliceNotification, setDevShowPoliceNotification] = useState(false);
+  const audioContextInitialized = useRef(false);
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
@@ -472,6 +477,25 @@ function GameRoomContent() {
                     className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                   />
                 </div>
+
+                {/* Traffic Police Switch */}
+                <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-start justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-orbitron text-slate-400 tracking-wider uppercase font-bold">
+                      ট্রাফিক পুলিশ
+                    </label>
+                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-wide leading-relaxed">
+                      চালু থাকলে, নির্দিষ্ট সময় পর পর ট্রাফিক পুলিশ এসে জরিমানা বা জেলে পাঠাতে পারে।
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!settings.enableTrafficPolice}
+                    disabled={!isHost}
+                    onChange={(e) => handleSettingChange('enableTrafficPolice', e.target.checked)}
+                    className={`w-4 h-4 text-cyber-blue bg-slate-900 border-slate-800 rounded outline-none focus:ring-0 focus:ring-offset-0 mt-1 ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                  />
+                </div>
               </div>
             </div>
 
@@ -626,20 +650,25 @@ function GameRoomContent() {
       )}
 
       {/* Police Notification Overlay */}
-      {gameState?.activeDonPower && (
-        <PoliceNotification state={gameState} playerId={userId} />
+      {(gameState?.activeDonPower || devShowPoliceNotification) && (
+        <PoliceNotification 
+          state={gameState!} 
+          playerId={userId} 
+          forceShow={devShowPoliceNotification}
+          onCloseForceShow={() => setDevShowPoliceNotification(false)}
+        />
       )}
 
       {/* Bank Modal Overlay */}
       {activeModal === 'BANK' && (
-        <BankModal 
-          onClose={() => setActiveModal('NONE')} 
-          onTakeLoan={takeLoan} 
+        <BankModal
+          onClose={() => setActiveModal('NONE')}
+          onTakeLoan={takeLoan}
         />
       )}
 
       {/* Main UI Layout (Board-priority 3-column system) */}
-      <div className="flex-1 w-full p-4 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row items-center justify-between gap-4 min-h-0 relative z-10">
+      <div className="flex-1 w-full px-4 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row items-center justify-between gap-4 min-h-0 relative z-10">
 
         {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas — highest priority) */}
         {/* CRITICAL: xl:flex-1 AND min-w-0 prevent Flexbox squeeze lock so the board can shrink when sidebar expands on desktop. shrink-0 on mobile prevents height collapse. */}
@@ -668,23 +697,26 @@ function GameRoomContent() {
             onDevAddFunds={devAddFunds}
             onDevForceCrash={devForceCrash}
             onDevSetNextCrash={devSetNextCrash}
+            onDevForcePolice={devForcePolice}
+            onDevSetNextPolice={devSetNextPolice}
             onDevGivePowerCard={devGivePowerCard}
+            onDevTestPoliceNotification={() => setDevShowPoliceNotification(true)}
           />
         </section>
 
         {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
         <section className="order-2 xl:order-1 w-full xl:w-[300px] 2xl:w-[350px] shrink-0 h-[60vh] xl:h-full flex flex-col justify-end gap-3 overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none z-40">
           <div className="shrink-0 mb-1">
-            <GovernmentBank 
-              gameState={gameState} 
-              playerId={userId} 
+            <GovernmentBank
+              gameState={gameState}
+              playerId={userId}
               onOpenBankModal={() => setActiveModal('BANK')}
               repayLoan={repayLoan}
             />
           </div>
-          
+
           <div className="shrink-0 mb-1">
-            <PowerSection state={gameState} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
+            <PowerSection state={gameState} boardTiles={boardTiles} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             <PropertyManager
@@ -702,17 +734,17 @@ function GameRoomContent() {
 
         {/* 3. RIGHT AREA WRAPPER */}
         <div className="order-3 xl:order-3 flex flex-row items-start gap-3 h-screen pt-4 pb-4 pr-4 self-start z-40">
-          
-          {/* VOLUME COLUMN (Pushed down slightly to align with Player List) */}
-          <div className="w-[90px] xl:w-[110px] flex flex-col gap-2 mt-[45px]">
-            <SoundControls />
-          </div>
 
           {/* MAIN PANELS COLUMN (Strict Uniform Width) */}
           <div className="w-[320px] xl:w-[360px] flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar pr-2 pb-10">
-            
-            {/* TOP ACTION BUTTONS (Settings, Give Up) */}
-            <div className="flex justify-end gap-2 w-full">
+
+            {/* SOUND CONTROLS & TOP ACTION BUTTONS ROW */}
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <SoundControls />
+              </div>
+              
+              <div className="flex justify-end gap-2">
               <button
                 onClick={() => {
                   // Future Votekick placeholder
@@ -737,6 +769,7 @@ function GameRoomContent() {
                 <Flag size={12} className="fill-current stroke-current" />
                 দেউলিয়া
               </button>
+            </div>
             </div>
 
             {/* KHELOAR TALIKA (Player List) */}

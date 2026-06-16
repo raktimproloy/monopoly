@@ -29,6 +29,9 @@ interface BoardProps {
   onDevForceCrash?: () => void;
   onDevSetNextCrash?: (delayMinutes: number) => void;
   onDevGivePowerCard?: () => void;
+  onDevForcePolice?: () => void;
+  onDevSetNextPolice?: (delayMinutes: number) => void;
+  onDevTestPoliceNotification?: () => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -392,6 +395,9 @@ export default function Board({
   onDevForceCrash,
   onDevSetNextCrash,
   onDevGivePowerCard,
+  onDevForcePolice,
+  onDevSetNextPolice,
+  onDevTestPoliceNotification,
   onPlaceBid,
 }: BoardProps) {
   const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
@@ -403,7 +409,9 @@ export default function Board({
   const [devD2, setDevD2] = useState<number>(1);
   const [devAddFundsAmount, setDevAddFundsAmount] = useState<number>(1000);
   const [devCrashDelay, setDevCrashDelay] = useState<number>(5);
+  const [devPoliceDelay, setDevPoliceDelay] = useState<number>(5);
   const [countdownText, setCountdownText] = useState<string>('');
+  const [policeCountdownText, setPoliceCountdownText] = useState<string>('');
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
@@ -426,13 +434,13 @@ export default function Board({
     (myPlayer?.balance ?? 0) >= currentTilePrice &&
     gameState.turnStatus === 'MUST_ACT_OR_END';
 
-  // Compute Market Crash countdown
+  // Compute Market Crash and Police countdown
   useEffect(() => {
-    if (!devMode || !gameState.marketCrash) return;
+    if (!devMode) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
-      if (gameState.marketCrash.active && gameState.marketCrash.crashEndTime) {
+      if (gameState.marketCrash?.active && gameState.marketCrash.crashEndTime) {
         const diff = gameState.marketCrash.crashEndTime - now;
         if (diff > 0) {
           const mins = Math.floor(diff / 60000);
@@ -441,7 +449,7 @@ export default function Board({
         } else {
           setCountdownText('Ending soon...');
         }
-      } else if (!gameState.marketCrash.active && gameState.marketCrash.nextCrashTime) {
+      } else if (gameState.marketCrash && !gameState.marketCrash.active && gameState.marketCrash.nextCrashTime) {
         const diff = gameState.marketCrash.nextCrashTime - now;
         if (diff > 0) {
           const mins = Math.floor(diff / 60000);
@@ -453,10 +461,36 @@ export default function Board({
       } else {
         setCountdownText('No crash scheduled');
       }
+
+      if (gameState.trafficPolice) {
+        if (gameState.trafficPolice.active && gameState.trafficPolice.disappearanceTime) {
+          const diff = gameState.trafficPolice.disappearanceTime - now;
+          if (diff > 0) {
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            setPoliceCountdownText(`Leaves in: ${mins}m ${secs}s`);
+          } else {
+            setPoliceCountdownText('Leaving soon...');
+          }
+        } else if (!gameState.trafficPolice.active && gameState.trafficPolice.nextAppearanceTime) {
+          const diff = gameState.trafficPolice.nextAppearanceTime - now;
+          if (diff > 0) {
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            setPoliceCountdownText(`Arrives in: ${mins}m ${secs}s`);
+          } else {
+            setPoliceCountdownText('Arriving soon...');
+          }
+        } else {
+          setPoliceCountdownText('Police off duty');
+        }
+      } else {
+        setPoliceCountdownText('Not enabled');
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [devMode, gameState.marketCrash]);
+  }, [devMode, gameState.marketCrash, gameState.trafficPolice]);
 
   // Auto-end turn when sent to or staying in jail
   const wasSentToJailRef = useRef(false);
@@ -556,7 +590,7 @@ export default function Board({
 
   return (
     <div
-      className="relative mx-auto flex flex-col justify-between max-w-full"
+      className="relative m-auto flex flex-col justify-between max-w-full"
       style={{ 
         aspectRatio: '1 / 1', 
         maxHeight: 'calc(100vh - 2rem)', // 2rem accounts for the p-4 parent padding
@@ -628,6 +662,12 @@ export default function Board({
             >
               Give Don Card
             </button>
+            <button
+              onClick={() => onDevTestPoliceNotification?.()}
+              className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(51,65,85,0.4)] active:scale-95 w-full"
+            >
+              Test Notification
+            </button>
           </div>
 
           {/* Add Funds Area */}
@@ -672,6 +712,34 @@ export default function Board({
               className="bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] active:scale-95 w-full"
             >
               এখনই মার্কেট ক্র্যাশ করুন
+            </button>
+          </div>
+
+          {/* Traffic Police Area */}
+          <div className="flex flex-col gap-2 border-t border-purple-500/30 pt-2">
+            <div className="text-[10px] text-center text-blue-400 font-orbitron tracking-widest font-bold">
+              {policeCountdownText}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase flex-1">পুলিশ:</span>
+              <input
+                type="number" min="1" max="60"
+                value={devPoliceDelay} onChange={(e) => setDevPoliceDelay(parseInt(e.target.value) || 5)}
+                className="w-10 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
+              />
+              <span className="text-[10px] text-slate-400">মিঃ</span>
+              <button
+                onClick={() => onDevSetNextPolice?.(devPoliceDelay)}
+                className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95"
+              >
+                সেট
+              </button>
+            </div>
+            <button
+              onClick={() => onDevForcePolice?.()}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(37,99,235,0.4)] active:scale-95 w-full"
+            >
+              এখনই পুলিশ পাঠান
             </button>
           </div>
         </div>
@@ -750,6 +818,7 @@ export default function Board({
           else if (orientation === 'RIGHT') hoverPositionClass = 'right-[calc(100%+8px)] top-1/2 -translate-y-1/2';
 
           const isHijacked = gameState.activeDonPower?.targetTileIndex === tile.index;
+          const hasPolice = gameState.trafficPolice?.active && gameState.trafficPolice?.position === tile.index;
 
           return (
             <div
@@ -778,6 +847,15 @@ export default function Board({
                   <div className="absolute bottom-0 right-0 w-8 h-1 bg-yellow-400 repeating-linear-gradient-45 transform -rotate-45 translate-x-2 -translate-y-1" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-40">
                     <ShieldAlert size={32} className="text-red-500" />
+                  </div>
+                </div>
+              )}
+
+              {/* Traffic Police Overlay */}
+              {hasPolice && (
+                <div className="absolute inset-0 z-[35] pointer-events-none flex items-center justify-center rounded-md">
+                  <div className="relative animate-bounce drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">
+                     <img src="/images/trafic-plice.png" alt="Traffic Police" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
                   </div>
                 </div>
               )}
@@ -1083,18 +1161,42 @@ export default function Board({
                 )}
 
                 {/* Roll the dice OR Conclude Turn */}
-                {gameState.turnStatus === 'MUST_ROLL' && !activePlayer?.inJail && isActionReady && (
-                  <button
-                    onClick={() => {
-                      setIsActionReady(false);
-                      onRollDice();
-                      setTimeout(() => setIsActionReady(true), 2200);
-                    }}
-                    className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
-                  >
-                    <DiceIcon size={14} className="stroke-white" />
-                    ছক্কা মারুন
-                  </button>
+                {gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
+                  <div className="flex flex-col gap-2 w-full items-center">
+                    <button
+                      onClick={() => {
+                        setIsActionReady(false);
+                        onRollDice();
+                        setTimeout(() => setIsActionReady(true), 2200);
+                      }}
+                      className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
+                    >
+                      <DiceIcon size={14} className="stroke-white" />
+                      ছক্কা মারুন
+                    </button>
+
+                    {/* Jail Options */}
+                    {activePlayer?.inJail && (
+                      <div className="flex gap-2 justify-center flex-wrap mt-2">
+                        <button
+                          onClick={onPayJailFine}
+                          className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                        >
+                          <MoneyBagIcon size={12} className="stroke-white shrink-0" />
+                          ৳{toBanglaNum(50)} জরিমানা দিন
+                        </button>
+                        {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
+                          <button
+                            onClick={onUsePardonCard}
+                            className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+                          >
+                            <span className="text-lg leading-none shrink-0">🗝️</span>
+                            পার্ডন কার্ড ব্যবহার করুন
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {gameState.turnStatus === 'MUST_ACT_OR_END' && isActionReady && (
@@ -1118,27 +1220,7 @@ export default function Board({
                       </button>
                     )}
 
-                    {/* get free for $50 fine option */}
-                    {activePlayer?.inJail && (
-                      <>
-                        <button
-                          onClick={onPayJailFine}
-                          className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-[#7B5BF2] hover:bg-[#6849E0] text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-[#7B5BF2]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                        >
-                          <MoneyBagIcon size={12} className="stroke-white shrink-0" />
-                          ৳{toBanglaNum(50)} জরিমানা দিন
-                        </button>
-                        {(activePlayer.getOutOfJailFreeCards || 0) > 0 && onUsePardonCard && (
-                          <button
-                            onClick={onUsePardonCard}
-                            className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-yellow-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
-                          >
-                            <span className="text-lg leading-none shrink-0">🗝️</span>
-                            পার্ডন কার্ড ব্যবহার করুন
-                          </button>
-                        )}
-                      </>
-                    )}
+                    {/* NO JAIL OPTIONS HERE ANYMORE */}
 
                     <button
                       onClick={onEndTurn}

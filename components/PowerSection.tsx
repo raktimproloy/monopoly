@@ -5,12 +5,13 @@ import { Zap, ShieldAlert, Key } from 'lucide-react';
 
 interface PowerSectionProps {
   state: GameState;
+  boardTiles: any[];
   playerId: string;
   onUsePowerCard?: (cardType: string, actionPayload: any) => void;
   onUsePardonCard?: () => void;
 }
 
-export default function PowerSection({ state, playerId, onUsePowerCard, onUsePardonCard }: PowerSectionProps) {
+export default function PowerSection({ state, boardTiles, playerId, onUsePowerCard, onUsePardonCard }: PowerSectionProps) {
   const player = state.players[playerId];
   const [isDonModalOpen, setIsDonModalOpen] = useState(false);
 
@@ -100,6 +101,7 @@ export default function PowerSection({ state, playerId, onUsePowerCard, onUsePar
       {isDonModalOpen && (
         <UseDonModal 
           state={state} 
+          boardTiles={boardTiles}
           playerId={playerId} 
           onClose={() => setIsDonModalOpen(false)} 
           onConfirm={handleUseDon} 
