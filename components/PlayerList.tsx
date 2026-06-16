@@ -90,7 +90,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       if (prevPlayer.position !== player.position) {
         const landedTile = boardTiles[player.position];
         // Match the tile by name (e.g., 'অবসর') or type if applicable
-        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'REST' || landedTile?.type === 'FREE_PARKING') {
+        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'FREE_PARKING') {
           try {
             soundManager.playEventSound('PRISON_SOUND');
           } catch (err) {
@@ -264,6 +264,13 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
                 {player.isBankrupt && (
                   <div className="text-[7px] font-mono text-red-500 font-bold uppercase tracking-wider mt-px">
                     দেউলিয়া
+                  </div>
+                )}
+
+                {player.loan && !player.isBankrupt && (
+                  <div className="text-[9px] font-mono text-amber-400 font-bold tracking-wider mt-px flex items-center justify-end gap-1">
+                    <span title="Remaining Loan">🏦</span>
+                    -৳{toBanglaNum(player.loan.remainingAmount)}
                   </div>
                 )}
               </div>

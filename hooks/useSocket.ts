@@ -267,6 +267,20 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devGivePowerCard = useCallback(() => {
+    console.log('[Socket Emit] dev_give_power_card', { playerId: userId, cardType: 'BECOME_A_DON' });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_give_power_card', { playerId: userId, cardType: 'BECOME_A_DON' });
+    }
+  }, [userId]);
+
+  const usePowerCard = useCallback((cardType: string, actionPayload: any) => {
+    console.log('[Socket Emit] use_power_card', { playerId: userId, cardType, actionPayload });
+    if (socketRef.current) {
+      socketRef.current.emit('use_power_card', { playerId: userId, cardType, actionPayload });
+    }
+  }, [userId]);
+
   const addBot = useCallback(() => {
     console.log('[Socket Emit] add_bot');
     if (socketRef.current) {
@@ -327,6 +341,20 @@ export function useSocket(
     console.log('[Socket Emit] use_pardon_card', { playerId: userId });
     if (socketRef.current) {
       socketRef.current.emit('use_pardon_card', { playerId: userId });
+    }
+  }, [userId]);
+
+  const takeLoan = useCallback((amount: number) => {
+    console.log('[Socket Emit] take_loan', { playerId: userId, amount });
+    if (socketRef.current) {
+      socketRef.current.emit('take_loan', { playerId: userId, amount });
+    }
+  }, [userId]);
+
+  const repayLoan = useCallback((amount?: number) => {
+    console.log('[Socket Emit] repay_loan', { playerId: userId, amount });
+    if (socketRef.current) {
+      socketRef.current.emit('repay_loan', { playerId: userId, amount });
     }
   }, [userId]);
 
@@ -394,6 +422,10 @@ export function useSocket(
     updateAppearance,
     resolveCard,
     sellPardonCard,
-    usePardonCard
+    usePardonCard,
+    devGivePowerCard,
+    usePowerCard,
+    takeLoan,
+    repayLoan
   };
 }

@@ -12,6 +12,9 @@ import TradePanel from '../../../components/TradePanel';
 import CardReveal from '../../../components/CardReveal';
 import AuctionModal from '../../../components/AuctionModal';
 import SoundControls from '../../../components/SoundControls';
+import PowerSection from '../../../components/PowerSection';
+import PoliceNotification from '../../../components/PoliceNotification';
+import GovernmentBank from '../../../components/GovernmentBank';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -76,7 +79,11 @@ function GameRoomContent() {
     placeBid,
     devAddFunds,
     devForceCrash,
-    devSetNextCrash
+    devSetNextCrash,
+    devGivePowerCard,
+    usePowerCard,
+    takeLoan,
+    repayLoan
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
@@ -616,6 +623,14 @@ function GameRoomContent() {
         />
       )}
 
+      {/* Police Notification Overlay */}
+      {gameState?.activeDonPower && (
+        <PoliceNotification state={gameState} playerId={userId} />
+      )}
+
+      {/* Power Cards Section */}
+      <PowerSection state={gameState} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
+
       {/* Main UI Layout (Board-priority 3-column system) */}
       <div className="flex-1 w-full p-2 md:p-3 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row gap-3 min-h-0 relative z-10">
 
@@ -646,11 +661,20 @@ function GameRoomContent() {
             onDevAddFunds={devAddFunds}
             onDevForceCrash={devForceCrash}
             onDevSetNextCrash={devSetNextCrash}
+            onDevGivePowerCard={devGivePowerCard}
           />
         </section>
 
         {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
         <section className="order-2 xl:order-1 w-full xl:w-72 shrink-0 flex flex-col gap-3 h-[60vh] xl:h-full xl:min-w-[220px] overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none">
+          <div className="shrink-0 mb-1">
+            <GovernmentBank 
+              gameState={gameState} 
+              playerId={userId} 
+              takeLoan={takeLoan} 
+              repayLoan={repayLoan} 
+            />
+          </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             <PropertyManager
               gameState={gameState}

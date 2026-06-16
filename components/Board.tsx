@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { GameState, BoardTile, Player } from '../../shared/types';
 import DiceManager from './dice/DiceManager';
-import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown } from 'lucide-react';
+import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown, ShieldAlert } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 
 interface BoardProps {
@@ -28,6 +28,7 @@ interface BoardProps {
   onDevAddFunds?: (amount: number) => void;
   onDevForceCrash?: () => void;
   onDevSetNextCrash?: (delayMinutes: number) => void;
+  onDevGivePowerCard?: () => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -236,9 +237,14 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
         const boardRect = boardEl.getBoundingClientRect();
 
         // Find index on tile to stagger overlapping tokens smoothly in a circle
-        const playersOnTile = Object.values(gameState.players).filter(
+        let playersOnTile = Object.values(gameState.players).filter(
           (p) => p.position === displayPosition && !p.isBankrupt
         );
+
+        if (displayPosition === 10) {
+          playersOnTile = playersOnTile.filter(p => p.inJail === player.inJail);
+        }
+
         const indexOnTile = playersOnTile.findIndex((p) => p.id === player.id);
         const totalOnTile = playersOnTile.length;
 
@@ -252,6 +258,16 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
         if (orientation === 'BOTTOM') multY = 0.22;
         if (orientation === 'LEFT') multX = 0.78;
         if (orientation === 'RIGHT') multX = 0.22;
+
+        if (Number(displayPosition) === 10) {
+          if (player.inJail) {
+            multX = 0.25;
+            multY = 0.75;
+          } else {
+            multX = 0.8;
+            multY = 0.2;
+          }
+        }
 
         if (totalOnTile > 1) {
           const angle = (indexOnTile / totalOnTile) * Math.PI * 2;
@@ -309,7 +325,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
   const isFlipped = displayPosition > 10 && displayPosition < 30;
   const isParentTileHovered = hoveredTileIndex === player.position;
-  const targetOpacity = !isVisible ? 0 : isHovered ? 1 : isParentTileHovered ? 0.3 : player.inJail ? 0.4 : 1;
+  const targetOpacity = !isVisible ? 0 : isHovered ? 1 : isParentTileHovered ? 0.3 : player.inJail ? 0.9 : 1;
 
   return (
     <div
@@ -375,6 +391,7 @@ export default function Board({
   onDevAddFunds,
   onDevForceCrash,
   onDevSetNextCrash,
+  onDevGivePowerCard,
   onPlaceBid,
 }: BoardProps) {
   const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
@@ -599,6 +616,16 @@ export default function Board({
             </button>
           </div>
 
+          {/* Give Don Card Area */}
+          <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
+            <button
+              onClick={() => onDevGivePowerCard?.()}
+              className="bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] active:scale-95 w-full"
+            >
+              Give Don Card
+            </button>
+          </div>
+
           {/* Add Funds Area */}
           <div className="flex items-center gap-2 border-t border-purple-500/30 pt-2">
             <span className="text-[10px] text-purple-400 font-bold tracking-widest uppercase w-[45px]">টাকা:</span>
@@ -647,6 +674,16 @@ export default function Board({
       )}
 
       {/* 11x11 Grid Wrapper */}
+      <style>{`
+        @keyframes pop-in {
+          0% { transform: scale(0.5); opacity: 0; }
+          50% { transform: scale(1.3); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+          animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
       <div
         id="board-container"
         className="grid w-full h-full border-4 border-[#1e2a3d] rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] bg-slate-900/40"
@@ -665,7 +702,7 @@ export default function Board({
           const divisionName = nameParts.length === 2 ? nameParts[1].replace(')', '') : null;
 
           // Get owner details
-          let ownerAvatar: string | null = null;
+          let ownerAvatar: string | undefined = undefined;
           let isMortgaged = false;
           let houses = 0;
           let currentRent = 0;
@@ -708,6 +745,8 @@ export default function Board({
           else if (orientation === 'LEFT') hoverPositionClass = 'left-[calc(100%+8px)] top-1/2 -translate-y-1/2';
           else if (orientation === 'RIGHT') hoverPositionClass = 'right-[calc(100%+8px)] top-1/2 -translate-y-1/2';
 
+          const isHijacked = gameState.activeDonPower?.targetTileIndex === tile.index;
+
           return (
             <div
               id={`tile-${tile.index}`}
@@ -725,19 +764,31 @@ export default function Board({
               }}
               className={`relative rounded-md bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60]`}
             >
+              {/* Hijacked Visual Overlay */}
+              {isHijacked && (
+                <div className="absolute inset-0 z-30 pointer-events-none rounded-md overflow-hidden ring-2 ring-red-500 shadow-[inset_0_0_15px_rgba(220,38,38,0.5)]">
+                  {/* Police Tape Corners */}
+                  <div className="absolute top-0 left-0 w-8 h-1 bg-yellow-400 repeating-linear-gradient-45 transform -rotate-45 -translate-x-2 translate-y-1" />
+                  <div className="absolute bottom-0 right-0 w-8 h-1 bg-yellow-400 repeating-linear-gradient-45 transform -rotate-45 translate-x-2 -translate-y-1" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-40">
+                    <ShieldAlert size={32} className="text-red-500" />
+                  </div>
+                </div>
+              )}
+
               {/* ABSOLUTE REGION TABS - INWARD FACING */}
               {tile.group && orientation !== 'CORNER' && (
                 <div className={
                   orientation === 'LEFT' ? `absolute left-full top-[10%] h-[80%] w-[14px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                  orientation === 'RIGHT' ? `absolute right-full top-[10%] h-[80%] w-[14px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                  orientation === 'TOP' ? `absolute top-full left-[10%] w-[80%] h-[12px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                  `absolute bottom-full left-[10%] w-[80%] h-[12px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
+                    orientation === 'RIGHT' ? `absolute right-full top-[10%] h-[80%] w-[14px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                      orientation === 'TOP' ? `absolute top-full left-[10%] w-[80%] h-[12px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                        `absolute bottom-full left-[10%] w-[80%] h-[12px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
                 } />
               )}
 
               {(() => {
                 const priceContent = !isOwned && !!tile.price ? (
-                  <span className="drop-shadow-md text-slate-200 text-[8px] md:text-[10px] xl:text-[12px] font-bold font-mono">
+                  <span className="drop-shadow-md text-green-200 text-[8px] md:text-[10px] xl:text-[12px] font-bold font-mono">
                     {gameState.marketCrash?.active ? (
                       <span className="flex flex-wrap justify-center items-center gap-[2px]">
                         <del className="text-red-400 text-[6px] md:text-[8px] block md:inline leading-none mr-0.5">৳{toBanglaNum(tile.price)}</del>
@@ -752,6 +803,7 @@ export default function Board({
                 const iconNode = (() => {
                   if (tile.type === 'RAILROAD') return <TramFront size={28} className="text-slate-300 drop-shadow-md shrink-0" />;
                   if (tile.type === 'CHEST') return <Gift size={28} className="text-amber-300 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'CHANCE') return <img src="/images/treasure-chest.png" alt="Chance" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0" />;
                   if (tile.type === 'UTILITY') {
                     if (districtName.includes('বিদ্যুৎ')) return <Lightbulb size={28} className="text-yellow-400 drop-shadow-md shrink-0" />;
                     if (districtName.includes('পানি')) return <Droplet size={28} className="text-blue-400 drop-shadow-md shrink-0" />;
@@ -760,31 +812,47 @@ export default function Board({
                   return null;
                 })();
 
+                const getHouseImage = (h: number) => {
+                  if (h === 1) return '/images/house-1.png';
+                  if (h === 2) return '/images/house-2.png';
+                  if (h === 3) return '/images/house-3.png';
+                  if (h === 4) return '/images/houes-4.png';
+                  return '/images/hotel.png';
+                };
+
                 const houseNode = houses > 0 ? (
-                  <div className="flex items-center justify-center shrink-0 z-20">
+                  <div key={`house-${houses}`} className="flex items-center justify-center shrink-0 z-20 animate-pop-in">
                     {houses < 5 ? (
                       <div className="flex items-center leading-none gap-[2px]">
-                        <HouseIcon size={10} className="text-emerald-400 drop-shadow-[0_0_2px_rgba(52,211,153,0.8)]" />
-                        <span className="text-[9px] md:text-[10px] font-bold text-emerald-400 leading-none">
+                        <img src={getHouseImage(houses)} alt={`House ${houses}`} className="w-4 h-4 md:w-5 md:h-5 object-contain drop-shadow-md" />
+                        <span className="text-[10px] md:text-[12px] font-black text-emerald-400 drop-shadow-md leading-none">
                           {toBanglaNum(houses)}
                         </span>
                       </div>
                     ) : (
-                      <HotelIcon size={12} className="text-red-500 drop-shadow-[0_0_2px_rgba(239,68,68,0.8)]" />
+                      <img src="/images/hotel.png" alt="Hotel" className="w-5 h-5 md:w-6 md:h-6 object-contain drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
                     )}
                   </div>
                 ) : null;
 
                 if (orientation === 'CORNER') {
                   return (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-1 md:p-2 bg-[#0B0E14]/90 text-center break-keep">
-                      <span className="font-bold text-[10px] md:text-[14px] xl:text-[16px] uppercase leading-tight text-white">{tile.name}</span>
-                      {tile.index === 0 && <div className="text-emerald-400 mt-1 md:mt-1.5 font-black text-[12px] md:text-[16px]">GO</div>}
-                      {tile.type === 'FREE_PARKING' && gameState.settings?.freeParkingCashPool && (
-                        <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse">
-                          <MoneyBagIcon size={12} className="mr-0.5" />
-                          ৳{toBanglaNum(gameState.freeParkingPool || 0)}
-                        </div>
+                    <div className="w-full h-full flex flex-col items-center justify-center p-1 md:p-2 bg-[#0B0E14]/90 text-center break-keep relative">
+                      <span className={`font-bold text-[9px] md:text-[13px] xl:text-[16px] uppercase leading-tight text-white z-10 ${tile.type === 'JAIL' ? 'absolute top-1 md:top-2 left-1/2 -translate-x-1/2 w-full px-1' : 'relative'}`}>{tile.name}</span>
+                      {tile.index === 0 && <div className="text-emerald-400 mt-1 md:mt-1.5 font-black text-[12px] md:text-[16px] z-10 relative">GO</div>}
+                      {tile.type === 'FREE_PARKING' && (
+                        <>
+                          <img src="/images/relaxing.png" alt="Free Parking" className="w-10 h-10 md:w-14 md:h-14 mt-1 object-contain drop-shadow-md z-10 relative" />
+                          {gameState.settings?.freeParkingCashPool && (
+                            <div className="text-emerald-400 mt-1 flex items-center justify-center font-black text-[10px] md:text-[12px] animate-pulse z-10 relative">
+                              <MoneyBagIcon size={12} className="mr-0.5" />
+                              ৳{toBanglaNum(gameState.freeParkingPool || 0)}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {tile.type === 'GO_TO_JAIL' && (
+                        <img src="/images/custody.png" alt="Go To Jail" className="w-10 h-10 md:w-14 md:h-14 mt-1 object-contain drop-shadow-md z-10 relative" />
                       )}
                     </div>
                   );
@@ -799,11 +867,11 @@ export default function Board({
                       </div>
                       {/* Zone 2 (Text Line) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
-                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                         {priceContent}
                       </div>
                       {/* Zone 3 (Icon) */}
-                      <div className="h-5 w-full shrink-0 flex items-center justify-center">
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center mb-1 md:mb-1.5">
                         {iconNode}
                         {houseNode}
                       </div>
@@ -815,14 +883,14 @@ export default function Board({
                   return (
                     <div className="flex flex-col items-center p-1 gap-1.5 h-full w-full min-h-0">
                       {/* Zone 1 (Icon) */}
-                      <div className="h-5 w-full shrink-0 flex items-center justify-center">
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center mt-1 md:mt-1.5">
                         {iconNode}
                         {houseNode}
                       </div>
                       {/* Zone 2 (Text Line) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
                         {priceContent}
-                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
                       <div className="h-3 w-full shrink-0 flex items-center justify-center">
@@ -843,11 +911,11 @@ export default function Board({
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
                         {priceContent}
                         <div className="my-auto w-full flex flex-col items-center justify-center">
-                          <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                          <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                         </div>
                       </div>
                       {/* Zone 3 (Icon) */}
-                      <div className="w-5 shrink-0 flex items-center justify-center">
+                      <div className="w-5 shrink-0 flex items-center justify-center mr-1 md:mr-1.5">
                         {iconNode}
                         {houseNode}
                       </div>
@@ -859,7 +927,7 @@ export default function Board({
                   return (
                     <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
                       {/* Zone 1 (Icon) */}
-                      <div className="w-5 shrink-0 flex items-center justify-center">
+                      <div className="w-5 shrink-0 flex items-center justify-center ml-1 md:ml-1.5">
                         {iconNode}
                         {houseNode}
                       </div>
@@ -867,7 +935,7 @@ export default function Board({
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
                         {priceContent}
                         <div className="my-auto w-full flex flex-col items-center justify-center">
-                          <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-[12px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                          <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                         </div>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
@@ -905,26 +973,25 @@ export default function Board({
 
                   {/* Floating Action Menu */}
                   {propState?.ownerId === userId && (
-                    <div className={`absolute z-[100] flex flex-col gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto backdrop-blur-md bg-[#0B0E14]/90 p-2.5 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-max ${
-                      orientation === 'TOP' ? 'top-full left-1/2 -translate-x-1/2 mt-2 before:absolute before:-top-4 before:left-0 before:w-full before:h-4' :
+                    <div className={`absolute z-[100] flex flex-col gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto backdrop-blur-md bg-[#0B0E14]/90 p-2.5 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-max ${orientation === 'TOP' ? 'top-full left-1/2 -translate-x-1/2 mt-2 before:absolute before:-top-4 before:left-0 before:w-full before:h-4' :
                       orientation === 'BOTTOM' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2 before:absolute before:-bottom-4 before:left-0 before:w-full before:h-4' :
-                      orientation === 'LEFT' ? 'left-full top-1/2 -translate-y-1/2 ml-2 before:absolute before:-left-4 before:top-0 before:w-4 before:h-full' :
-                      'right-full top-1/2 -translate-y-1/2 mr-2 before:absolute before:-right-4 before:top-0 before:w-4 before:h-full'
-                    }`}>
-                      
+                        orientation === 'LEFT' ? 'left-full top-1/2 -translate-y-1/2 ml-2 before:absolute before:-left-4 before:top-0 before:w-4 before:h-full' :
+                          'right-full top-1/2 -translate-y-1/2 mr-2 before:absolute before:-right-4 before:top-0 before:w-4 before:h-full'
+                      }`}>
+
                       {/* ONLY SHOW HOUSE CONTROLS IF IT IS A COLORED PROPERTY */}
                       {tile.group && (
                         <>
                           <button onClick={(e) => { e.stopPropagation(); onBuildHouse?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/60 text-emerald-400 text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-500 hover:text-white hover:shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all active:scale-95">
                             Build House
                           </button>
-                          
+
                           <button onClick={(e) => { e.stopPropagation(); onSellHouse?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-orange-950/60 border border-orange-500/60 text-orange-400 text-[10px] font-bold uppercase tracking-wider hover:bg-orange-500 hover:text-white hover:shadow-[0_0_10px_rgba(249,115,22,0.5)] transition-all active:scale-95">
                             Break House
                           </button>
                         </>
                       )}
-                      
+
                       {/* THESE ALWAYS SHOW FOR ANY OWNED PROPERTY */}
                       <button onClick={(e) => { e.stopPropagation(); onMortgageProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/60 text-amber-400 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-500 hover:text-white hover:shadow-[0_0_10px_rgba(245,158,11,0.5)] transition-all active:scale-95">
                         Mortgage
@@ -933,11 +1000,11 @@ export default function Board({
                       <button onClick={(e) => { e.stopPropagation(); onSellProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-rose-950/60 border border-rose-500/60 text-rose-400 text-[10px] font-bold uppercase tracking-wider hover:bg-rose-500 hover:text-white hover:shadow-[0_0_10px_rgba(244,63,94,0.5)] transition-all active:scale-95">
                         Sell
                       </button>
-                      
+
                       <button onClick={(e) => { e.stopPropagation(); onAuctionProperty?.(tile.index); }} className="flex items-center justify-center px-4 py-1.5 rounded-full bg-fuchsia-950/60 border border-fuchsia-500/60 text-fuchsia-400 text-[10px] font-bold uppercase tracking-wider hover:bg-fuchsia-500 hover:text-white hover:shadow-[0_0_10px_rgba(217,70,239,0.5)] transition-all active:scale-95">
                         Auction
                       </button>
-                      
+
                     </div>
                   )}
                 </>
@@ -1143,6 +1210,20 @@ export default function Board({
           return <PlayerToken key={p.id} player={p} gameState={gameState} userId={userId} hoveredTileIndex={hoveredTileIndex} />;
         })}
 
+        {/* Jail Icon Overlay (Z-index 80 to cover tokens in jail) */}
+        <div
+          style={{
+            gridRow: getGridCoords(10).row,
+            gridColumn: getGridCoords(10).col,
+          }}
+          className="relative pointer-events-none z-[80] w-full h-full"
+        >
+          <img
+            src="/images/Jail.png"
+            alt="Jail"
+            className="absolute bottom-1 md:bottom-1.5 left-1 md:left-1.5 w-[60px] h-[60px] md:w-[65px] md:h-[65px] lg:w-16 lg:h-16 object-contain drop-shadow-2xl"
+          />
+        </div>
 
       </div>
 
