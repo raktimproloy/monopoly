@@ -79,37 +79,21 @@ export default function SoundControls() {
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 w-full">
-        <button 
-          onClick={handleMuteToggle}
-          className="text-slate-400 hover:text-cyber-blue transition-colors cursor-pointer outline-none w-4 flex items-center justify-center shrink-0"
-        >
-          {isMuted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-        </button>
-        <input 
-          type="range" 
-          min="0" 
-          max="1" 
-          step="0.05" 
-          value={isMuted ? 0 : volume} 
-          onChange={handleVolumeChange}
-          className="flex-1 w-16 md:w-20 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyber-blue"
-        />
+    <>
+      <div className="flex flex-col gap-1.5 w-full">
+        <div className="flex items-center justify-between">
+          <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Sound</label>
+          <button onClick={handleMuteToggle} className="text-slate-500 hover:text-emerald-500 transition-colors cursor-pointer outline-none">
+            {isMuted || volume === 0 ? <VolumeX size={12} /> : <Volume2 size={12} />}
+          </button>
+        </div>
+        <input type="range" min="0" max="1" step="0.05" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
       </div>
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 w-full">
-        <span className="text-[12px] w-4 flex items-center justify-center select-none leading-none opacity-80 cursor-help shrink-0" title="Background Music">🎵</span>
-        <input 
-          type="range" 
-          min="0" 
-          max="1" 
-          step="0.05" 
-          value={bgmVolume} 
-          onChange={handleBgmVolumeChange}
-          className="flex-1 w-16 md:w-20 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyber-blue"
-        />
+      <div className="flex flex-col gap-1.5 w-full mt-1">
+        <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Music</label>
+        <input type="range" min="0" max="1" step="0.05" value={bgmVolume} onChange={handleBgmVolumeChange} className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
         <audio ref={bgmRef} src="/sounds/Background Music.mp3" loop />
       </div>
-    </div>
+    </>
   );
 }

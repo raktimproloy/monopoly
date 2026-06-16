@@ -261,10 +261,10 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
         if (Number(displayPosition) === 10) {
           if (player.inJail) {
-            multX = 0.25;
-            multY = 0.75;
+            multX = 0.5;  
+            multY = 0.62; // Mathematically centered over the 60% height icon
           } else {
-            multX = 0.8;
+            multX = 0.8;  
             multY = 0.2;
           }
         }
@@ -330,7 +330,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
   return (
     <div
       style={{ ...style, opacity: targetOpacity }}
-      className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-[70] pointer-events-auto"
+      className="absolute top-0 left-0 transition-all duration-700 ease-in-out z-50 pointer-events-auto"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -556,8 +556,12 @@ export default function Board({
 
   return (
     <div
-      className="relative mx-auto flex flex-col justify-between w-full xl:w-auto h-auto xl:h-full max-w-full max-h-[calc(100vh-24px)]"
-      style={{ aspectRatio: '1 / 1' }}
+      className="relative mx-auto flex flex-col justify-between max-w-full"
+      style={{ 
+        aspectRatio: '1 / 1', 
+        maxHeight: 'calc(100vh - 2rem)', // 2rem accounts for the p-4 parent padding
+        width: 'auto'
+      }}
     >
       {/* Dev Mode Toggle Button */}
       <button
@@ -689,7 +693,7 @@ export default function Board({
         className="grid w-full h-full border-4 border-[#1e2a3d] rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.5)] bg-slate-900/40"
         style={{
           gridTemplateColumns: 'minmax(0, 1.8fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.8fr)',
-          gridTemplateRows: 'minmax(0, 1.8fr) repeat(9, minmax(0, 1fr)) minmax(0, 1.8fr)'
+          gridTemplateRows: 'minmax(0, 1.8fr) repeat(9, minmax(0, 1.15fr)) minmax(0, 1.8fr)'
         }}
       >
         {boardTiles.map((tile) => {
@@ -755,11 +759,13 @@ export default function Board({
               onMouseEnter={() => setHoveredTileIndex(tile.index)}
               onMouseLeave={() => setHoveredTileIndex(null)}
               onClick={() => {
-                if (devMode && isMyTurn) {
-                  setSelectedDevTile(prev => prev === tile.index ? null : tile.index);
-                } else {
-                  setSelectedTileIndex(tile.index);
-                  onTileClick(tile.index);
+                if (['STREET', 'RAILROAD', 'UTILITY'].includes(tile.type)) {
+                  if (devMode && isMyTurn) {
+                    setSelectedDevTile(prev => prev === tile.index ? null : tile.index);
+                  } else {
+                    setSelectedTileIndex(tile.index);
+                    onTileClick(tile.index);
+                  }
                 }
               }}
               className={`relative rounded-md bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60]`}
@@ -860,18 +866,21 @@ export default function Board({
 
                 if (orientation === 'TOP') {
                   return (
-                    <div className="flex flex-col items-center p-1 gap-1.5 h-full w-full min-h-0">
-                      {/* Zone 1 (Outer Edge) */}
-                      <div className="h-3 w-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="h-full w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                    <div className="flex flex-col items-center p-1 gap-1 h-full w-full min-h-0">
+                      {/* Zone 1 (Outer Edge - Purchase Bar OR Money) */}
+                      <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
+                        {isOwned ? (
+                          <div className="h-2.5 md:h-3 w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                        ) : (
+                          priceContent
+                        )}
                       </div>
-                      {/* Zone 2 (Text Line) */}
-                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
+                      {/* Zone 2 (Text Line - Perfectly Centered) */}
+                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
                         <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
-                        {priceContent}
                       </div>
-                      {/* Zone 3 (Icon) */}
-                      <div className="h-5 w-full shrink-0 flex items-center justify-center mb-1 md:mb-1.5">
+                      {/* Zone 3 (Icon - Inner Edge) */}
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center mb-0.5 md:mb-1">
                         {iconNode}
                         {houseNode}
                       </div>
@@ -881,20 +890,23 @@ export default function Board({
 
                 if (orientation === 'BOTTOM') {
                   return (
-                    <div className="flex flex-col items-center p-1 gap-1.5 h-full w-full min-h-0">
-                      {/* Zone 1 (Icon) */}
-                      <div className="h-5 w-full shrink-0 flex items-center justify-center mt-1 md:mt-1.5">
+                    <div className="flex flex-col items-center p-1 gap-1 h-full w-full min-h-0">
+                      {/* Zone 1 (Icon - Inner Edge) */}
+                      <div className="h-5 w-full shrink-0 flex items-center justify-center mt-0.5 md:mt-1">
                         {iconNode}
                         {houseNode}
                       </div>
-                      {/* Zone 2 (Text Line) */}
-                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center py-1 px-1">
-                        {priceContent}
+                      {/* Zone 2 (Text Line - Perfectly Centered) */}
+                      <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
                         <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                       </div>
-                      {/* Zone 3 (Outer Edge) */}
-                      <div className="h-3 w-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="h-full w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      {/* Zone 3 (Outer Edge - Purchase Bar OR Money) */}
+                      <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
+                        {isOwned ? (
+                          <div className="h-2.5 md:h-3 w-[80%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                        ) : (
+                          priceContent
+                        )}
                       </div>
                     </div>
                   );
@@ -907,12 +919,10 @@ export default function Board({
                       <div className="w-3 h-full shrink-0 flex items-center justify-center">
                         {isOwned && <div className="w-full h-[75%] rounded-sm shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
                       </div>
-                      {/* Zone 2 (Text Line) */}
-                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
+                      {/* Zone 2 (Text Line - Strict Vertical Stack) */}
+                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
                         {priceContent}
-                        <div className="my-auto w-full flex flex-col items-center justify-center">
-                          <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
-                        </div>
+                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center mr-1 md:mr-1.5">
@@ -931,12 +941,10 @@ export default function Board({
                         {iconNode}
                         {houseNode}
                       </div>
-                      {/* Zone 2 (Text Line) */}
-                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-start pt-1 text-center px-0.5">
+                      {/* Zone 2 (Text Line - Strict Vertical Stack) */}
+                      <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
                         {priceContent}
-                        <div className="my-auto w-full flex flex-col items-center justify-center">
-                          <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
-                        </div>
+                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
                       <div className="w-3 h-full shrink-0 flex items-center justify-center">
@@ -1210,18 +1218,18 @@ export default function Board({
           return <PlayerToken key={p.id} player={p} gameState={gameState} userId={userId} hoveredTileIndex={hoveredTileIndex} />;
         })}
 
-        {/* Jail Icon Overlay (Z-index 80 to cover tokens in jail) */}
+        {/* Jail Icon Overlay */}
         <div
           style={{
             gridRow: getGridCoords(10).row,
             gridColumn: getGridCoords(10).col,
           }}
-          className="relative pointer-events-none z-[80] w-full h-full"
+          className="relative pointer-events-none z-[70] w-full h-full"
         >
           <img
             src="/images/Jail.png"
             alt="Jail"
-            className="absolute bottom-1 md:bottom-1.5 left-1 md:left-1.5 w-[60px] h-[60px] md:w-[65px] md:h-[65px] lg:w-16 lg:h-16 object-contain drop-shadow-2xl"
+            className="absolute top-[32%] left-1/2 -translate-x-1/2 w-[60%] h-[60%] object-contain drop-shadow-2xl"
           />
         </div>
 

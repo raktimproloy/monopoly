@@ -26,7 +26,7 @@ export default function ChatBox({ logs }: ChatBoxProps) {
   };
 
   return (
-    <div className="w-full p-4 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-full shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+    <div className="w-full h-full p-4 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
 
 
       <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">

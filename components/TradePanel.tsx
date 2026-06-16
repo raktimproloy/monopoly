@@ -88,43 +88,16 @@ function ClockIcon({ size = 10, className = "" }) {
   );
 }
 
-// Maps name/group to flag emoji
-const getTileFlag = (name: string, group?: string) => {
-  const n = name.toLowerCase();
-  if (n.includes('venice') || n.includes('milan') || n.includes('rome') || n.includes('italy')) return '🇮🇹';
-  if (n.includes('berlin') || n.includes('frankfurt') || n.includes('munich') || n.includes('germany') || n.includes('munchen')) return '🇩🇪';
-  if (n.includes('london') || n.includes('manchester') || n.includes('liverpool') || n.includes('uk')) return '🇬🇧';
-  if (n.includes('new york') || n.includes('san francisco') || n.includes('usa') || n.includes('jfk')) return '🇺🇸';
-  if (n.includes('paris') || n.includes('nice') || n.includes('marseille') || n.includes('france')) return '🇫🇷';
-  if (n.includes('tokyo') || n.includes('osaka') || n.includes('kyoto') || n.includes('japan')) return '🇯🇵';
-  if (n.includes('madrid') || n.includes('barcelona') || n.includes('spain')) return '🇪🇸';
-  if (n.includes('rio') || n.includes('sao paulo') || n.includes('brazil')) return '🇧🇷';
-  
-  if (group) {
-    switch (group) {
-      case 'Brown': return '🇧🇷';
-      case 'Light Blue': return '🇫🇷';
-      case 'Pink': return '🇮🇹';
-      case 'Orange': return '🇩🇪';
-      case 'Red': return '🇬🇧';
-      case 'Yellow': return '🇪🇸';
-      case 'Green': return '🇯🇵';
-      case 'Dark Blue': return '🇺🇸';
-    }
-  }
-  return '🏳️';
-};
-
 const getGroupColor = (group: string | undefined): string => {
   switch (group) {
-    case 'Brown': return 'bg-[#64748b]'; // Group 11 (Steel/Slate)
-    case 'Light Blue': return 'bg-[#06b6d4]'; // Group 6 (Cyan)
-    case 'Pink': return 'bg-[#d946ef]'; // Group 10 (Pink)
-    case 'Orange': return 'bg-[#f97316]'; // Group 2 (Orange)
-    case 'Red': return 'bg-[#ef4444]'; // Group 1 (Red)
-    case 'Yellow': return 'bg-[#eab308]'; // Group 3 (Yellow)
-    case 'Green': return 'bg-[#22c55e]'; // Group 5 (Green)
-    case 'Dark Blue': return 'bg-[#3b82f6]'; // Group 7 (Blue)
+    case 'Brown': return 'bg-amber-700';
+    case 'Light Blue': return 'bg-cyan-400';
+    case 'Pink': return 'bg-fuchsia-400';
+    case 'Orange': return 'bg-orange-500';
+    case 'Red': return 'bg-red-500';
+    case 'Yellow': return 'bg-yellow-400';
+    case 'Green': return 'bg-emerald-500';
+    case 'Dark Blue': return 'bg-blue-600';
     default: return 'bg-slate-700';
   }
 };
@@ -298,7 +271,7 @@ export default function TradePanel({
   const pendingReceiver = pendingTrade ? gameState.players[pendingTrade.offer.receiverId] : null;
 
   return (
-    <div className="flex flex-col gap-4 h-full">
+    <div className="w-full flex flex-col gap-4 h-full">
       {/* 1. TRADES LIST CARD */}
       <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
         <div className="flex justify-between items-center">
@@ -372,7 +345,7 @@ export default function TradePanel({
       {/* 2. MY PROPERTIES CARD */}
       <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
         <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase block text-center border-b border-[#241F3C] pb-2.5">
-          My Assets ({myProperties.length + (self.getOutOfJailFreeCards || 0)})
+          MY PROPERTIES ({myProperties.length + (self.getOutOfJailFreeCards || 0)})
         </span>
         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
           {myProperties.length === 0 && (self.getOutOfJailFreeCards || 0) === 0 ? (
@@ -510,7 +483,7 @@ export default function TradePanel({
 
       {/* MODAL 1: SELECT COUNTERPARTY */}
       {activeModal === 'SELECT_COUNTERPARTY' && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
           <div className="max-w-md w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative animate-scale-up">
             <button
               onClick={() => setActiveModal('NONE')}
@@ -565,7 +538,7 @@ export default function TradePanel({
 
       {/* MODAL 2: CREATE TRADE */}
       {activeModal === 'CREATE_TRADE' && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
           <div className="max-w-2xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
             {/* Close Button */}
             <button
@@ -646,7 +619,6 @@ export default function TradePanel({
                       )}
                       {myTradableProps.map((p) => {
                         const tile = boardTiles[p.tileIndex];
-                        const flag = getTileFlag(tile.name, tile.group);
                         const isSelected = selectedOfferProps.includes(p.tileIndex);
                         return (
                           <div
@@ -659,7 +631,10 @@ export default function TradePanel({
                             }`}
                           >
                             <div className="flex items-center gap-1.5 truncate mr-2">
-                              <span>{flag}</span>
+                              <span 
+                                className={`w-3 h-3 rounded-full shrink-0 border border-white/20 shadow-sm ${getGroupColor(tile.group)}`} 
+                                title={tile.group || 'Special'}
+                              />
                               <span className="truncate">{tile.name}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{toBanglaNum(getPropPrice(p.tileIndex))}</span>
@@ -744,7 +719,6 @@ export default function TradePanel({
                       )}
                       {opponentTradableProps.map((p) => {
                         const tile = boardTiles[p.tileIndex];
-                        const flag = getTileFlag(tile.name, tile.group);
                         const isSelected = selectedRequestProps.includes(p.tileIndex);
                         return (
                           <div
@@ -757,7 +731,10 @@ export default function TradePanel({
                             }`}
                           >
                             <div className="flex items-center gap-1.5 truncate mr-2">
-                              <span>{flag}</span>
+                              <span 
+                                className={`w-3 h-3 rounded-full shrink-0 border border-white/20 shadow-sm ${getGroupColor(tile.group)}`} 
+                                title={tile.group || 'Special'}
+                              />
                               <span className="truncate">{tile.name}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
@@ -831,7 +808,7 @@ export default function TradePanel({
 
       {/* MODAL 3: VIEW TRADE */}
       {activeModal === 'VIEW_TRADE' && pendingTrade && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
           <div className="max-w-2xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-4 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
             {/* Close Button */}
             <button
@@ -888,14 +865,17 @@ export default function TradePanel({
                           </div>
                       )}
                       {pendingTrade.offer.offerPropertyIndexes.map((idx) => {
-                        const flag = getTileFlag(getPropName(idx));
+                        const tile = boardTiles[idx];
                         return (
                           <div
                             key={idx}
                             className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]"
                           >
                             <div className="flex items-center gap-1.5 truncate mr-2">
-                              <span>{flag}</span>
+                              <span 
+                                className={`w-3 h-3 rounded-full shrink-0 border border-white/20 shadow-sm ${getGroupColor(tile?.group)}`} 
+                                title={tile?.group || 'Special'}
+                              />
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
@@ -954,14 +934,17 @@ export default function TradePanel({
                           </div>
                       )}
                       {pendingTrade.offer.requestPropertyIndexes.map((idx) => {
-                        const flag = getTileFlag(getPropName(idx));
+                        const tile = boardTiles[idx];
                         return (
                           <div
                             key={idx}
                             className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]"
                           >
                             <div className="flex items-center gap-1.5 truncate mr-2">
-                              <span>{flag}</span>
+                              <span 
+                                className={`w-3 h-3 rounded-full shrink-0 border border-white/20 shadow-sm ${getGroupColor(tile?.group)}`} 
+                                title={tile?.group || 'Special'}
+                              />
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>

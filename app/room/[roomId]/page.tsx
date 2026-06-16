@@ -15,6 +15,7 @@ import SoundControls from '../../../components/SoundControls';
 import PowerSection from '../../../components/PowerSection';
 import PoliceNotification from '../../../components/PoliceNotification';
 import GovernmentBank from '../../../components/GovernmentBank';
+import BankModal from '../../../components/BankModal';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -92,6 +93,7 @@ function GameRoomContent() {
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<'NONE' | 'BANK'>('NONE');
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const AVATAR_COLORS = [
@@ -577,7 +579,7 @@ function GameRoomContent() {
 
   // --- SCREEN 2: ACTIVE STRATEGY GAMEPLAY (gameStatus === 'ACTIVE') ---
   return (
-    <main className="relative w-screen h-screen bg-[#0B0E14] overflow-hidden flex flex-col cyber-grid text-slate-200">
+    <main className="relative flex flex-col items-center justify-center min-h-screen w-full bg-[#0B0E14] overflow-hidden cyber-grid text-slate-200">
       <div className="absolute top-[10%] left-[25%] w-96 h-96 rounded-full bg-cyber-blue/5 blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[10%] right-[25%] w-96 h-96 rounded-full bg-cyber-purple/5 blur-[160px] pointer-events-none" />
 
@@ -628,15 +630,20 @@ function GameRoomContent() {
         <PoliceNotification state={gameState} playerId={userId} />
       )}
 
-      {/* Power Cards Section */}
-      <PowerSection state={gameState} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
+      {/* Bank Modal Overlay */}
+      {activeModal === 'BANK' && (
+        <BankModal 
+          onClose={() => setActiveModal('NONE')} 
+          onTakeLoan={takeLoan} 
+        />
+      )}
 
       {/* Main UI Layout (Board-priority 3-column system) */}
-      <div className="flex-1 w-full p-2 md:p-3 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row gap-3 min-h-0 relative z-10">
+      <div className="flex-1 w-full p-4 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row items-center justify-between gap-4 min-h-0 relative z-10">
 
         {/* COLUMN 2: CENTER BOARD AREA (Primary strategy canvas — highest priority) */}
         {/* CRITICAL: xl:flex-1 AND min-w-0 prevent Flexbox squeeze lock so the board can shrink when sidebar expands on desktop. shrink-0 on mobile prevents height collapse. */}
-        <section className="order-1 xl:order-2 shrink-0 xl:shrink xl:flex-1 w-full xl:w-auto block xl:flex xl:items-center xl:justify-center min-w-0 h-auto xl:h-full pt-2 xl:pt-0">
+        <section className="order-1 xl:order-2 flex-1 h-full flex items-center justify-center min-w-0 z-10 relative w-full">
           <Board
             gameState={gameState}
             boardTiles={boardTiles}
@@ -666,14 +673,18 @@ function GameRoomContent() {
         </section>
 
         {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
-        <section className="order-2 xl:order-1 w-full xl:w-72 shrink-0 flex flex-col gap-3 h-[60vh] xl:h-full xl:min-w-[220px] overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none">
+        <section className="order-2 xl:order-1 w-full xl:w-[300px] 2xl:w-[350px] shrink-0 h-[60vh] xl:h-full flex flex-col justify-end gap-3 overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none z-40">
           <div className="shrink-0 mb-1">
             <GovernmentBank 
               gameState={gameState} 
               playerId={userId} 
-              takeLoan={takeLoan} 
-              repayLoan={repayLoan} 
+              onOpenBankModal={() => setActiveModal('BANK')}
+              repayLoan={repayLoan}
             />
+          </div>
+          
+          <div className="shrink-0 mb-1">
+            <PowerSection state={gameState} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
           </div>
           <div className="flex-1 min-h-0 overflow-hidden">
             <PropertyManager
@@ -689,48 +700,56 @@ function GameRoomContent() {
           </div>
         </section>
 
-        {/* COLUMN 3: RIGHT OVERLAYS HUD (Players & Trades) */}
-        <div className="order-3 xl:order-3 w-full xl:w-[380px] shrink-0 h-[60vh] xl:h-full flex flex-col gap-3">
-          <div className="flex flex-col gap-3 h-full w-full select-none overflow-hidden bg-slate-900/40 xl:bg-[#0B0E14] xl:border-l border-slate-800 rounded-xl xl:rounded-none p-3 xl:p-0 xl:pl-3">
-            {/* Top Actions: Sound Controls, Votekick and Bankrupt */}
-            <div className="flex justify-between items-center shrink-0">
-              <SoundControls />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    // Future Votekick placeholder
-                  }}
-                  className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
-                >
-                  <UserX size={12} className="stroke-current" />
-                  কিক করুন
-                </button>
-                <button
-                  onClick={() => {
-                    if (window.confirm("Are you sure you want to declare bankruptcy? You will surrender all assets and exit the game.")) {
-                      declareBankruptcy();
-                    }
-                  }}
-                  disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
-                  className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${(gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
-                    ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
-                    : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
-                    }`}
-                >
-                  <Flag size={12} className="fill-current stroke-current" />
-                  দেউলিয়া
-                </button>
-              </div>
+        {/* 3. RIGHT AREA WRAPPER */}
+        <div className="order-3 xl:order-3 flex flex-row items-start gap-3 h-screen pt-4 pb-4 pr-4 self-start z-40">
+          
+          {/* VOLUME COLUMN (Pushed down slightly to align with Player List) */}
+          <div className="w-[90px] xl:w-[110px] flex flex-col gap-2 mt-[45px]">
+            <SoundControls />
+          </div>
+
+          {/* MAIN PANELS COLUMN (Strict Uniform Width) */}
+          <div className="w-[320px] xl:w-[360px] flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar pr-2 pb-10">
+            
+            {/* TOP ACTION BUTTONS (Settings, Give Up) */}
+            <div className="flex justify-end gap-2 w-full">
+              <button
+                onClick={() => {
+                  // Future Votekick placeholder
+                }}
+                className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <UserX size={12} className="stroke-current" />
+                কিক করুন
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to declare bankruptcy? You will surrender all assets and exit the game.")) {
+                    declareBankruptcy();
+                  }
+                }}
+                disabled={gameState.gameStatus !== 'ACTIVE' || gameState.currentTurnPlayerId !== userId || gameState.players[userId]?.isBankrupt}
+                className={`font-sans text-xs font-bold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-[0.98] shadow-md ${(gameState.gameStatus === 'ACTIVE' && gameState.currentTurnPlayerId === userId && !gameState.players[userId]?.isBankrupt)
+                  ? 'bg-[#E55C5C] hover:bg-[#D44B4B] text-white shadow-[#E55C5C]/15 cursor-pointer'
+                  : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50 shadow-none'
+                  }`}
+              >
+                <Flag size={12} className="fill-current stroke-current" />
+                দেউলিয়া
+              </button>
             </div>
 
-            <div className="shrink-0 h-auto">
+            {/* KHELOAR TALIKA (Player List) */}
+            <div className="w-full">
               <PlayerList
                 gameState={gameState}
                 boardTiles={boardTiles}
                 userId={userId}
               />
             </div>
-            <div className="flex-1 min-h-0">
+
+            {/* TRADE SECTION */}
+            <div className="w-full">
               <TradePanel
                 gameState={gameState}
                 boardTiles={boardTiles}
@@ -740,6 +759,7 @@ function GameRoomContent() {
                 onRespondToTrade={respondToTrade}
               />
             </div>
+
           </div>
         </div>
       </div>

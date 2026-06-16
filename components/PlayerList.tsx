@@ -90,7 +90,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       if (prevPlayer.position !== player.position) {
         const landedTile = boardTiles[player.position];
         // Match the tile by name (e.g., 'অবসর') or type if applicable
-        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'FREE_PARKING') {
+        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'REST' || landedTile?.type === 'FREE_PARKING') {
           try {
             soundManager.playEventSound('PRISON_SOUND');
           } catch (err) {
@@ -140,7 +140,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
   }, [gameState.players]);
 
   return (
-    <div className="w-full p-4 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-auto shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+    <div className="w-full p-3 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-auto shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
 
       
       <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">
@@ -264,13 +264,6 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
                 {player.isBankrupt && (
                   <div className="text-[7px] font-mono text-red-500 font-bold uppercase tracking-wider mt-px">
                     দেউলিয়া
-                  </div>
-                )}
-
-                {player.loan && !player.isBankrupt && (
-                  <div className="text-[9px] font-mono text-amber-400 font-bold tracking-wider mt-px flex items-center justify-end gap-1">
-                    <span title="Remaining Loan">🏦</span>
-                    -৳{toBanglaNum(player.loan.remainingAmount)}
                   </div>
                 )}
               </div>
