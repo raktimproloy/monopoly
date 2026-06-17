@@ -15,7 +15,7 @@ export default function GovernmentBank({ gameState, playerId, onOpenBankModal, r
 
   return (
     <div className="w-full">
-      <div className="w-full bg-[#19162C] border border-emerald-900/50 rounded-2xl p-4 flex flex-col gap-4 shadow-[0_4px_20px_rgba(16,185,129,0.1)] relative overflow-hidden">
+      <div className="w-full glass-card p-4 flex flex-col gap-4 relative overflow-hidden border-emerald-500/20">
         {/* Decorative background glow */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -59,7 +59,7 @@ export default function GovernmentBank({ gameState, playerId, onOpenBankModal, r
             </div>
             <button
               onClick={() => repayLoan()}
-              className="mt-2 w-full flex items-center justify-center gap-2 bg-[#0B0E14] hover:bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
+              className="mt-2 w-full flex items-center justify-center gap-2 glass-item text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98]"
             >
               <CheckCircle2 className="w-4 h-4" />
               REPAY FULL LOAN

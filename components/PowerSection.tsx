@@ -23,7 +23,7 @@ export default function PowerSection({ state, boardTiles, playerId, onUsePowerCa
   if (pardonCards === 0 && powerCards.length === 0) {
     return (
       <div className="w-full">
-        <div className="bg-[#0f172a]/90 border border-indigo-500/30 rounded-lg p-3 backdrop-blur-md">
+        <div className="glass-card border border-indigo-500/30 rounded-lg p-3 backdrop-blur-md">
           <div className="flex items-center gap-2 mb-3 border-b border-indigo-500/20 pb-2">
             <Zap className="text-yellow-400" size={16} />
             <h3 className="text-sm font-bold text-indigo-100 tracking-wider">POWER CARDS</h3>
@@ -50,7 +50,7 @@ export default function PowerSection({ state, boardTiles, playerId, onUsePowerCa
   return (
     <>
       <div className="w-full mt-3">
-        <div className="bg-[#0f172a]/90 border border-indigo-500/30 rounded-lg p-3 backdrop-blur-md">
+        <div className="glass-card border border-indigo-500/30 rounded-lg p-3 backdrop-blur-md">
           <div className="flex items-center gap-2 mb-3 border-b border-indigo-500/20 pb-2">
             <Zap className="text-yellow-400" size={16} />
             <h3 className="text-sm font-bold text-indigo-100 tracking-wider">POWER CARDS</h3>
@@ -58,7 +58,7 @@ export default function PowerSection({ state, boardTiles, playerId, onUsePowerCa
           
           <div className="flex flex-col gap-2">
             {pardonCards > 0 && (
-              <div className="bg-[#1e293b]/80 border border-slate-600 rounded p-2 flex justify-between items-center group hover:bg-[#334155]/80 transition-colors">
+              <div className="glass-item border border-slate-600/30 rounded p-2 flex justify-between items-center group transition-colors">
                 <div className="flex items-center gap-2">
                   <Key className="text-emerald-400" size={16} />
                   <div>

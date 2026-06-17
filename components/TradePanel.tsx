@@ -273,7 +273,7 @@ export default function TradePanel({
   return (
     <div className="w-full flex flex-col gap-4 h-full">
       {/* 1. TRADES LIST CARD */}
-      <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+      <div className="bg-white/5 backdrop-blur-xl border border-[#2D284B] rounded-2xl p-4 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
             <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase">
@@ -302,7 +302,7 @@ export default function TradePanel({
           {pendingTrade ? (
             <div
               onClick={handleOpenViewTradeModal}
-              className="bg-[#241F3E] border border-[#3A335E] rounded-xl p-3B flex items-center justify-between cursor-pointer hover:bg-[#2C274B] hover:border-[#4E467D] transition-all duration-200 shadow-md group p-3.5"
+              className="bg-white/5 hover:bg-white/10 border border-[#3A335E] rounded-xl p-3B flex items-center justify-between cursor-pointer hover:bg-[#2C274B] hover:border-[#4E467D] transition-all duration-200 shadow-md group p-3.5"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div
@@ -343,7 +343,7 @@ export default function TradePanel({
       </div>
 
       {/* 2. MY PROPERTIES CARD */}
-      <div className="bg-[#19162C] border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-xl border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
         <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase block text-center border-b border-[#241F3C] pb-2.5">
           MY PROPERTIES ({myProperties.length + (self.getOutOfJailFreeCards || 0)})
         </span>
@@ -357,7 +357,7 @@ export default function TradePanel({
               {self.getOutOfJailFreeCards! > 0 && Array.from({ length: self.getOutOfJailFreeCards! }).map((_, i) => (
                 <div
                   key={`pardon-${i}`}
-                  className="p-2.5 bg-[#211B35] hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
+                  className="p-2.5 bg-white/5 hover:bg-white/10 hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
                 >
                   <div className="flex gap-3 items-center flex-1 min-w-0">
                     <div className="w-2.5 h-8 rounded-sm shrink-0 bg-yellow-400" />
@@ -391,7 +391,7 @@ export default function TradePanel({
               return (
                 <div
                   key={prop.tileIndex}
-                  className="p-2.5 bg-[#211B35] hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
+                  className="p-2.5 bg-white/5 hover:bg-white/10 hover:bg-[#2A2345] border border-[#2E284D]/40 rounded-xl flex justify-between items-center gap-2 transition-colors shadow-sm"
                 >
                   <div className="flex gap-3 items-center flex-1 min-w-0">
                     <div className={`w-2.5 h-8 rounded-sm shrink-0 ${getGroupColor(tile.group)}`} />
@@ -484,7 +484,7 @@ export default function TradePanel({
       {/* MODAL 1: SELECT COUNTERPARTY */}
       {activeModal === 'SELECT_COUNTERPARTY' && (
         <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-md w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative animate-scale-up">
+          <div className="max-w-md w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative animate-scale-up">
             <button
               onClick={() => setActiveModal('NONE')}
               className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors bg-[#231F3B] hover:bg-[#2F294F] w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
@@ -510,7 +510,7 @@ export default function TradePanel({
                     <button
                       key={p.id}
                       onClick={() => handleSelectCounterparty(p.id)}
-                      className="bg-[#241F3C] border border-[#2E284D] rounded-xl py-3.5 px-4 flex items-center gap-3.5 text-white font-extrabold text-sm hover:bg-[#2F294F] active:scale-[0.98] transition-all cursor-pointer w-full text-left shadow-sm hover:border-[#4C3D8B]"
+                      className="bg-white/5 hover:bg-white/10 border border-[#2E284D] rounded-xl py-3.5 px-4 flex items-center gap-3.5 text-white font-extrabold text-sm hover:bg-[#2F294F] active:scale-[0.98] transition-all cursor-pointer w-full text-left shadow-sm hover:border-[#4C3D8B]"
                     >
                       <div
                         style={{ backgroundColor: p.avatar }}
@@ -539,7 +539,7 @@ export default function TradePanel({
       {/* MODAL 2: CREATE TRADE */}
       {activeModal === 'CREATE_TRADE' && (
         <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-2xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
+          <div className="max-w-2xl w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}
@@ -578,7 +578,7 @@ export default function TradePanel({
                     max={self.balance}
                     value={offerCash}
                     onChange={(e) => setOfferCash(Number(e.target.value))}
-                    className="w-full accent-[#7B5BF2] bg-[#241F3C] h-1.5 rounded-lg appearance-none cursor-pointer"
+                    className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
@@ -649,7 +649,7 @@ export default function TradePanel({
 
               {/* CENTER DIVIDER */}
               <div className="flex items-center justify-center relative">
-                <div className="w-[1px] h-full bg-[#241F3C]" />
+                <div className="w-[1px] h-full bg-white/5 hover:bg-white/10" />
                 <div className="absolute w-6 h-6 rounded-full bg-[#1C1A32] border border-[#2D284F] flex items-center justify-center shadow-lg">
                   <span className="text-[#8B5CF6] text-[10px]">↔</span>
                 </div>
@@ -678,7 +678,7 @@ export default function TradePanel({
                     max={gameState.players[receiverId]?.balance || 0}
                     value={requestCash}
                     onChange={(e) => setRequestCash(Number(e.target.value))}
-                    className="w-full accent-[#7B5BF2] bg-[#241F3C] h-1.5 rounded-lg appearance-none cursor-pointer"
+                    className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
@@ -762,7 +762,7 @@ export default function TradePanel({
                     onChange={(e) => setUseTimer(e.target.checked)}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-[#241F3C] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B5BF2] peer-checked:after:bg-white"></div>
+                  <div className="w-11 h-6 bg-white/5 hover:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#7B5BF2] peer-checked:after:bg-white"></div>
                 </label>
               </div>
 
@@ -779,7 +779,7 @@ export default function TradePanel({
                     step={15}
                     value={timerSeconds}
                     onChange={(e) => setTimerSeconds(Number(e.target.value))}
-                    className="w-full accent-[#7B5BF2] bg-[#241F3C] h-1.5 rounded-lg appearance-none cursor-pointer"
+                    className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono">
                     <span>30s (QUICK)</span>
@@ -809,7 +809,7 @@ export default function TradePanel({
       {/* MODAL 3: VIEW TRADE */}
       {activeModal === 'VIEW_TRADE' && pendingTrade && (
         <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-2xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-4 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
+          <div className="max-w-2xl w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-4 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}
@@ -890,7 +890,7 @@ export default function TradePanel({
 
               {/* CENTER DIVIDER */}
               <div className="flex items-center justify-center relative">
-                <div className="w-[1px] h-full bg-[#241F3C]" />
+                <div className="w-[1px] h-full bg-white/5 hover:bg-white/10" />
                 <div className="absolute w-6 h-6 rounded-full bg-[#1C1A32] border border-[#2D284F] flex items-center justify-center">
                   <span className="text-[#8B5CF6] text-[10px]">↔</span>
                 </div>

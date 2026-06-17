@@ -20,7 +20,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
 
   return (
     <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/70 p-4 transition-opacity duration-200">
-      <div className="bg-[#0B0E14] border-2 border-emerald-900/50 rounded-2xl w-full max-w-2xl shadow-[0_0_50px_rgba(16,185,129,0.15)] flex flex-col overflow-hidden relative">
+      <div className="glass-menu w-full max-w-2xl flex flex-col overflow-hidden relative border-emerald-500/20">
         
         {/* Header */}
         <div className="bg-emerald-950/30 border-b border-emerald-900/50 p-4 md:p-6 flex justify-between items-center relative overflow-hidden">
@@ -53,7 +53,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
                 className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 flex flex-col items-center gap-2 text-center overflow-hidden
                   ${selectedLoan === opt.amount 
                     ? 'border-emerald-500 bg-emerald-950/40 shadow-[0_0_20px_rgba(16,185,129,0.2)] scale-105' 
-                    : 'border-slate-800 bg-[#19162C] hover:border-emerald-700/50 hover:bg-slate-800'
+                    : 'border-white/5 glass-item hover:border-emerald-700/50'
                   }
                 `}
               >

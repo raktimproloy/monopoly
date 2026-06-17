@@ -160,7 +160,7 @@ function GameRoomContent() {
     const takenColors = roomDetails?.players?.map(p => p.avatar.toLowerCase()) || [];
 
     return (
-      <div className="min-h-screen w-full bg-[#0B0E14] flex flex-col items-center justify-center font-sans cyber-grid z-50 relative">
+      <div className="min-h-screen w-full bg-[#151525] flex flex-col items-center justify-center font-sans cyber-grid z-50 relative">
         <div className="absolute top-[20%] left-[15%] w-72 h-72 rounded-full bg-[#8BA4F9]/5 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[20%] right-[15%] w-72 h-72 rounded-full bg-[#D8B4F8]/5 blur-[120px] pointer-events-none" />
 
@@ -217,7 +217,7 @@ function GameRoomContent() {
   // Loading indicator while connecting
   if (!gameState || boardTiles.length === 0) {
     return (
-      <div className="min-h-screen w-full bg-[#0B0E14] flex flex-col items-center justify-center font-sans cyber-grid animate-pulse-slow">
+      <div className="min-h-screen w-full bg-[#151525] flex flex-col items-center justify-center font-sans cyber-grid animate-pulse-slow">
         <div className="glass-panel p-8 max-w-sm w-full text-center relative border border-cyber-blue/30 shadow-[0_0_20px_rgba(139,164,249,0.05)]">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
           {errorMessage ? (
@@ -264,7 +264,7 @@ function GameRoomContent() {
     };
 
     return (
-      <main className="relative w-screen h-screen bg-[#0B0E14] overflow-hidden flex flex-col cyber-grid text-slate-200">
+      <main className="relative w-screen h-screen bg-[#151525] overflow-hidden flex flex-col cyber-grid text-slate-200">
         {/* Glow spots */}
         <div className="absolute top-[20%] left-[20%] w-96 h-96 rounded-full bg-cyber-blue/5 blur-[150px] pointer-events-none" />
         <div className="absolute bottom-[20%] right-[20%] w-96 h-96 rounded-full bg-cyber-purple/5 blur-[150px] pointer-events-none" />
@@ -531,7 +531,7 @@ function GameRoomContent() {
         {/* Appearance Modal */}
         {showAppearanceModal && (
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="relative w-full max-w-sm p-6 glass-panel border border-cyber-blue/30 shadow-[0_0_30px_rgba(139,164,249,0.1)] bg-[#0B0E14]/95">
+            <div className="relative w-full max-w-sm p-6 glass-panel border border-cyber-blue/30 shadow-[0_0_30px_rgba(139,164,249,0.1)] bg-[#151525]/95">
               <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
               <button
                 onClick={() => setShowAppearanceModal(false)}
@@ -603,7 +603,7 @@ function GameRoomContent() {
 
   // --- SCREEN 2: ACTIVE STRATEGY GAMEPLAY (gameStatus === 'ACTIVE') ---
   return (
-    <main className="relative flex flex-col items-center justify-center min-h-screen w-full bg-[#0B0E14] overflow-hidden cyber-grid text-slate-200">
+    <main className="relative flex flex-col items-center justify-center min-h-screen w-full bg-[#151525] overflow-hidden cyber-grid text-slate-200">
       <div className="absolute top-[10%] left-[25%] w-96 h-96 rounded-full bg-cyber-blue/5 blur-[160px] pointer-events-none" />
       <div className="absolute bottom-[10%] right-[25%] w-96 h-96 rounded-full bg-cyber-purple/5 blur-[160px] pointer-events-none" />
 
@@ -803,7 +803,7 @@ function GameRoomContent() {
 export default function GameRoom() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen w-full bg-[#0B0E14] flex flex-col items-center justify-center font-sans cyber-grid animate-pulse-slow">
+      <div className="min-h-screen w-full bg-[#151525] flex flex-col items-center justify-center font-sans cyber-grid animate-pulse-slow">
         <div className="glass-panel p-8 max-w-sm w-full text-center relative border border-cyber-blue/30 shadow-[0_0_20px_rgba(139,164,249,0.05)]">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-cyber-blue" />
           <RotateCw className="w-10 h-10 text-cyber-blue animate-spin mx-auto mb-4" />

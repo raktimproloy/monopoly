@@ -145,7 +145,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
   }, [gameState.players]);
 
   return (
-    <div className="w-full p-3 bg-[#19162C] border border-[#2D284B] rounded-2xl flex flex-col gap-3.5 select-none relative h-auto shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
+    <div className="w-full p-3 glass-card flex flex-col gap-3.5 select-none relative h-auto">
 
       
       <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">
@@ -170,8 +170,8 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
               key={playerId}
               className={`relative flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 ${
                 isCurrentTurn
-                  ? 'bg-[#241F3E] border border-[#4E467D] shadow-md pl-3.5' 
-                  : 'bg-[#121021]/50 border border-[#241F3C] pl-3'
+                  ? 'glass-item-active shadow-md pl-3.5' 
+                  : 'glass-item pl-3'
               } ${player.isBankrupt ? 'opacity-40 grayscale' : ''}`}
             >
               {/* Highlight Vertical Bar on left for active player */}

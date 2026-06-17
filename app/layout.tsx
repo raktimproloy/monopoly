@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${orbitron.variable} ${hanken.variable} h-full antialiased`}>
-      <body className="h-full w-full bg-[#0B0E14] text-slate-100 font-sans select-none overflow-hidden">{children}</body>
+      <body className="h-full w-full bg-[#151525] text-slate-100 font-sans select-none overflow-hidden">{children}</body>
     </html>
   );
 }
