@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { GameState, BoardTile, TradeOfferPayload } from '../../shared/types';
 import { toBanglaNum } from '../utils/format';
+import { isPropertyFrozenForOwner } from '../utils/donPower';
 
 interface TradePanelProps {
   gameState: GameState;
@@ -239,7 +240,7 @@ export default function TradePanel({
 
   // My properties and opponent's properties that are tradable (houses = 0)
   const myTradableProps = Object.values(gameState.properties).filter(
-    (p) => p.ownerId === userId && p.houses === 0
+    (p) => p.ownerId === userId && p.houses === 0 && !isPropertyFrozenForOwner(gameState, p.tileIndex, userId)
   );
 
   const opponentTradableProps = Object.values(gameState.properties).filter(
@@ -387,6 +388,7 @@ export default function TradePanel({
               
               const mortgageVal = tile.mortgageValue || Math.floor((tile.price || 0) / 2);
               const unmortgageCost = Math.ceil(mortgageVal * 1.1);
+              const isDonFrozen = isPropertyFrozenForOwner(gameState, prop.tileIndex, userId);
 
               return (
                 <div
@@ -429,9 +431,9 @@ export default function TradePanel({
                           if (onUnmortgageProperty) onUnmortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('unmortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={self.balance < unmortgageCost || isJailLossRestricted}
+                        disabled={self.balance < unmortgageCost || isJailLossRestricted || isDonFrozen}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          self.balance >= unmortgageCost && !isJailLossRestricted
+                          self.balance >= unmortgageCost && !isJailLossRestricted && !isDonFrozen
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -445,9 +447,9 @@ export default function TradePanel({
                           if (onMortgageProperty) onMortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('mortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={prop.houses > 0 || isJailLossRestricted}
+                        disabled={prop.houses > 0 || isJailLossRestricted || isDonFrozen}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          prop.houses === 0 && !isJailLossRestricted
+                          prop.houses === 0 && !isJailLossRestricted && !isDonFrozen
                             ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}

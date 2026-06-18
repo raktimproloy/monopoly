@@ -1,0 +1,189 @@
+{
+  "_themeExamples": [
+    "Showy Guy got a treasure card: Car rental insurance. Pay $60.",
+    "Showy Guy bought Tel Aviv",
+    "Showy Guy paid a $150 tax",
+    "Low Branch landed on Start and received $300",
+    "Low Branch got a surprise card: Advance to Start.",
+    "Raktim Proloy paid $6 to Showy Guy"
+  ],
+  "settings": {
+    "maxEntries": 12,
+    "showPlayerDot": false,
+    "segmentSplit": "➡️",
+    "movementDelayMs": 2200
+  },
+  "skipLogs": [
+    "joined room",
+    "লবিতে যুক্ত",
+    "নতুন গেম",
+    "খেলা শুরু",
+    "চাল দিয়ে খেলা",
+    "এর চাল শেষ",
+    "এখন .+ এর",
+    "it's now",
+    "turn ended"
+  ],
+  "skipSegments": [
+    "রোল:\\s*\\d+\\+\\d+",
+    "^নিজের\\s",
+    "বন্ধককৃত",
+    "^[^➡️।]+[।.]?$"
+  ],
+  "rules": [
+    {
+      "id": "chest",
+      "enabled": true,
+      "match": "গুপ্তধন:\\s*(.+)",
+      "say": "{player} গুপ্তধন কার্ড পেয়েছেন: {1}"
+    },
+    {
+      "id": "chance",
+      "enabled": true,
+      "match": "ভাগ্য পরীক্ষা:\\s*(.+)",
+      "say": "{player} ভাগ্য কার্ড পেয়েছেন: {1}"
+    },
+    {
+      "id": "buy",
+      "enabled": true,
+      "match": "\"([^\"]+)\"\\s*কিনেছেন(?:\\s*\\(৳([\\d,]+)\\))?|অধিগ্রহণ করেছেন",
+      "say": "{player} {tile} কিনেছেন",
+      "sayAlt": "{player} {tile} কিনেছেন (৳{amount})"
+    },
+    {
+      "id": "auction_buy",
+      "enabled": true,
+      "match": "কিনেছেন\\s+৳([\\d,]+)-এ",
+      "say": "{player} {tile} কিনেছেন (৳{1})"
+    },
+    {
+      "id": "tax",
+      "enabled": true,
+      "match": "(.+?)\\s+কর\\s+৳([\\d,]+)",
+      "say": "{player} ৳{2} কর দিয়েছেন ({1})"
+    },
+    {
+      "id": "go_bonus",
+      "enabled": true,
+      "match": "GO.*?\\+?৳([\\d,]+)|GO পার হয়ে",
+      "say": "{player} GO-তে এসে ৳{1} পেয়েছেন",
+      "sayFallback": "{player} GO-তে এসে বোনাস পেয়েছেন"
+    },
+    {
+      "id": "rent_paid",
+      "enabled": true,
+      "match": "ভাড়া দিয়েছেন ৳([\\d,]+)\\s*\\(([^)]+)-কে\\)",
+      "say": "{payer} {receiver}-কে ৳{1} ভাড়া দিয়েছেন"
+    },
+    {
+      "id": "rent_tile",
+      "enabled": true,
+      "match": "(.+?)-এ ভাড়া ৳([\\d,]+)",
+      "say": "{player} {1}-এ ভাড়া ৳{2} দিতে হবে"
+    },
+    {
+      "id": "mortgage",
+      "enabled": true,
+      "match": "\"([^\"]+)\"\\s*বন্ধক রেখেছেন",
+      "say": "{player} {1} বন্ধক রেখেছেন",
+      "sayAlt": "{player} {1} বন্ধক রেখেছেন (+৳{amount})"
+    },
+    {
+      "id": "unmortgage",
+      "enabled": true,
+      "match": "\"([^\"]+)\"\\s*ছাড়িয়েছেন",
+      "say": "{player} {1} বন্ধক থেকে উঠিয়েছেন"
+    },
+    {
+      "id": "build",
+      "enabled": true,
+      "match": "(.+?)-এ\\s+(?:house|hotel|বাড়ি|হোটেল)\\s*বানিয়েছেন",
+      "say": "{player} {1}-এ বাড়ি বানিয়েছেন"
+    },
+    {
+      "id": "sell_house",
+      "enabled": true,
+      "match": "(.+?)-এ\\s+(?:house|hotel|বাড়ি|হোটেল)\\s*ভেঙেছেন",
+      "say": "{player} {1}-এ বাড়ি ভেঙেছেন"
+    },
+    {
+      "id": "sell_land",
+      "enabled": true,
+      "match": "(.+?)\\s+বিক্রি করেছেন",
+      "say": "{player} {1} বিক্রি করেছেন"
+    },
+    {
+      "id": "trade",
+      "enabled": true,
+      "match": "চুক্তি সম্পন্ন|trade complete",
+      "say": "{player1} ও {player2} চুক্তি করেছেন"
+    },
+    {
+      "id": "auction_start",
+      "enabled": true,
+      "match": "(.+?)\\s+নিলাম শুরু",
+      "say": "{1} নিলাম শুরু হয়েছে"
+    },
+    {
+      "id": "auction_bid",
+      "enabled": true,
+      "match": "বিড:\\s*৳([\\d,]+)",
+      "say": "{player} নিলামে ৳{1} বিড করেছেন"
+    },
+    {
+      "id": "jail",
+      "enabled": true,
+      "match": "জেলে পাঠানো|৩ ডাবলে সোজা জেলে",
+      "say": "{player} জেলে গেছেন"
+    },
+    {
+      "id": "jail_fine",
+      "enabled": true,
+      "match": "জরিমানা দিয়ে জেল থেকে মুক্ত|paidjailfine",
+      "say": "{player} ৳50 দিয়ে জেল থেকে মুক্ত"
+    },
+    {
+      "id": "traffic_fine",
+      "enabled": true,
+      "match": "ট্রাফিক পুলিশের হাতে ধরা!.+?৳([\\d,]+)\\s*জরিমানা",
+      "say": "{player} ট্রাফিক পুলিশে ধরা — {reason}, ৳{1} জরিমানা"
+    },
+    {
+      "id": "traffic_jail",
+      "enabled": true,
+      "match": "ট্রাফিক পুলিশের হাতে ধরা!.+?সোজা জেলে",
+      "say": "{player} ট্রাফিক পুলিশে ধরা — সোজা জেলে গেছেন"
+    },
+    {
+      "id": "police_spawn",
+      "enabled": true,
+      "match": "ট্রাফিক পুলিশ\\s+(.+?)\\s+এ অবস্থান",
+      "say": "ট্রাফিক পুলিশ {1} এ এসেছে"
+    },
+    {
+      "id": "police_leave",
+      "enabled": true,
+      "match": "ট্রাফিক পুলিশ ডিউটি শেষ",
+      "say": "ট্রাফিক পুলিশ চলে গেছে"
+    },
+    {
+      "id": "bankrupt",
+      "enabled": true,
+      "match": "দেউলিয়া|bankrupt",
+      "say": "{player} দেউলিয়া ঘোষণা করেছেন"
+    },
+    {
+      "id": "winner",
+      "enabled": true,
+      "match": "game over|জিতেছেন|winner|গেম শেষ",
+      "say": "{winner} গেম জিতেছেন!",
+      "sayFallback": "গেম শেষ"
+    },
+    {
+      "id": "kick",
+      "enabled": true,
+      "match": "কিক|kicked|ভোটের মাধ্যমে",
+      "say": "{player} ভোটে কিক হয়েছেন"
+    }
+  ]
+}

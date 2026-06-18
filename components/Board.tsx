@@ -6,6 +6,9 @@ import DiceManager from './dice/DiceManager';
 import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown, ShieldAlert } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 import { getCompleteSets } from '../utils/propertySets';
+import { historyTheme, parseBoardHistoryLog } from '../utils/boardHistory';
+import { useBoardHistoryLogs } from '../hooks/useBoardHistoryLogs';
+import { isPropertyFrozenForOwner } from '../utils/donPower';
 
 interface BoardProps {
   gameState: GameState;
@@ -104,47 +107,6 @@ function getOrientation(index: number): TileOrientation {
   if (index > 20 && index < 30) return 'BOTTOM';
   return 'LEFT';
 }
-
-// Maps group to flag emoji
-const getTileFlag = (name: string, group?: string) => {
-  const n = name.toLowerCase();
-  if (n.includes('venice') || n.includes('milan') || n.includes('rome') || n.includes('italy')) return '🇮🇹';
-  if (n.includes('berlin') || n.includes('frankfurt') || n.includes('munich') || n.includes('germany') || n.includes('munchen')) return '🇩🇪';
-  if (n.includes('london') || n.includes('manchester') || n.includes('liverpool') || n.includes('uk')) return '🇬🇧';
-  if (n.includes('new york') || n.includes('san francisco') || n.includes('usa') || n.includes('jfk')) return '🇺🇸';
-  if (n.includes('paris') || n.includes('nice') || n.includes('marseille') || n.includes('france')) return '🇫🇷';
-  if (n.includes('tokyo') || n.includes('osaka') || n.includes('kyoto') || n.includes('japan')) return '🇯🇵';
-  if (n.includes('madrid') || n.includes('barcelona') || n.includes('spain')) return '🇪🇸';
-  if (n.includes('rio') || n.includes('sao paulo') || n.includes('brazil')) return '🇧🇷';
-
-  if (group) {
-    switch (group) {
-      case 'Brown': return '🇧🇷';
-      case 'Light Blue': return '🇫🇷';
-      case 'Pink': return '🇮🇹';
-      case 'Orange': return '🇩🇪';
-      case 'Red': return '🇬🇧';
-      case 'Yellow': return '🇪🇸';
-      case 'Green': return '🇯🇵';
-      case 'Dark Blue': return '🇺🇸';
-    }
-  }
-  return '🏳️';
-};
-
-const getGroupTextColor = (group: string | undefined): string => {
-  switch (group) {
-    case 'Brown': return 'text-amber-50';
-    case 'Light Blue': return 'text-cyan-950';
-    case 'Pink': return 'text-fuchsia-950';
-    case 'Orange': return 'text-orange-950';
-    case 'Red': return 'text-red-50';
-    case 'Yellow': return 'text-yellow-950';
-    case 'Green': return 'text-emerald-950';
-    case 'Dark Blue': return 'text-blue-50';
-    default: return 'text-slate-300';
-  }
-};
 
 const getGroupColor = (group: string | undefined): string => {
   switch (group) {
@@ -396,17 +358,6 @@ function OwnerColorBar({ color, isMortgaged, vertical = false }: { color: string
   );
 }
 
-function MortgageTileIcon({ className = '' }: { className?: string }) {
-  return (
-    <img
-      src="/images/Mortgage.png"
-      alt="বন্ধক"
-      className={`object-contain drop-shadow-md shrink-0 pointer-events-none ${className}`}
-      draggable={false}
-    />
-  );
-}
-
 export default function Board({
   gameState,
   boardTiles,
@@ -453,6 +404,11 @@ export default function Board({
   const prevCompleteSetsRef = useRef<Set<string>>(new Set());
   const prevGameStatusForGlowRef = useRef<string | null>(null);
   const glowTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const boardHistoryLogs = useBoardHistoryLogs(
+    logs,
+    gameState,
+    historyTheme.settings.movementDelayMs ?? 2200
+  );
 
   // One-shot glow when a color set is newly completed
   useEffect(() => {
@@ -612,86 +568,6 @@ export default function Board({
       wasAutoEndedRef.current = false;
     }
   }, [isMyTurn, myPlayer?.inJail, myPlayer?.position, gameState.turnStatus, gameState.dice, onEndTurn]);
-
-  // Helper to parse log rows dynamically and render avatars + city flags
-  const renderLogWithAvatars = (logText: string) => {
-    const players = Object.values(gameState.players);
-    const sortedPlayers = [...players].sort((a, b) => b.name.length - a.name.length);
-
-    let parts = [{ isPlayer: false, isTile: false, text: logText, player: null as any, tile: null as any }];
-
-    // Split by player names
-    for (const player of sortedPlayers) {
-      const newParts: typeof parts = [];
-      for (const part of parts) {
-        if (part.isPlayer || part.isTile) {
-          newParts.push(part);
-          continue;
-        }
-
-        const segments = part.text.split(player.name);
-        for (let i = 0; i < segments.length; i++) {
-          if (segments[i] !== '') {
-            newParts.push({ isPlayer: false, isTile: false, text: segments[i], player: null, tile: null });
-          }
-          if (i < segments.length - 1) {
-            newParts.push({ isPlayer: true, isTile: false, text: player.name, player, tile: null });
-          }
-        }
-      }
-      parts = newParts;
-    }
-
-    // Split by board tile names
-    const sortedTiles = [...boardTiles].filter(t => t.price).sort((a, b) => b.name.length - a.name.length);
-    for (const tile of sortedTiles) {
-      const newParts: typeof parts = [];
-      for (const part of parts) {
-        if (part.isPlayer || part.isTile) {
-          newParts.push(part);
-          continue;
-        }
-
-        const segments = part.text.split(tile.name);
-        for (let i = 0; i < segments.length; i++) {
-          if (segments[i] !== '') {
-            newParts.push({ isPlayer: false, isTile: false, text: segments[i], player: null, tile: null });
-          }
-          if (i < segments.length - 1) {
-            newParts.push({ isPlayer: false, isTile: true, text: tile.name, player: null, tile });
-          }
-        }
-      }
-      parts = newParts;
-    }
-    return (
-      <span className="flex items-center justify-center flex-wrap gap-1 text-[11.5px] font-sans font-semibold text-slate-300 select-none">
-        {parts.map((part, idx) => {
-          if (part.isPlayer) {
-            return (
-              <span key={idx} className="inline-flex items-center gap-1 text-white font-bold whitespace-nowrap">
-                <span
-                  style={{ backgroundColor: part.player.avatar }}
-                  className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/10"
-                />
-                <span>{part.player.name}</span>
-              </span>
-            );
-          }
-          if (part.isTile) {
-            const flag = getTileFlag(part.tile.name, part.tile.group);
-            return (
-              <span key={idx} className="inline-flex items-center gap-0.5 text-white font-bold whitespace-nowrap">
-                <span>{flag}</span>
-                <span className="underline decoration-dotted decoration-slate-600">{part.tile.name}</span>
-              </span>
-            );
-          }
-          return <span key={idx} className="text-slate-400">{part.text}</span>;
-        })}
-      </span>
-    );
-  };
 
   return (
     <div
@@ -1062,10 +938,6 @@ export default function Board({
                   </div>
                 ) : null;
 
-                const mortgageIconNode = isOwned && isMortgaged ? (
-                  <MortgageTileIcon className="w-7 h-7 md:w-9 md:h-9" />
-                ) : null;
-
                 if (orientation === 'CORNER') {
                   return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-1 md:p-2 bg-[#0B0E14]/90 text-center break-keep relative">
@@ -1106,8 +978,8 @@ export default function Board({
                       </div>
                       {/* Zone 3 (Icon - Inner Edge) */}
                       <div className="h-5 w-full shrink-0 flex items-center justify-center mb-0.5 md:mb-1">
-                        {mortgageIconNode || iconNode}
-                        {!isMortgaged && houseNode}
+                        {iconNode}
+                        {houseNode}
                       </div>
                     </div>
                   );
@@ -1118,8 +990,8 @@ export default function Board({
                     <div className="flex flex-col items-center p-1 gap-1 h-full w-full min-h-0">
                       {/* Zone 1 (Icon - Inner Edge) */}
                       <div className="h-5 w-full shrink-0 flex items-center justify-center mt-0.5 md:mt-1">
-                        {mortgageIconNode || iconNode}
-                        {!isMortgaged && houseNode}
+                        {iconNode}
+                        {houseNode}
                       </div>
                       {/* Zone 2 (Text Line - Perfectly Centered) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
@@ -1151,8 +1023,8 @@ export default function Board({
                       </div>
                       {/* Zone 3 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center mr-1 md:mr-1.5">
-                        {mortgageIconNode || iconNode}
-                        {!isMortgaged && houseNode}
+                        {iconNode}
+                        {houseNode}
                       </div>
                     </div>
                   );
@@ -1163,8 +1035,8 @@ export default function Board({
                     <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
                       {/* Zone 1 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center ml-1 md:ml-1.5">
-                        {mortgageIconNode || iconNode}
-                        {!isMortgaged && houseNode}
+                        {iconNode}
+                        {houseNode}
                       </div>
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
@@ -1205,7 +1077,7 @@ export default function Board({
                   )}
 
                   {/* Floating Action Menu */}
-                  {propState?.ownerId === userId && (
+                  {propState?.ownerId === userId && !isPropertyFrozenForOwner(gameState, tile.index, userId) && (
                     <div className={`absolute z-[100] flex flex-col gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto backdrop-blur-md bg-[#0B0E14]/90 p-2.5 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-max ${orientation === 'TOP' ? 'top-full left-1/2 -translate-x-1/2 mt-2 before:absolute before:-top-4 before:left-0 before:w-full before:h-4' :
                       orientation === 'BOTTOM' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2 before:absolute before:-bottom-4 before:left-0 before:w-full before:h-4' :
                         orientation === 'LEFT' ? 'left-full top-1/2 -translate-y-1/2 ml-2 before:absolute before:-left-4 before:top-0 before:w-4 before:h-full' :
@@ -1376,61 +1248,42 @@ export default function Board({
             )}
           </div>
 
-          {/* Real-time Activity History Log — filtered to important events only */}
-          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0 group">
-            <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2.5 scrollbar-thin select-none max-h-[120px] pb-10 text-[12px] md:text-[13px]">
+          {/* Real-time Activity History Log — short lines, player dot only */}
+          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0">
+            <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2 scrollbar-thin select-none max-h-[120px] pb-10">
               {(() => {
-                // Whitelist: only show truly important game events
-                const importantLogs = logs.filter(log => {
-                  const l = log.toLowerCase();
-                  if (l.includes('bought') || l.includes('কিনে') || l.includes('অধিগ্রহণ')) return true;
-                  if (l.includes('paid rent') || l.includes('ভাড়া')) return true;
-                  if (l.includes('paid ৳') || l.includes('জরিমানা') || l.includes('কর')) return true;
-                  if (l.includes('tax')) return true;
-                  if (l.includes('collecting ৳200') || l.includes('বোনাস')) return true;
-                  if (l.includes('passing go')) return true;
-                  if (l.includes('jail') || l.includes('জেল')) return true;
-                  if (l.includes('bankrupt') || l.includes('দেউলিয়া')) return true;
-                  if (l.includes('trade') || l.includes('চুক্তি')) return true;
-                  if (l.includes('swapped')) return true;
-                  if (l.includes('mortgage') || l.includes('বন্ধক')) return true;
-                  if (l.includes('game over')) return true;
-                  if (l.includes('winner')) return true;
-                  if (l.includes('built') || l.includes('তৈরি')) return true;
-                  if (l.includes('broke') || l.includes('ভেঙে')) return true;
-                  if (l.includes('liquidated') || l.includes('বিক্রি')) return true;
-                  if (l.includes('auction') || l.includes('নিলাম')) return true;
-                  if (l.includes('ভাগ্য পরীক্ষা') || l.includes('গুপ্তধন')) return true;
+                const entries = boardHistoryLogs
+                  .map((log) => parseBoardHistoryLog(log, Object.values(gameState.players)))
+                  .filter((e): e is NonNullable<typeof e> => e !== null)
+                  .slice(0, historyTheme.settings.maxEntries);
 
-                  // Tactical Tags
-                  if (l.includes('[acquire]')) return true;
-                  if (l.includes('[transfer]')) return true;
-                  if (l.includes('[trade]')) return true;
-                  if (l.includes('[upgrade]')) return true;
-                  if (l.includes('[downgrade]')) return true;
-                  if (l.includes('[liquidate]')) return true;
-                  if (l.includes('[auction]')) return true;
-                  return false;
-                });
-
-                if (importantLogs.length === 0) {
+                if (entries.length === 0) {
                   return (
-                    <div className="text-center py-8 text-slate-600 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
-                      No activities recorded
+                    <div className="text-center py-8 text-slate-600 font-sans text-[10px] tracking-wide">
+                      কোনো কার্যকলাপ নেই
                     </div>
                   );
                 }
 
-                return importantLogs.map((log, index) => (
-                  <div key={index} className="flex items-center justify-center gap-1 py-px w-full">
-                    {renderLogWithAvatars(log)}
+                return entries.map((entry, index) => (
+                  <div key={index} className="flex items-center justify-center gap-2 py-0.5 w-full px-2">
+                    {historyTheme.settings.showPlayerDot && entry.player && (
+                      <span
+                        style={{ backgroundColor: entry.player.avatar }}
+                        className="w-3 h-3 rounded-full shrink-0 border border-white/15 shadow-sm"
+                        title={entry.player.name}
+                      />
+                    )}
+                    <span className="text-[11px] md:text-[12px] font-sans font-medium text-slate-300 text-center leading-snug">
+                      {entry.text}
+                    </span>
                   </div>
                 ));
               })()}
             </div>
 
-            {/* Opacity Fading overlay at the bottom fading into black/main grid bg */}
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#212f4d] via-[#212f4d]/85 to-transparent pointer-events-none z-10" />
+            {/* Fade into board center — matches corner/center tile tone */}
+            <div className="absolute bottom-0 left-0 right-0 h-14 bg-gradient-to-t from-[#0B0E14] from-40% via-[#0B0E14]/80 to-transparent pointer-events-none z-10" />
           </div>
 
         </div>
@@ -1506,13 +1359,17 @@ export default function Board({
               const hasEnoughMoney = (myPlayer?.balance || 0) >= houseCost;
 
               const isJailRestricted = gameState.settings?.jailLoss && myPlayer?.inJail;
+              const isDonFrozen =
+                selectedTileIndex !== null &&
+                isPropertyFrozenForOwner(gameState, selectedTileIndex, userId);
 
-              const canBuildHere = !isJailRestricted && ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
-              const canSellHere = !isJailRestricted && currentHouses > 0 && currentHouses === maxHouses;
-              const canMortgageHere = !isJailRestricted && !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
+              const canBuildHere = !isJailRestricted && !isDonFrozen && ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
+              const canSellHere = !isJailRestricted && !isDonFrozen && currentHouses > 0 && currentHouses === maxHouses;
+              const canMortgageHere = !isJailRestricted && !isDonFrozen && !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
 
               let buildDisabledReason = "";
-              if (isJailRestricted) buildDisabledReason = "Jail Loss Active";
+              if (isDonFrozen) buildDisabledReason = "Don Hijacked";
+              else if (isJailRestricted) buildDisabledReason = "Jail Loss Active";
               else if (!ownsFullSet) buildDisabledReason = "Requires Full Set";
               else if (anyMortgaged) buildDisabledReason = "Group is Mortgaged";
               else if (currentHouses > minHouses) buildDisabledReason = "Build Evenly";
@@ -1520,14 +1377,16 @@ export default function Board({
               else if (!hasEnoughMoney) buildDisabledReason = "Insufficient Funds";
 
               let sellDisabledReason = "";
-              if (isJailRestricted) sellDisabledReason = "Jail Loss Active";
+              if (isDonFrozen) sellDisabledReason = "Don Hijacked";
+              else if (isJailRestricted) sellDisabledReason = "Jail Loss Active";
               else if (currentHouses === 0) sellDisabledReason = "No Houses To Break";
               else if (currentHouses < maxHouses) sellDisabledReason = "Break Evenly";
 
-              const canSellPropertyHere = !isJailRestricted && !groupHasHouses;
+              const canSellPropertyHere = !isJailRestricted && !isDonFrozen && !groupHasHouses;
 
               let mortgageDisabledReason = "";
-              if (isJailRestricted) mortgageDisabledReason = "Jail Loss Active";
+              if (isDonFrozen) mortgageDisabledReason = "Don Hijacked";
+              else if (isJailRestricted) mortgageDisabledReason = "Jail Loss Active";
               else if (selProp?.isMortgaged) mortgageDisabledReason = "Already Mortgaged";
               else if (currentHouses > 0) mortgageDisabledReason = "Has Houses";
               else if (groupHasHouses) mortgageDisabledReason = "Group Has Houses";

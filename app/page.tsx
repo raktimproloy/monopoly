@@ -15,9 +15,16 @@ const AVATAR_COLORS = [
   { hex: '#d946ef', name: 'Fuchsia Flash' }
 ];
 
+const PLAYER_NAME_KEY = 'monopoly_player_name';
+
 export default function Lobby() {
   const router = useRouter();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(PLAYER_NAME_KEY) || '';
+    }
+    return '';
+  });
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_COLORS[0].hex);
   
   // Auto-fill a random sector code Room ID by default
@@ -26,6 +33,8 @@ export default function Lobby() {
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !roomId.trim()) return;
+
+    localStorage.setItem(PLAYER_NAME_KEY, name.trim());
 
     // Create a unique player session token / User ID
     let userId = localStorage.getItem('monopoly_user_id');
