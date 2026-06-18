@@ -22,7 +22,7 @@ class SoundManager {
       const howl = new Howl({
         src: [path],
         preload: true,
-        volume: 1.0, // Individual volume can be tweaked later if needed
+        volume: 0.85,
       });
       this.sounds.set(event as SoundEvent, howl);
     }

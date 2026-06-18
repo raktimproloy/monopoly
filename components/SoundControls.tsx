@@ -4,8 +4,8 @@ import { soundManager } from '../utils/soundManager';
 
 export default function SoundControls() {
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.7);
-  const [bgmVolume, setBgmVolume] = useState(0.1);
+  const [volume, setVolume] = useState(0.35);
+  const [bgmVolume, setBgmVolume] = useState(0.08);
   const bgmRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -17,11 +17,11 @@ export default function SoundControls() {
       setVolume(v);
       soundManager.setGlobalVolume(v);
     } else {
-      soundManager.setGlobalVolume(0.7);
+      soundManager.setGlobalVolume(0.35);
     }
 
     const savedBgm = localStorage.getItem('monopoly_bgm_volume');
-    const initialBgm = savedBgm !== null ? parseFloat(savedBgm) : 0.2;
+    const initialBgm = savedBgm !== null ? parseFloat(savedBgm) : 0.08;
     setBgmVolume(initialBgm);
 
     if (bgmRef.current) {

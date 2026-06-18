@@ -8,7 +8,7 @@ export const SOUND_CONFIG = {
   isMuted: false,
 
   // Global volume (0.0 to 1.0)
-  globalVolume: 0.5,
+  globalVolume: 0.35,
 
   // Event to Audio File mapping
   events: {
