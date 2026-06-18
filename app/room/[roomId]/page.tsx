@@ -84,6 +84,7 @@ function GameRoomContent() {
     devForcePolice,
     devSetNextPolice,
     devGivePowerCard,
+    devGivePardonCard,
     usePowerCard,
     takeLoan,
     repayLoan
@@ -700,37 +701,41 @@ function GameRoomContent() {
             onDevForcePolice={devForcePolice}
             onDevSetNextPolice={devSetNextPolice}
             onDevGivePowerCard={devGivePowerCard}
+            onDevGivePardonCard={devGivePardonCard}
             onDevTestPoliceNotification={() => setDevShowPoliceNotification(true)}
           />
         </section>
 
-        {/* COLUMN 1: LEFT OVERLAYS HUD (Securities & Telemetry) */}
-        <section className="order-2 xl:order-1 w-full xl:w-[300px] 2xl:w-[350px] shrink-0 h-[60vh] xl:h-full flex flex-col justify-end gap-3 overflow-hidden bg-slate-900/40 xl:bg-transparent rounded-xl xl:rounded-none p-3 xl:p-0 border border-slate-800 xl:border-none z-40">
-          <div className="shrink-0 mb-1">
-            <GovernmentBank
-              gameState={gameState}
-              playerId={userId}
-              onOpenBankModal={() => setActiveModal('BANK')}
-              repayLoan={repayLoan}
+        {/* 1. LEFT COLUMN */}
+        <div className="w-[380px] xl:w-[420px] shrink-0 flex flex-col justify-start gap-4 z-40 overflow-hidden h-screen pt-4 pb-4 pl-4 self-start">
+          
+          {/* TOP: Govt Bank (Cannot shrink) */}
+          <div className="shrink-0 w-full">
+            <GovernmentBank 
+              gameState={gameState} 
+              playerId={userId} 
+              onOpenBankModal={() => setActiveModal('BANK')} 
+              repayLoan={repayLoan} 
+            />
+          </div>
+          
+          {/* MIDDLE: Power Cards (Cannot shrink) */}
+          <div className="shrink-0 w-full min-w-0 max-w-full">
+            <PowerSection 
+              state={gameState} 
+              boardTiles={boardTiles} 
+              playerId={userId} 
+              onUsePowerCard={usePowerCard} 
+              onUsePardonCard={usePardonCard} 
             />
           </div>
 
-          <div className="shrink-0 mb-1">
-            <PowerSection state={gameState} boardTiles={boardTiles} playerId={userId} onUsePowerCard={usePowerCard} onUsePardonCard={usePardonCard} />
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <PropertyManager
-              gameState={gameState}
-              boardTiles={boardTiles}
-              userId={userId}
-              onMortgageProperty={mortgageProperty}
-              onUnmortgageProperty={unmortgageProperty}
-            />
-          </div>
-          <div className="h-56 shrink-0">
+          {/* BOTTOM: Telemetry (flex-1 forces it to stretch and fill all remaining space below the cards) */}
+          <div className="flex-1 min-h-0 w-full">
             <ChatBox logs={logs} />
           </div>
-        </section>
+
+        </div>
 
         {/* 3. RIGHT AREA WRAPPER */}
         <div className="order-3 xl:order-3 flex flex-row items-start gap-3 h-screen pt-4 pb-4 pr-4 self-start z-40">

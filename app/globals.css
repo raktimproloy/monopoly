@@ -2,13 +2,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #2a2546;
+  --background: #302f5c;
   --foreground: #f8fafc;
   --cyber-blue: #6366f1;
   --cyber-purple: #d946ef;
 
   --font-orbitron: var(--font-orbitron), sans-serif;
   --font-hanken: var(--font-hanken), sans-serif;
+
+  /* NEW: Centralized Modal Colors */
+  --modal-overlay-color: rgba(0, 0, 0, 0.65); /* The dark background behind the window */
+  --modal-surface-color: rgba(33, 42, 82, 0.85); /* The actual window background color */
+  --modal-border-color: rgba(78, 67, 255, 0.3); /* Default border color (can be overridden by Tailwind) */
 }
 
 @theme inline {
@@ -28,9 +33,37 @@ body {
 
 /* ===== PREMIUM GLASS SYSTEM ===== */
 
+/* 1. The Full-Screen Backdrop (Replaces bg-black/60) */
+.glass-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--modal-overlay-color);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 1rem;
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* 2. The Main Window Container (Replaces bg-[#0B0E14] and bg-[#19162C]) */
+.glass-modal {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1rem; /* rounded-2xl */
+  background-color: var(--modal-surface-color);
+  border: 1px solid var(--modal-border-color);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 /* Main overlay glass panel (lobby cards, major UI panels) */
 .glass-panel {
-  background: rgba(54, 32, 80, 0.993);
+  background: rgba(33, 31, 75, 0.993);
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -39,7 +72,7 @@ body {
 }
 
 .glass-panel-light {
-  background: rgba(22, 22, 45, 0.4);
+  background: rgba(46, 46, 85, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -48,7 +81,7 @@ body {
 
 /* Full-screen modal/menu glass background (Trade, Loan, Don modal) */
 .glass-menu {
-  background: rgba(18, 18, 38, 0.75);
+  background: rgba(40, 40, 80, 0.75);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -58,7 +91,7 @@ body {
 
 /* Sidebar card/section glass (PlayerList, ChatBox, GovBank, Trade panels) */
 .glass-card {
-  background: rgba(20, 20, 42, 0.55);
+  background: rgba(44, 44, 80, 0.55);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -68,7 +101,7 @@ body {
 
 /* Inner list items / rows inside cards */
 .glass-item {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(62, 55, 92, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   transition: background 0.15s ease;
@@ -80,13 +113,13 @@ body {
 
 /* Active/selected glass item */
 .glass-item-active {
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(137, 137, 184, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.35);
   border-radius: 12px;
 }
 
 .glass-input {
-  background: rgba(18, 18, 38, 0.7);
+  background: rgba(50, 50, 92, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   border-radius: 8px;

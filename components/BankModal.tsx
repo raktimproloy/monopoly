@@ -12,15 +12,15 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
   const [selectedLoan, setSelectedLoan] = useState<number | null>(null);
 
   const loanOptions = [
-    { amount: 100, interest: 10, total: 110, turns: 10, deduction: 11 },
-    { amount: 200, interest: 15, total: 230, turns: 10, deduction: 23 },
-    { amount: 400, interest: 20, total: 480, turns: 10, deduction: 48 },
-    { amount: 800, interest: 25, total: 1000, turns: 10, deduction: 100 },
+    { amount: 100, interest: 10, total: 110, turns: 5, deduction: 22 },
+    { amount: 200, interest: 15, total: 230, turns: 5, deduction: 46 },
+    { amount: 400, interest: 20, total: 480, turns: 5, deduction: 96 },
+    { amount: 800, interest: 25, total: 1000, turns: 5, deduction: 200 },
   ];
 
   return (
-    <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/70 p-4 transition-opacity duration-200">
-      <div className="glass-menu w-full max-w-2xl flex flex-col overflow-hidden relative border-emerald-500/20">
+    <div className="glass-overlay">
+      <div className="glass-modal max-w-2xl border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)] flex flex-col">
         
         {/* Header */}
         <div className="bg-emerald-950/30 border-b border-emerald-900/50 p-4 md:p-6 flex justify-between items-center relative overflow-hidden">
@@ -42,7 +42,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
         {/* Content */}
         <div className="p-4 md:p-6 flex flex-col gap-6">
           <p className="text-sm text-slate-400 text-center max-w-lg mx-auto">
-            Select a financial package. Loans are automatically deducted from your balance over 10 turns. You may only carry one active loan at a time.
+            Select a financial package. Loans are automatically deducted from your balance over 5 turns. You may only carry one active loan at a time.
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">

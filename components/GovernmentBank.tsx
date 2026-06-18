@@ -20,7 +20,7 @@ export default function GovernmentBank({ gameState, playerId, onOpenBankModal, r
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* TITLE MOVED INSIDE */}
-        <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2 border-b border-emerald-900/30 pb-3">
+        <h3 className="text-base font-orbitron font-extrabold tracking-widest text-white uppercase flex items-center gap-2 border-b border-emerald-900/30 pb-3">
           <Landmark size={16} className="text-emerald-400" />
           GOVT. BANK
         </h3>
@@ -28,7 +28,7 @@ export default function GovernmentBank({ gameState, playerId, onOpenBankModal, r
         {!loan ? (
           <div className="flex flex-col items-center justify-center py-4 gap-3">
             <BankIcon size={32} className="text-slate-600" />
-            <p className="text-xs text-slate-400 text-center font-medium px-2">
+            <p className="text-xs text-white text-center font-medium px-2">
               Need capital? The Government Bank offers secure, low-interest loans for property investment.
             </p>
             <button
@@ -42,13 +42,13 @@ export default function GovernmentBank({ gameState, playerId, onOpenBankModal, r
         ) : (
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Loan</span>
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Active Loan</span>
               <span className="text-xs font-bold text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded border border-amber-900/50">{loan.remainingTurns} Turns Left</span>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex justify-between items-end">
-                <span className="text-slate-400 text-xs">Remaining</span>
-                <span className="text-emerald-400 font-bold font-mono text-lg">৳{loan.remainingAmount} <span className="text-slate-500 text-[10px] font-normal">/ ৳{loan.totalRepayment}</span></span>
+                <span className="text-white text-xs">Remaining</span>
+                <span className="text-emerald-400 font-bold font-mono text-lg">৳{loan.remainingAmount} <span className="text-white/80 text-[10px] font-normal">/ ৳{loan.totalRepayment}</span></span>
               </div>
               <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1 shadow-inner">
                 <div 

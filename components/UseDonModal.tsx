@@ -61,8 +61,8 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
   };
 
   const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/80 p-4 transition-opacity duration-200">
-      <div className="max-w-3xl w-full bg-[#131122] border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-2xl relative animate-in zoom-in-95 fade-in duration-200">
+    <div className="glass-overlay z-[99999]">
+      <div className="glass-modal max-w-[360px] md:max-w-3xl w-full p-5 md:p-6 flex flex-col gap-5 animate-in zoom-in-95 fade-in duration-200 border-red-500/40 shadow-[0_0_30px_rgba(220,38,38,0.2)]">
         
         {/* Close Button */}
         <button
@@ -85,10 +85,10 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6 items-start h-[400px]">
+        <div className="grid grid-cols-1 md:grid-cols-[250px_1fr] gap-6 items-stretch">
           
           {/* Left Column: Player Selection */}
-          <div className="flex flex-col gap-3 h-full overflow-hidden">
+          <div className="flex flex-col gap-3 h-[200px] md:h-[400px] overflow-hidden">
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Select Target Player</span>
             <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-2 custom-scrollbar">
               {otherPlayers.length === 0 ? (
@@ -125,7 +125,7 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
           </div>
 
           {/* Right Column: Properties Selection */}
-          <div className="flex flex-col gap-3 h-full overflow-hidden md:border-l md:border-[#241F3C] md:pl-6">
+          <div className="flex flex-col gap-3 h-[280px] md:h-[400px] overflow-hidden md:border-l md:border-[#241F3C] md:pl-6">
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               {selectedPlayer ? "Select Property to Hijack" : "Awaiting Player Selection"}
             </span>

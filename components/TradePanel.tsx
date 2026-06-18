@@ -276,7 +276,7 @@ export default function TradePanel({
       <div className="bg-white/5 backdrop-blur-xl border border-[#2D284B] rounded-2xl p-4 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)]">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase">
+            <span className="text-base font-orbitron font-extrabold tracking-widest text-white uppercase">
               ট্রেড
             </span>
             {isJailLossRestricted && (
@@ -344,7 +344,7 @@ export default function TradePanel({
 
       {/* 2. MY PROPERTIES CARD */}
       <div className="bg-white/5 backdrop-blur-xl border border-[#2D284B] rounded-2xl p-4 flex-1 flex flex-col gap-3.5 select-none shadow-[0_4px_20px_rgba(0,0,0,0.25)] min-h-[220px] overflow-hidden">
-        <span className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase block text-center border-b border-[#241F3C] pb-2.5">
+        <span className="text-base font-orbitron font-extrabold tracking-widest text-white uppercase block text-center border-b border-[#241F3C] pb-2.5">
           MY PROPERTIES ({myProperties.length + (self.getOutOfJailFreeCards || 0)})
         </span>
         <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2">
@@ -483,8 +483,8 @@ export default function TradePanel({
 
       {/* MODAL 1: SELECT COUNTERPARTY */}
       {activeModal === 'SELECT_COUNTERPARTY' && (
-        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-md w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_40px_rgba(0,0,0,0.5)] relative animate-scale-up">
+        <div className="glass-overlay">
+          <div className="glass-modal max-w-md w-full p-6 flex flex-col gap-5 animate-scale-up border-indigo-500/30">
             <button
               onClick={() => setActiveModal('NONE')}
               className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors bg-[#231F3B] hover:bg-[#2F294F] w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"
@@ -538,8 +538,8 @@ export default function TradePanel({
 
       {/* MODAL 2: CREATE TRADE */}
       {activeModal === 'CREATE_TRADE' && (
-        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-2xl w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-5 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
+        <div className="glass-overlay">
+          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-5 animate-scale-up border-indigo-500/30">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}
@@ -808,8 +808,8 @@ export default function TradePanel({
 
       {/* MODAL 3: VIEW TRADE */}
       {activeModal === 'VIEW_TRADE' && pendingTrade && (
-        <div className="fixed inset-0 z-[9999] w-screen h-screen flex items-center justify-center bg-black/60 p-4 transition-opacity duration-200">
-          <div className="max-w-2xl w-full bg-black/40 backdrop-blur-2xl border border-[#2D284F] p-6 rounded-2xl flex flex-col gap-4 shadow-[0_10px_50px_rgba(0,0,0,0.6)] relative animate-scale-up">
+        <div className="glass-overlay">
+          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-4 animate-scale-up border-indigo-500/30">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}

@@ -32,6 +32,7 @@ interface BoardProps {
   onDevForcePolice?: () => void;
   onDevSetNextPolice?: (delayMinutes: number) => void;
   onDevTestPoliceNotification?: () => void;
+  onDevGivePardonCard?: () => void;
   onPlaceBid?: (amountToAdd: number) => void;
 }
 
@@ -398,6 +399,7 @@ export default function Board({
   onDevForcePolice,
   onDevSetNextPolice,
   onDevTestPoliceNotification,
+  onDevGivePardonCard,
   onPlaceBid,
 }: BoardProps) {
   const [hoveredTileIndex, setHoveredTileIndex] = useState<number | null>(null);
@@ -664,6 +666,12 @@ export default function Board({
               className="bg-red-600 hover:bg-red-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(220,38,38,0.4)] active:scale-95 w-full"
             >
               Give Don Card
+            </button>
+            <button
+              onClick={() => onDevGivePardonCard?.()}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(16,185,129,0.4)] active:scale-95 w-full"
+            >
+              Give Pardon Card
             </button>
             <button
               onClick={() => onDevTestPoliceNotification?.()}
@@ -1323,7 +1331,7 @@ export default function Board({
       {/* Tile Detail Modal Overlay */}
       {selectedTileIndex !== null && (
         <div
-          className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-3xl p-4 transition-opacity duration-200"
+          className="absolute inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-3xl p-4 transition-opacity duration-200"
           onClick={() => setSelectedTileIndex(null)}
         >
           <div

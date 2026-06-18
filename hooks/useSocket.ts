@@ -288,6 +288,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const devGivePardonCard = useCallback(() => {
+    console.log('[Socket Emit] dev_give_power_card', { playerId: userId, cardType: 'GET_OUT_OF_JAIL_FREE' });
+    if (socketRef.current) {
+      socketRef.current.emit('dev_give_power_card', { playerId: userId, cardType: 'GET_OUT_OF_JAIL_FREE' });
+    }
+  }, [userId]);
+
   const usePowerCard = useCallback((cardType: string, actionPayload: any) => {
     console.log('[Socket Emit] use_power_card', { playerId: userId, cardType, actionPayload });
     if (socketRef.current) {
@@ -440,6 +447,7 @@ export function useSocket(
     sellPardonCard,
     usePardonCard,
     devGivePowerCard,
+    devGivePardonCard,
     usePowerCard,
     takeLoan,
     repayLoan

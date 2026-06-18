@@ -29,7 +29,7 @@ export default function ChatBox({ logs }: ChatBoxProps) {
     <div className="w-full h-full p-4 glass-card flex flex-col gap-3.5 select-none relative">
 
 
-      <h3 className="text-base font-orbitron font-extrabold tracking-widest text-slate-300 uppercase flex items-center gap-2">
+      <h3 className="text-base font-orbitron font-extrabold tracking-widest text-white uppercase flex items-center gap-2">
         <Terminal size={16} className="text-[#8B5CF6]" />
         TACTICAL TELEMETRY
       </h3>
@@ -72,7 +72,7 @@ export default function ChatBox({ logs }: ChatBoxProps) {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="SECURE CHANNEL OFFLINE"
-          className="flex-1 px-3 py-2 text-[11px] font-mono glass-input text-slate-500 placeholder-slate-600 focus:outline-none focus:border-[#6F4FF0] transition-colors cursor-not-allowed uppercase"
+          className="flex-1 px-3 py-2 text-[11px] font-mono glass-input text-white placeholder-white/50 focus:outline-none focus:border-[#6F4FF0] transition-colors cursor-not-allowed uppercase"
         />
         <button
           type="submit"
