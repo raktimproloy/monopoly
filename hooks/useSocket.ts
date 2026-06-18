@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '../../shared/types';
+import { createTelemetryEntry, TelemetryEntry } from '../utils/telemetryLog';
 
 export function useSocket(
   roomId: string | null,
@@ -12,7 +13,8 @@ export function useSocket(
   const [isConnected, setIsConnected] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [telemetryEntries, setTelemetryEntries] = useState<TelemetryEntry[]>([]);
+  const gameStateRef = useRef<GameState | null>(null);
   const [pendingTrade, setPendingTrade] = useState<{ tradeId: string; offer: TradeOfferPayload } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomDetails, setRoomDetails] = useState<{
@@ -34,11 +36,12 @@ export function useSocket(
     }
   }, [roomId]);
 
-  // Intercept and rewrite incoming telemetry logs to tactical style
-  const formatTelemetryLog = useCallback((log: string): string => {
-    if (!log) return '';
-    return log;
+  const pushTelemetry = useCallback((log: string, state: GameState | null) => {
+    if (!log?.trim()) return;
+    setTelemetryEntries((prev) => [createTelemetryEntry(log, state), ...prev]);
   }, []);
+
+  const logs = useMemo(() => telemetryEntries.map((e) => e.text), [telemetryEntries]);
 
   useEffect(() => {
     if (!roomId || !userId) return;
@@ -79,16 +82,19 @@ export function useSocket(
 
     // Handle initial room setup
     socket.on('room_initialized', (data: { state: GameState; board: BoardTile[] }) => {
+      gameStateRef.current = data.state;
       setGameState(data.state);
       setBoardTiles(data.board);
-      setLogs([`Joined room ${roomId} as ${playerName || 'Guest'}`]);
+      setTelemetryEntries([
+        createTelemetryEntry(`Joined room ${roomId} as ${playerName || 'Guest'}`, data.state),
+      ]);
     });
 
     // Handle state mutations
     socket.on('state_updated', (data: { state: GameState; log: string; lastRoll?: [number, number] }) => {
+      gameStateRef.current = data.state;
       setGameState(data.state);
-      const formattedLog = formatTelemetryLog(data.log);
-      setLogs((prev) => [formattedLog, ...prev]);
+      pushTelemetry(data.log, data.state);
 
       // Refresh room details if we receive updates, to keep taken avatars synced
       if (data.state) {
@@ -111,8 +117,7 @@ export function useSocket(
     });
 
     socket.on('trade_declined', (data: { tradeId: string; log: string }) => {
-      const formattedLog = formatTelemetryLog(data.log);
-      setLogs((prev) => [formattedLog, ...prev]);
+      pushTelemetry(data.log, gameStateRef.current);
     });
 
     socket.on('trade_resolved', (data: { tradeId: string }) => {
@@ -427,6 +432,7 @@ export function useSocket(
     gameState,
     boardTiles,
     logs,
+    telemetryEntries,
     pendingTrade,
     errorMessage,
     clearError: () => setErrorMessage(null),

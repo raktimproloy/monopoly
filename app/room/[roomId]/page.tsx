@@ -52,6 +52,7 @@ function GameRoomContent() {
     gameState,
     boardTiles,
     logs,
+    telemetryEntries,
     pendingTrade,
     errorMessage,
     clearError,
@@ -529,7 +530,7 @@ function GameRoomContent() {
 
           {/* RIGHT: Tactical Telemetry Logs */}
           <section className="w-80 shrink-0 h-full min-w-0">
-            <ChatBox logs={logs} />
+            <ChatBox entries={telemetryEntries} userId={userId} />
           </section>
         </div>
 
@@ -754,7 +755,7 @@ function GameRoomContent() {
 
           {/* BOTTOM: Telemetry (flex-1 forces it to stretch and fill all remaining space below the cards) */}
           <div className="flex-1 min-h-0 w-full">
-            <ChatBox logs={logs} />
+            <ChatBox entries={telemetryEntries} userId={userId} />
           </div>
 
         </div>
