@@ -25,7 +25,8 @@ export const SOUND_CONFIG = {
     'RECEIVE_CARD': '/sounds/Purchase.mp3', // Fallback for card
     'CARD_FLIP': '/sounds/Card Flip.mp3',
     'MONEY_TRANSACTION': '/sounds/Money.mp3',
-    'PRISON_SOUND': '/sounds/Prison.mp3'
+    'PRISON_SOUND': '/sounds/Prison.mp3',
+    'COMPLETE_SET': '/sounds/Build House.mp3'
   }
 };
 

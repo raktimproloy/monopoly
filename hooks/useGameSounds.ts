@@ -1,21 +1,40 @@
 import { useEffect, useRef } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState, BoardTile } from '../../shared/types';
 import { soundManager } from '../utils/soundManager';
+import { getCompleteSets } from '../utils/propertySets';
 
 export function useGameSounds(
   gameState: GameState | null,
   logs: string[],
   userId: string,
-  pendingTrade: { tradeId: string } | null
+  pendingTrade: { tradeId: string } | null,
+  boardTiles: BoardTile[] = []
 ) {
   const prevGameStatus = useRef<string | null>(null);
   const prevTurnPlayerId = useRef<string | null>(null);
   const prevLogsLength = useRef<number>(0);
   const prevPlayersCount = useRef<number>(0);
   const prevPendingTradeId = useRef<string | null>(null);
+  const prevCompleteSets = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!gameState) return;
+    if (!gameState || boardTiles.length === 0) return;
+
+    const currentSets = getCompleteSets(gameState, boardTiles);
+
+    // Detect Game Start — snapshot sets without playing sounds
+    if (gameState.gameStatus === 'ACTIVE' && prevGameStatus.current !== 'ACTIVE') {
+      prevCompleteSets.current = currentSets;
+    } else if (gameState.gameStatus === 'ACTIVE') {
+      currentSets.forEach((key) => {
+        if (!prevCompleteSets.current.has(key)) {
+          soundManager.playEventSound('COMPLETE_SET');
+        }
+      });
+      prevCompleteSets.current = currentSets;
+    } else {
+      prevCompleteSets.current = new Set();
+    }
 
     // Detect Game Start
     if (gameState.gameStatus === 'ACTIVE' && prevGameStatus.current !== 'ACTIVE') {
@@ -42,7 +61,7 @@ export function useGameSounds(
     }
     prevPendingTradeId.current = pendingTrade ? pendingTrade.tradeId : null;
 
-  }, [gameState, userId, pendingTrade]);
+  }, [gameState, userId, pendingTrade, boardTiles]);
 
   useEffect(() => {
     // Detect new events from logs

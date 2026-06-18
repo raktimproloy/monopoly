@@ -16,6 +16,8 @@ import PowerSection from '../../../components/PowerSection';
 import PoliceNotification from '../../../components/PoliceNotification';
 import GovernmentBank from '../../../components/GovernmentBank';
 import BankModal from '../../../components/BankModal';
+import KickVoteModal from '../../../components/KickVoteModal';
+import GameOverOverlay from '../../../components/GameOverOverlay';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -87,11 +89,13 @@ function GameRoomContent() {
     devGivePardonCard,
     usePowerCard,
     takeLoan,
-    repayLoan
+    repayLoan,
+    castKickVote,
+    restartGame
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
-  useGameSounds(gameState, logs, userId, pendingTrade);
+  useGameSounds(gameState, logs, userId, pendingTrade, boardTiles);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [devShowPoliceNotification, setDevShowPoliceNotification] = useState(false);
@@ -99,7 +103,7 @@ function GameRoomContent() {
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'NONE' | 'BANK'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'BANK' | 'KICK'>('NONE');
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
 
   const AVATAR_COLORS = [
@@ -668,6 +672,24 @@ function GameRoomContent() {
         />
       )}
 
+      {/* Kick Vote Modal */}
+      {activeModal === 'KICK' && gameState && (
+        <KickVoteModal
+          gameState={gameState}
+          userId={userId}
+          onClose={() => setActiveModal('NONE')}
+          onCastVote={castKickVote}
+        />
+      )}
+
+      {/* Game Over Overlay — visible to all players */}
+      {gameState?.gameStatus === 'FINISHED' && (
+        <GameOverOverlay
+          gameState={gameState}
+          onRestartGame={restartGame}
+        />
+      )}
+
       {/* Main UI Layout (Board-priority 3-column system) */}
       <div className="flex-1 w-full px-4 overflow-x-hidden overflow-y-auto xl:overflow-hidden flex flex-col xl:flex-row items-center justify-between gap-4 min-h-0 relative z-10">
 
@@ -751,10 +773,13 @@ function GameRoomContent() {
               
               <div className="flex justify-end gap-2">
               <button
-                onClick={() => {
-                  // Future Votekick placeholder
-                }}
-                className="bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
+                onClick={() => setActiveModal('KICK')}
+                disabled={gameState.gameStatus !== 'ACTIVE' || gameState.players[userId]?.isBankrupt}
+                className={`font-sans text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${
+                  gameState.gameStatus === 'ACTIVE' && !gameState.players[userId]?.isBankrupt
+                    ? 'bg-[#19162A]/60 border border-[#2D284B] hover:bg-[#241F3C] text-slate-400 hover:text-slate-300 cursor-pointer'
+                    : 'bg-[#252136] text-slate-600 border border-[#2D284B] cursor-not-allowed opacity-50'
+                }`}
               >
                 <UserX size={12} className="stroke-current" />
                 কিক করুন

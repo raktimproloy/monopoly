@@ -379,6 +379,20 @@ export function useSocket(
     }
   }, [userId]);
 
+  const castKickVote = useCallback((targetPlayerId: string | null) => {
+    console.log('[Socket Emit] cast_kick_vote', { playerId: userId, targetPlayerId });
+    if (socketRef.current) {
+      socketRef.current.emit('cast_kick_vote', { playerId: userId, targetPlayerId });
+    }
+  }, [userId]);
+
+  const restartGame = useCallback(() => {
+    console.log('[Socket Emit] restart_game', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('restart_game', { playerId: userId });
+    }
+  }, [userId]);
+
   useEffect(() => {
     const handleCustomBid = (e: any) => {
       if (socketRef.current) {
@@ -450,6 +464,8 @@ export function useSocket(
     devGivePardonCard,
     usePowerCard,
     takeLoan,
-    repayLoan
+    repayLoan,
+    castKickVote,
+    restartGame
   };
 }

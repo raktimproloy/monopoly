@@ -5,6 +5,7 @@ import { GameState, BoardTile, Player } from '../../shared/types';
 import DiceManager from './dice/DiceManager';
 import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown, ShieldAlert } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
+import { getCompleteSets } from '../utils/propertySets';
 
 interface BoardProps {
   gameState: GameState;
@@ -373,6 +374,39 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
   );
 }
 
+function OwnerColorBar({ color, isMortgaged, vertical = false }: { color: string; isMortgaged: boolean; vertical?: boolean }) {
+  return (
+    <div
+      className={`relative flex items-center justify-center rounded-none shadow-md overflow-hidden ${
+        vertical ? 'w-[22px] md:w-[26px] h-full' : 'h-[18px] md:h-[22px] w-full'
+      }`}
+      style={{ backgroundColor: color }}
+    >
+      {isMortgaged && (
+        <img
+          src="/images/Mortgage.png"
+          alt="বন্ধক"
+          className={`object-contain pointer-events-none drop-shadow-sm ${
+            vertical ? 'w-[18px] md:w-[22px] h-auto max-h-full' : 'h-[16px] md:h-[20px] w-auto max-w-full'
+          }`}
+          draggable={false}
+        />
+      )}
+    </div>
+  );
+}
+
+function MortgageTileIcon({ className = '' }: { className?: string }) {
+  return (
+    <img
+      src="/images/Mortgage.png"
+      alt="বন্ধক"
+      className={`object-contain drop-shadow-md shrink-0 pointer-events-none ${className}`}
+      draggable={false}
+    />
+  );
+}
+
 export default function Board({
   gameState,
   boardTiles,
@@ -415,6 +449,72 @@ export default function Board({
   const [countdownText, setCountdownText] = useState<string>('');
   const [policeCountdownText, setPoliceCountdownText] = useState<string>('');
   const [isActionReady, setIsActionReady] = useState<boolean>(true);
+  const [glowingTiles, setGlowingTiles] = useState<Record<number, string>>({});
+  const prevCompleteSetsRef = useRef<Set<string>>(new Set());
+  const prevGameStatusForGlowRef = useRef<string | null>(null);
+  const glowTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  // One-shot glow when a color set is newly completed
+  useEffect(() => {
+    if (boardTiles.length === 0) return;
+
+    const currentSets = getCompleteSets(gameState, boardTiles);
+    const status = gameState.gameStatus;
+
+    if (status === 'ACTIVE' && prevGameStatusForGlowRef.current !== 'ACTIVE') {
+      prevCompleteSetsRef.current = currentSets;
+      prevGameStatusForGlowRef.current = status;
+      return;
+    }
+
+    prevGameStatusForGlowRef.current = status;
+
+    if (status !== 'ACTIVE') {
+      prevCompleteSetsRef.current = new Set();
+      return;
+    }
+
+    currentSets.forEach((key) => {
+      if (prevCompleteSetsRef.current.has(key)) return;
+
+      const colonIdx = key.indexOf(':');
+      const ownerId = key.slice(0, colonIdx);
+      const group = key.slice(colonIdx + 1);
+      const color = gameState.players[ownerId]?.avatar;
+      if (!color) return;
+
+      const indices = boardTiles
+        .filter((t) => t.group === group && t.type === 'STREET')
+        .map((t) => t.index);
+
+      setGlowingTiles((prev) => {
+        const next = { ...prev };
+        indices.forEach((idx) => { next[idx] = color; });
+        return next;
+      });
+
+      indices.forEach((idx) => {
+        if (glowTimeoutsRef.current[idx]) clearTimeout(glowTimeoutsRef.current[idx]);
+        glowTimeoutsRef.current[idx] = setTimeout(() => {
+          setGlowingTiles((prev) => {
+            const next = { ...prev };
+            delete next[idx];
+            return next;
+          });
+          delete glowTimeoutsRef.current[idx];
+        }, 3000);
+      });
+    });
+
+    prevCompleteSetsRef.current = currentSets;
+  }, [gameState, boardTiles]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(glowTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
   const isMyTurn = gameState.currentTurnPlayerId === userId;
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
   const myPlayer = gameState.players[userId];
@@ -766,6 +866,27 @@ export default function Board({
         .animate-pop-in {
           animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+        @keyframes complete-set-glow-once {
+          0% {
+            box-shadow: inset 0 0 4px var(--set-glow-color), 0 0 4px var(--set-glow-color);
+            opacity: 0;
+          }
+          35% {
+            box-shadow: inset 0 0 16px var(--set-glow-color), 0 0 14px var(--set-glow-color), 0 0 28px var(--set-glow-color);
+            opacity: 1;
+          }
+          70% {
+            box-shadow: inset 0 0 10px var(--set-glow-color), 0 0 8px var(--set-glow-color);
+            opacity: 0.6;
+          }
+          100% {
+            box-shadow: none;
+            opacity: 0;
+          }
+        }
+        .animate-complete-set-glow-once {
+          animation: complete-set-glow-once 2.8s ease-out forwards;
+        }
       `}</style>
       <div
         id="board-container"
@@ -830,6 +951,7 @@ export default function Board({
 
           const isHijacked = gameState.activeDonPower?.targetTileIndex === tile.index;
           const hasPolice = gameState.trafficPolice?.active && gameState.trafficPolice?.position === tile.index;
+          const glowColor = glowingTiles[tile.index];
 
           return (
             <div
@@ -848,8 +970,18 @@ export default function Board({
                   }
                 }
               }}
-              className={`relative rounded-md bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60]`}
+              className="relative rounded-md bg-slate-800/40 backdrop-blur-md border border-slate-700 transition-all duration-150 cursor-pointer group hover:bg-slate-700/50 hover:border-slate-500/50 overflow-visible z-10 hover:z-[60]"
             >
+              {/* One-shot complete set glow */}
+              {glowColor && (
+                <div
+                  className="absolute inset-0 rounded-md pointer-events-none z-[5] animate-complete-set-glow-once border-2"
+                  style={{
+                    ['--set-glow-color' as string]: glowColor,
+                    borderColor: glowColor,
+                  }}
+                />
+              )}
               {/* Hijacked Visual Overlay */}
               {isHijacked && (
                 <div className="absolute inset-0 z-30 pointer-events-none rounded-md overflow-hidden ring-2 ring-red-500 shadow-[inset_0_0_15px_rgba(220,38,38,0.5)]">
@@ -930,6 +1062,10 @@ export default function Board({
                   </div>
                 ) : null;
 
+                const mortgageIconNode = isOwned && isMortgaged ? (
+                  <MortgageTileIcon className="w-7 h-7 md:w-9 md:h-9" />
+                ) : null;
+
                 if (orientation === 'CORNER') {
                   return (
                     <div className="w-full h-full flex flex-col items-center justify-center p-1 md:p-2 bg-[#0B0E14]/90 text-center break-keep relative">
@@ -957,9 +1093,9 @@ export default function Board({
                   return (
                     <div className="flex flex-col items-center p-1 gap-1 h-full w-full min-h-0">
                       {/* Zone 1 (Outer Edge - Purchase Bar OR Money) */}
-                      <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
+                      <div className="min-h-[22px] w-full shrink-0 flex items-center justify-center">
                         {isOwned ? (
-                          <div className="h-3 md:h-3.5 w-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                          <OwnerColorBar color={ownerAvatar!} isMortgaged={isMortgaged} />
                         ) : (
                           priceContent
                         )}
@@ -970,8 +1106,8 @@ export default function Board({
                       </div>
                       {/* Zone 3 (Icon - Inner Edge) */}
                       <div className="h-5 w-full shrink-0 flex items-center justify-center mb-0.5 md:mb-1">
-                        {iconNode}
-                        {houseNode}
+                        {mortgageIconNode || iconNode}
+                        {!isMortgaged && houseNode}
                       </div>
                     </div>
                   );
@@ -982,17 +1118,17 @@ export default function Board({
                     <div className="flex flex-col items-center p-1 gap-1 h-full w-full min-h-0">
                       {/* Zone 1 (Icon - Inner Edge) */}
                       <div className="h-5 w-full shrink-0 flex items-center justify-center mt-0.5 md:mt-1">
-                        {iconNode}
-                        {houseNode}
+                        {mortgageIconNode || iconNode}
+                        {!isMortgaged && houseNode}
                       </div>
                       {/* Zone 2 (Text Line - Perfectly Centered) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
                         <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge - Purchase Bar OR Money) */}
-                      <div className="min-h-[16px] w-full shrink-0 flex items-center justify-center">
+                      <div className="min-h-[22px] w-full shrink-0 flex items-center justify-center">
                         {isOwned ? (
-                          <div className="h-3 md:h-3.5 w-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />
+                          <OwnerColorBar color={ownerAvatar!} isMortgaged={isMortgaged} />
                         ) : (
                           priceContent
                         )}
@@ -1005,8 +1141,8 @@ export default function Board({
                   return (
                     <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
                       {/* Zone 1 (Outer Edge) */}
-                      <div className="w-3.5 md:w-4 h-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="w-full h-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      <div className="w-[22px] md:w-[26px] h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <OwnerColorBar color={ownerAvatar!} isMortgaged={isMortgaged} vertical />}
                       </div>
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
@@ -1015,8 +1151,8 @@ export default function Board({
                       </div>
                       {/* Zone 3 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center mr-1 md:mr-1.5">
-                        {iconNode}
-                        {houseNode}
+                        {mortgageIconNode || iconNode}
+                        {!isMortgaged && houseNode}
                       </div>
                     </div>
                   );
@@ -1027,8 +1163,8 @@ export default function Board({
                     <div className="flex flex-row items-center p-1 gap-1.5 h-full w-full min-w-0">
                       {/* Zone 1 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center ml-1 md:ml-1.5">
-                        {iconNode}
-                        {houseNode}
+                        {mortgageIconNode || iconNode}
+                        {!isMortgaged && houseNode}
                       </div>
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
@@ -1036,8 +1172,8 @@ export default function Board({
                         <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
-                      <div className="w-3.5 md:w-4 h-full shrink-0 flex items-center justify-center">
-                        {isOwned && <div className="w-full h-full rounded-none shadow-md" style={{ backgroundColor: ownerAvatar, opacity: isMortgaged ? 0.3 : 1 }} />}
+                      <div className="w-[22px] md:w-[26px] h-full shrink-0 flex items-center justify-center">
+                        {isOwned && <OwnerColorBar color={ownerAvatar!} isMortgaged={isMortgaged} vertical />}
                       </div>
                     </div>
                   );
@@ -1160,14 +1296,8 @@ export default function Board({
                       সতর্কতা: আপনার ব্যালেন্স নেগেটিভ
                     </span>
                     <span className="text-[10px] md:text-xs text-slate-300 text-center leading-tight">
-                      আপনাকে অবশ্যই কিছু বিক্রি বা বন্ধক রেখে টাকা জোগাড় করতে হবে, না হলে দেউলিয়া ঘোষণা করতে হবে।
+                      আপনাকে অবশ্যই কিছু বিক্রি বা বন্ধক রেখে টাকা জোগাড় করতে হবে, অথবা সাইডবার থেকে দেউলিয়া ঘোষণা করুন।
                     </span>
-                    <button
-                      onClick={() => window.dispatchEvent(new CustomEvent('declare_bankruptcy'))}
-                      className="bg-red-600/80 border border-red-500 hover:bg-red-500 text-white font-orbitron font-extrabold text-[9px] md:text-[11px] px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl mt-1 shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all active:scale-[0.98] cursor-pointer w-full sm:w-auto"
-                    >
-                      দেউলিয়া ঘোষণা করুন
-                    </button>
                   </div>
                 )}
 
