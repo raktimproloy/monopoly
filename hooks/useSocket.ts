@@ -46,8 +46,13 @@ export function useSocket(
   useEffect(() => {
     if (!roomId || !userId) return;
 
-    // Connect to Socket.io server with auth credentials
-    const socket = io(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001', {
+    // Dynamically grab the PC's IP address
+    const dynamicServerUrl = typeof window !== 'undefined' 
+      ? `http://${window.location.hostname}:3001` 
+      : 'http://localhost:3001';
+
+    // Connect directly to the dynamic URL, ignoring the .env file completely
+    const socket = io(dynamicServerUrl, {
       auth: { userId },
       query: { userId },
       transports: ['websocket']
@@ -114,6 +119,12 @@ export function useSocket(
     // Handle trade negotiations
     socket.on('trade_proposed', (data: { tradeId: string; offer: TradeOfferPayload }) => {
       setPendingTrade(data);
+    });
+
+    // Handle being kicked from lobby
+    socket.on('kicked_from_lobby', () => {
+      alert("You have been kicked from the lobby by the host.");
+      window.location.href = '/';
     });
 
     socket.on('trade_declined', (data: { tradeId: string; log: string }) => {
@@ -398,6 +409,13 @@ export function useSocket(
     }
   }, [userId]);
 
+  const kickPlayerFromLobby = useCallback((targetId: string) => {
+    console.log('[Socket Emit] kick_player_from_lobby', { playerId: userId, targetId });
+    if (socketRef.current) {
+      socketRef.current.emit('kick_player_from_lobby', { playerId: userId, targetId });
+    }
+  }, [userId]);
+
   useEffect(() => {
     const handleCustomBid = (e: any) => {
       if (socketRef.current) {
@@ -472,6 +490,7 @@ export function useSocket(
     takeLoan,
     repayLoan,
     castKickVote,
-    restartGame
+    restartGame,
+    kickPlayerFromLobby
   };
 }

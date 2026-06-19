@@ -571,11 +571,12 @@ export default function Board({
 
   return (
     <div
-      className="relative m-auto flex flex-col justify-between max-w-full"
+      className="relative mx-auto flex flex-col justify-between shadow-2xl rounded-sm md:rounded-md ring-2 ring-[#2D284B] shrink-0"
       style={{ 
         aspectRatio: '1 / 1', 
-        maxHeight: 'calc(100vh - 2rem)', // 2rem accounts for the p-4 parent padding
-        width: 'auto'
+        width: '100%',
+        minWidth: '700px', /* MAGIC FIX: Forces text/tiles to ALWAYS render perfectly */
+        maxWidth: 'calc(100vh - 2rem)' /* Desktop height constraint */
       }}
     >
       {/* Dev Mode Toggle Button */}
@@ -882,16 +883,16 @@ export default function Board({
               {/* ABSOLUTE REGION TABS - INWARD FACING */}
               {tile.group && orientation !== 'CORNER' && (
                 <div className={
-                  orientation === 'LEFT' ? `absolute left-full top-[20%] h-[60%] w-[11px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                    orientation === 'RIGHT' ? `absolute right-full top-[20%] h-[60%] w-[11px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                      orientation === 'TOP' ? `absolute top-full left-[20%] w-[60%] h-[9px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
-                        `absolute bottom-full left-[20%] w-[60%] h-[9px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
+                  orientation === 'LEFT' ? `absolute left-full top-[25%] h-[50%] w-[15px] rounded-r-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                    orientation === 'RIGHT' ? `absolute right-full top-[25%] h-[50%] w-[15px] rounded-l-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                      orientation === 'TOP' ? `absolute top-full left-[25%] w-[50%] h-[15px] rounded-b-md z-[25] shadow-md ${getGroupColor(tile.group)}` :
+                        `absolute bottom-full left-[25%] w-[50%] h-[15px] rounded-t-md z-[25] shadow-md ${getGroupColor(tile.group)}`
                 } />
               )}
 
               {(() => {
                 const priceContent = !isOwned && !!tile.price ? (
-                  <span className="drop-shadow-md text-green-200 text-[8px] md:text-[10px] xl:text-[12px] font-bold font-mono">
+                  <span className="drop-shadow-md text-green-200 text-[6px] md:text-[8px] xl:text-[10px] font-bold font-mono">
                     {gameState.marketCrash?.active ? (
                       <span className="flex flex-wrap justify-center items-center gap-[2px]">
                         <del className="text-red-400 text-[6px] md:text-[8px] block md:inline leading-none mr-0.5">৳{toBanglaNum(tile.price)}</del>
@@ -904,23 +905,23 @@ export default function Board({
                 ) : null;
 
                 const iconNode = (() => {
-                  if (tile.type === 'RAILROAD') return <TramFront size={28} className="text-slate-300 drop-shadow-md shrink-0" />;
-                  if (tile.type === 'CHEST') return <Gift size={28} className="text-amber-300 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'RAILROAD') return <TramFront className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-slate-300 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'CHEST') return <Gift className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-amber-300 drop-shadow-md shrink-0" />;
                   if (tile.type === 'CHANCE') return <img src="/images/treasure-chest.png" alt="Chance" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0" />;
                   if (tile.type === 'UTILITY') {
-                    if (districtName.includes('বিদ্যুৎ')) return <Lightbulb size={28} className="text-yellow-400 drop-shadow-md shrink-0" />;
-                    if (districtName.includes('পানি')) return <Droplet size={28} className="text-blue-400 drop-shadow-md shrink-0" />;
+                    if (districtName.includes('বিদ্যুৎ')) return <Lightbulb className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-yellow-400 drop-shadow-md shrink-0" />;
+                    if (districtName.includes('পানি')) return <Droplet className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-blue-400 drop-shadow-md shrink-0" />;
                   }
-                  if (tile.type === 'TAX') return <BanknoteArrowDown size={28} className="text-red-400 drop-shadow-md shrink-0" />;
+                  if (tile.type === 'TAX') return <BanknoteArrowDown className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-red-400 drop-shadow-md shrink-0" />;
                   return null;
                 })();
 
                 const getHouseImage = (h: number) => {
-                  if (h === 1) return '/images/house-1.png';
-                  if (h === 2) return '/images/house-2.png';
-                  if (h === 3) return '/images/house-3.png';
-                  if (h === 4) return '/images/houes-4.png';
-                  return '/images/hotel.png';
+                  if (h === 1) return '/images/House_1.Png';
+                  if (h === 2) return '/images/House_2.Png';
+                  if (h === 3) return '/images/House_3.Png';
+                  if (h === 4) return '/images/House_4.png';
+                  return '/images/Hotel.Png';
                 };
 
                 const houseNode = houses > 0 ? (
@@ -933,7 +934,7 @@ export default function Board({
                         </span>
                       </div>
                     ) : (
-                      <img src="/images/hotel.png" alt="Hotel" className="w-5 h-5 md:w-6 md:h-6 object-contain drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+                      <img src="/images/Hotel.Png" alt="Hotel" className="w-5 h-5 md:w-6 md:h-6 object-contain drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
                     )}
                   </div>
                 ) : null;
@@ -974,7 +975,7 @@ export default function Board({
                       </div>
                       {/* Zone 2 (Text Line - Perfectly Centered) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
-                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-xs break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                       </div>
                       {/* Zone 3 (Icon - Inner Edge) */}
                       <div className="h-5 w-full shrink-0 flex items-center justify-center mb-0.5 md:mb-1">
@@ -995,7 +996,7 @@ export default function Board({
                       </div>
                       {/* Zone 2 (Text Line - Perfectly Centered) */}
                       <div className="flex-1 w-full min-h-0 flex flex-col items-center justify-center text-center px-1">
-                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-xs break-keep whitespace-pre-line leading-tight text-center w-full">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge - Purchase Bar OR Money) */}
                       <div className="min-h-[22px] w-full shrink-0 flex items-center justify-center">
@@ -1019,7 +1020,7 @@ export default function Board({
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
                         {priceContent}
-                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-xs break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Icon) */}
                       <div className="w-5 shrink-0 flex items-center justify-center mr-1 md:mr-1.5">
@@ -1041,7 +1042,7 @@ export default function Board({
                       {/* Zone 2 (Text Line - Strict Vertical Stack) */}
                       <div className="flex-1 h-full min-w-0 flex flex-col items-center justify-center text-center px-0.5">
                         {priceContent}
-                        <span className="text-white font-bold font-sans text-[7px] md:text-[9px] xl:text-[11px] break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
+                        <span className="text-white font-bold font-sans text-[8px] md:text-[10px] xl:text-xs break-keep whitespace-pre-line leading-tight text-center w-full mt-0.5">{districtName}</span>
                       </div>
                       {/* Zone 3 (Outer Edge) */}
                       <div className="w-[22px] md:w-[26px] h-full shrink-0 flex items-center justify-center">
@@ -1133,7 +1134,7 @@ export default function Board({
         })}
 
         {/* Center Canvas Area - OPEN DIRECT DESIGN (No extra card framing overlay borders) */}
-        <div className="col-start-2 col-end-11 row-start-2 row-end-11 flex flex-col items-center justify-center p-4 rounded-2xl m-3 relative overflow-hidden gap-3">
+        <div className="absolute inset-[15%] md:inset-[12%] lg:inset-[14%] flex flex-col items-center justify-center pointer-events-none z-0">
 
           {gameState.marketCrash?.active && (
             <div className="absolute top-2 flex items-center gap-2 px-4 py-1.5 bg-red-950/80 border border-red-500/50 rounded-full shadow-[0_0_15px_rgba(239,68,68,0.5)] z-50">

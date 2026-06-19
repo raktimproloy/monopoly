@@ -61,10 +61,10 @@ export default function Lobby() {
         <div className="absolute bottom-0 right-0 w-24 h-[2px] bg-cyber-purple" />
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-kalpurush font-extrabold tracking-widest text-white text-shadow-neon-blue uppercase">
-            Monopoly
+          <h1 className="text-4xl font-kalpurush font-extrabold tracking-widest text-white drop-shadow-md uppercase">
+            BanglaPoly Lobby
           </h1>
-          <p className="text-sm text-slate-300 mt-2 font-kalpurush tracking-widest uppercase">
+          <p className="text-sm text-white/80 mt-2 font-kalpurush tracking-widest uppercase">
             Server-Authoritative Strategy Node
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function Lobby() {
         <form onSubmit={handleJoin} className="space-y-6">
           {/* Callsign Input */}
           <div>
-            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-kalpurush text-white uppercase tracking-widest mb-2">
               Operator Callsign
             </label>
             <div className="relative">
@@ -86,14 +86,14 @@ export default function Lobby() {
                 placeholder="ENTER PLAYER CALLSIGN"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-400 text-base font-kalpurush tracking-wide"
+                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-white/50 text-base font-kalpurush tracking-wide"
               />
             </div>
           </div>
 
           {/* Room ID Input */}
           <div>
-            <label className="block text-xs font-kalpurush text-slate-300 uppercase tracking-widest mb-2">
+            <label className="block text-xs font-kalpurush text-white uppercase tracking-widest mb-2">
               Match Sector (Room ID)
             </label>
             <div className="relative">
@@ -106,7 +106,7 @@ export default function Lobby() {
                 placeholder="ENTER ROOM ID"
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-slate-400 text-base font-kalpurush tracking-wide uppercase"
+                className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-white/50 text-base font-kalpurush tracking-wide uppercase"
               />
             </div>
           </div>
