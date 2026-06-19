@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Terminal, Users, Sparkles } from 'lucide-react';
 
 const AVATAR_COLORS = [
-  { hex: '#6366f1', name: 'Indigo Neon' },
-  { hex: '#f43f5e', name: 'Rose Red' },
-  { hex: '#10b981', name: 'Emerald Green' },
-  { hex: '#f59e0b', name: 'Amber Gold' },
+  { hex: '#ffffff', name: 'Titanium White' },
   { hex: '#8b5cf6', name: 'Violet Pulse' },
-  { hex: '#06b6d4', name: 'Cyan Tech' },
-  { hex: '#ec4899', name: 'Pink Glow' },
-  { hex: '#d946ef', name: 'Fuchsia Flash' }
+  { hex: '#14b8a6', name: 'Cyber Teal' },
+  { hex: '#a3e635', name: 'Radioactive Lime' },
+  { hex: '#d946ef', name: 'Fuchsia Flash' },
+  { hex: '#94a3b8', name: 'Steel Gray' },
+  { hex: '#e0b0ff', name: 'Neon Mauve' },
+  { hex: '#00fa9a', name: 'Spring Mint' }
 ];
 
 const PLAYER_NAME_KEY = 'monopoly_player_name';
@@ -26,13 +26,11 @@ export default function Lobby() {
     return '';
   });
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_COLORS[0].hex);
-  
-  // Auto-fill a random sector code Room ID by default
-  const [roomId, setRoomId] = useState(() => `sector-${Math.floor(100 + Math.random() * 900)}`);
+  const [roomId, setRoomId] = useState('');
 
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !roomId.trim()) return;
+    if (!name.trim()) return;
 
     localStorage.setItem(PLAYER_NAME_KEY, name.trim());
 
@@ -43,8 +41,17 @@ export default function Lobby() {
       localStorage.setItem('monopoly_user_id', userId);
     }
 
+    // Use provided Room ID or generate a new 6-character one
+    let finalRoomId = roomId.trim().toLowerCase();
+    if (!finalRoomId) {
+      const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      for (let i = 0; i < 6; i++) {
+        finalRoomId += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+    }
+
     router.push(
-      `/room/${roomId.toLowerCase()}?name=${encodeURIComponent(name)}&uid=${userId}&avatar=${encodeURIComponent(selectedAvatar)}`
+      `/room/${finalRoomId}?name=${encodeURIComponent(name)}&uid=${userId}&avatar=${encodeURIComponent(selectedAvatar)}`
     );
   };
 
@@ -64,16 +71,13 @@ export default function Lobby() {
           <h1 className="text-4xl font-kalpurush font-extrabold tracking-widest text-white drop-shadow-md uppercase">
             BanglaPoly Lobby
           </h1>
-          <p className="text-sm text-white/80 mt-2 font-kalpurush tracking-widest uppercase">
-            Server-Authoritative Strategy Node
-          </p>
         </div>
 
         <form onSubmit={handleJoin} className="space-y-6">
           {/* Callsign Input */}
           <div>
             <label className="block text-xs font-kalpurush text-white uppercase tracking-widest mb-2">
-              Operator Callsign
+              Your Name
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -94,7 +98,7 @@ export default function Lobby() {
           {/* Room ID Input */}
           <div>
             <label className="block text-xs font-kalpurush text-white uppercase tracking-widest mb-2">
-              Match Sector (Room ID)
+              Room ID
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
@@ -102,8 +106,7 @@ export default function Lobby() {
               </span>
               <input
                 type="text"
-                required
-                placeholder="ENTER ROOM ID"
+                placeholder="LEAVE BLANK TO CREATE NEW"
                 value={roomId}
                 onChange={(e) => setRoomId(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 glass-input text-white placeholder-white/50 text-base font-kalpurush tracking-wide uppercase"
@@ -115,8 +118,7 @@ export default function Lobby() {
             type="submit"
             className="w-full py-4 mt-2 glass-panel-light text-cyber-blue border border-cyber-blue/30 font-kalpurush font-bold tracking-widest text-base hover:bg-cyber-blue/15 hover:border-cyber-blue active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-neon-blue/10 flex items-center justify-center gap-2"
           >
-            <Sparkles size={18} />
-            INITIALIZE SESSION
+            {roomId.trim() ? 'Join Lobby' : 'Create Lobby'}
           </button>
         </form>
       </div>

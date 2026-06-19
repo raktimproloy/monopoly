@@ -53,7 +53,7 @@ function GameRoomContent() {
     boardTiles,
     logs,
     telemetryEntries,
-    pendingTrade,
+    pendingTrades,
     errorMessage,
     clearError,
     roomDetails,
@@ -97,7 +97,7 @@ function GameRoomContent() {
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
-  useGameSounds(gameState, logs, userId, pendingTrade, boardTiles);
+  useGameSounds(gameState, logs, userId, pendingTrades, boardTiles);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [devShowPoliceNotification, setDevShowPoliceNotification] = useState(false);
@@ -108,18 +108,17 @@ function GameRoomContent() {
   const [activeModal, setActiveModal] = useState<'NONE' | 'BANK' | 'KICK'>('NONE');
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
   const [mobileTab, setMobileTab] = useState<'board' | 'bank' | 'logs' | 'players' | 'properties'>('board');
-  const [boardZoom, setBoardZoom] = useState(1);
   const [mobileLobbyTab, setMobileLobbyTab] = useState<'nodes' | 'rules' | 'logs'>('rules');
 
   const AVATAR_COLORS = [
     { hex: '#ffffff', name: 'Titanium White' },
-    { hex: '#8b5cf6', name: 'Violet Pulse' },
-    { hex: '#14b8a6', name: 'Cyber Teal' },
-    { hex: '#a3e635', name: 'Radioactive Lime' },
-    { hex: '#d946ef', name: 'Fuchsia Flash' },
     { hex: '#94a3b8', name: 'Steel Gray' },
-    { hex: '#e0b0ff', name: 'Neon Mauve' },
-    { hex: '#00fa9a', name: 'Spring Mint' }
+    { hex: '#d946ef', name: 'Neon Fuchsia' },
+    { hex: '#14b8a6', name: 'Cyber Teal' },
+    { hex: '#8b5cf6', name: 'Violet Pulse' },
+    { hex: '#f43f5e', name: 'Crimson Rose' },
+    { hex: '#6366f1', name: 'Indigo Spark' },
+    { hex: '#10b981', name: 'Emerald Glow' }
   ];
 
   // Auto-select first available avatar signature
@@ -141,13 +140,13 @@ function GameRoomContent() {
     }
   }, [isGuest, errorMessage, clearError]);
 
- // Change this function to look exactly like this:
+  // Change this function to look exactly like this:
   const handleSubmit = () => {
     if (!guestName.trim()) {
       setModalError('Please enter a player callsign.');
       return;
     }
-    
+
     let finalAvatar = selectedAvatar || AVATAR_COLORS[0].hex;
     if (roomDetails?.players) {
       const takenColors = roomDetails.players.map(p => p.avatar.toLowerCase());
@@ -287,9 +286,6 @@ function GameRoomContent() {
             <h1 className="text-xs font-orbitron font-extrabold tracking-widest text-slate-400 uppercase">
               STRATEGY INTERFACE
             </h1>
-            <div className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[9px] font-mono text-slate-400">
-              LOBBY SECTOR: {roomId.toUpperCase()}
-            </div>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[9px] font-mono">
             {isConnected ? (
@@ -304,19 +300,16 @@ function GameRoomContent() {
               </>
             )}
           </div>
-          <div className="ml-4 hidden md:block">
-            <SoundControls />
-          </div>
         </header>
 
         {/* Main Content Layout */}
         <div className="flex-1 w-full p-4 md:p-6 flex flex-col min-h-0 z-10 relative">
-          <div className="flex flex-col xl:flex-row w-full gap-4 xl:gap-6 h-full">
+          <div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-6 h-full">
 
             {/* =========================================
                 MOBILE TAB NAVIGATION (Hidden on Desktop)
                 ========================================= */}
-            <div className="xl:hidden w-full flex gap-2 shrink-0 bg-[#0B0E14]/80 p-1.5 rounded-xl border border-indigo-500/20 backdrop-blur-md">
+            <div className="lg:hidden w-full flex gap-2 shrink-0 bg-[#0B0E14]/80 p-1.5 rounded-xl border border-indigo-500/20 backdrop-blur-md">
               <button
                 onClick={() => setMobileLobbyTab('nodes')}
                 className={`flex-1 py-2.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${mobileLobbyTab === 'nodes' ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.4)]' : 'text-indigo-300 hover:bg-indigo-900/40'}`}
@@ -340,13 +333,13 @@ function GameRoomContent() {
             {/* =========================================
                 COLUMN 1: CONNECTED NODES
                 ========================================= */}
-            <div className={`w-full xl:w-[320px] h-full flex-col ${mobileLobbyTab === 'nodes' ? 'flex' : 'hidden xl:flex'}`}>
+            <div className={`w-full lg:w-[320px] h-full flex-col ${mobileLobbyTab === 'nodes' ? 'flex' : 'hidden lg:flex'}`}>
               {/* ---> INSERT EXISTING CONNECTED NODES COMPONENT/HTML HERE <--- */}
               <section className="w-full shrink-0 flex flex-col gap-4 h-full glass-panel p-4 relative">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-slate-400 uppercase flex items-center gap-2">
                     <Users size={14} className="text-cyber-purple" />
-                    CONNECTED NODES ({players.length})
+                    Player Names ({players.length})
                   </h3>
                   {isHost && (
                     <button
@@ -400,22 +393,180 @@ function GameRoomContent() {
                     );
                   })}
                 </div>
+
+                {/* Room ID Copy Section */}
+                <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-col gap-2 shrink-0">
+                  <span className="text-[10px] font-orbitron text-slate-400 uppercase tracking-widest font-bold">
+                    ROOM ID
+                  </span>
+                  <div className="flex items-center gap-2 bg-slate-950/40 border border-slate-800 rounded-lg p-2 font-mono text-xs text-white justify-between">
+                    <span className="select-all tracking-wider">{roomId.toUpperCase()}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(roomId);
+                        alert("Room ID copied to clipboard!");
+                      }}
+                      className="px-2 py-1 bg-cyber-blue/10 border border-cyber-blue/20 hover:bg-cyber-blue/20 hover:border-cyber-blue/40 text-cyber-blue hover:text-white rounded text-[8px] font-bold tracking-widest uppercase transition-all cursor-pointer"
+                    >
+                      COPY
+                    </button>
+                  </div>
+                </div>
               </section>
             </div>
 
             {/* =========================================
                 COLUMN 2: TACTICAL RULES
                 ========================================= */}
-            <div className={`w-full flex-1 h-full flex-col overflow-y-auto ${mobileLobbyTab === 'rules' ? 'flex' : 'hidden xl:flex'}`}>
+            <div className={`w-full flex-1 h-full flex-col overflow-y-auto ${mobileLobbyTab === 'rules' ? 'flex' : 'hidden lg:flex'}`}>
               {/* ---> INSERT EXISTING TACTICAL RULES COMPONENT/HTML HERE <--- */}
               <section className="w-full flex-1 glass-panel p-6 flex flex-col justify-between relative">
                 <div>
                   <h3 className="text-xs font-orbitron font-extrabold tracking-widest text-white uppercase flex items-center gap-2 mb-6">
                     <Settings size={14} className="text-cyber-blue" />
-                    TACTICAL RULES CONFIGURATION
+                    Games Rules Settings
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* ... (rules content remains the same) ... */}
+                    {/* Starting Cash */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex flex-col gap-2">
+                      <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                        প্রারম্ভিক টাকা (STARTING CASH)
+                      </label>
+                      <select
+                        value={settings.startingCash}
+                        disabled={!isHost}
+                        onChange={(e) => handleSettingChange('startingCash', parseInt(e.target.value))}
+                        className={`w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs font-mono text-white outline-none focus:border-cyber-blue ${isHost ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
+                      >
+                        <option value={500}>৳৫০০</option>
+                        <option value={1000}>৳১,০০০</option>
+                        <option value={1500}>৳১,৫০০</option>
+                        <option value={2000}>৳২,০০০</option>
+                      </select>
+                      <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-normal">
+                        গেমের শুরুতে প্রতিটি খেলোয়াড় কত টাকা পাবে।
+                      </span>
+                    </div>
+
+                    {/* Free Parking Switch */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                          ফ্রি পার্কিং ক্যাশ পুল
+                        </label>
+                        <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-relaxed">
+                          আয়কর এবং জরিমানা ফ্রি পার্কিং ঘরে জমা হবে এবং যে ঐ ঘরে ল্যান্ড করবে সে পাবে।
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isHost}
+                        onClick={() => handleSettingChange('freeParkingCashPool', !settings.freeParkingCashPool)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings.freeParkingCashPool ? 'bg-cyber-blue shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800'
+                          } ${!isHost ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.freeParkingCashPool ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Allow Unpurchased Auction */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                          নিলামে বিক্রি (AUCTION)
+                        </label>
+                        <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-relaxed">
+                          কোনো খেলোয়াড় ল্যান্ড করা প্রোপার্টি কিনতে না চাইলে তা সরাসরি নিলামে উঠবে।
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isHost}
+                        onClick={() => handleSettingChange('allowUnpurchasedAuction', !settings.allowUnpurchasedAuction)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings.allowUnpurchasedAuction ? 'bg-cyber-blue shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800'
+                          } ${!isHost ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.allowUnpurchasedAuction ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Allow Mortgage */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                          মর্টগেজ সুবিধা (MORTGAGE)
+                        </label>
+                        <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-relaxed">
+                          প্রোপার্টি বন্ধক রেখে ব্যাংক থেকে ঋণ নেওয়ার সুযোগ।
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isHost}
+                        onClick={() => handleSettingChange('allowMortgage', !settings.allowMortgage)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings.allowMortgage ? 'bg-cyber-blue shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800'
+                          } ${!isHost ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.allowMortgage ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Jail Loss Switch */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                          জেলে থাকলে ইনকাম বন্ধ
+                        </label>
+                        <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-relaxed">
+                          জেলে থাকাকালীন সময়ে নিজের মালিকানাধীন প্রোপার্টির ভাড়া আদায় করা যাবে না।
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isHost}
+                        onClick={() => handleSettingChange('jailLoss', !settings.jailLoss)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings.jailLoss ? 'bg-cyber-blue shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800'
+                          } ${!isHost ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.jailLoss ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* Traffic Police Switch */}
+                    <div className="p-4 rounded-xl bg-slate-950/30 border border-slate-900 flex items-center justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-orbitron text-white tracking-wider uppercase font-bold">
+                          ট্রাফিক পুলিশ (TRAFFIC POLICE)
+                        </label>
+                        <span className="text-[8px] font-mono text-white uppercase tracking-wide leading-relaxed">
+                          চালু থাকলে, নির্দিষ্ট সময় পর পর ট্রাফিক পুলিশ এসে জরিমানা বা জেলে পাঠাতে পারে।
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!isHost}
+                        onClick={() => handleSettingChange('enableTrafficPolice', !settings.enableTrafficPolice)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings.enableTrafficPolice ? 'bg-cyber-blue shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-slate-800'
+                          } ${!isHost ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings.enableTrafficPolice ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-center justify-center gap-3 mt-8">
@@ -444,7 +595,7 @@ function GameRoomContent() {
             {/* =========================================
                 COLUMN 3: TACTICAL TELEMETRY
                 ========================================= */}
-            <div className={`w-full xl:w-[380px] h-full flex-col ${mobileLobbyTab === 'logs' ? 'flex' : 'hidden xl:flex'}`}>
+            <div className={`w-full lg:w-[380px] h-full flex-col ${mobileLobbyTab === 'logs' ? 'flex' : 'hidden lg:flex'}`}>
               {/* ---> INSERT EXISTING TACTICAL TELEMETRY COMPONENT/HTML HERE <--- */}
               <section className="w-full shrink-0 h-full min-w-0">
                 <ChatBox entries={telemetryEntries} userId={userId} />
@@ -454,7 +605,7 @@ function GameRoomContent() {
             {/* =========================================
                 GLOBAL MOBILE ACTION BAR (Hidden on Desktop)
                 ========================================= */}
-            <div className="xl:hidden w-full shrink-0 pt-2 z-50">
+            <div className="lg:hidden w-full shrink-0 pt-2 z-50">
               {isHost ? (
                 <>
                   <button
@@ -560,12 +711,12 @@ function GameRoomContent() {
 
   // --- SCREEN 2: ACTIVE STRATEGY GAMEPLAY (gameStatus === 'ACTIVE') ---
   return (
-    <div className="w-screen h-screen bg-[#0B0E14] overflow-hidden flex flex-col xl:flex-row relative">
+    <div className="w-screen h-screen bg-[#0B0E14] overflow-hidden flex flex-col lg:flex-row relative">
 
       {/* =========================================
           PIECE 1: MOBILE TOP NAV (Hidden on Desktop)
           ========================================= */}
-      <div className="xl:hidden w-full h-[60px] shrink-0 bg-[#0B0E14] border-b border-indigo-500/20 flex items-center justify-between px-4 z-40 relative shadow-lg">
+      <div className="lg:hidden w-full h-[60px] shrink-0 bg-[#0B0E14] border-b border-indigo-500/20 flex items-center justify-between px-4 z-40 relative shadow-lg">
         <div className="flex gap-2 w-full">
           <button
             onClick={() => setMobileTab(t => t === 'bank' ? 'board' : 'bank')}
@@ -585,10 +736,10 @@ function GameRoomContent() {
       {/* =========================================
           LEFT COLUMN (Desktop Sidebar OR Mobile Overlay)
           ========================================= */}
-      <div className={`w-full xl:w-[380px] h-[calc(100vh-120px)] xl:h-full overflow-y-auto flex-col gap-4 p-4 z-30 bg-[#0B0E14] xl:bg-transparent xl:relative absolute top-[60px] left-0 ${mobileTab === 'bank' || mobileTab === 'logs' ? 'flex' : 'hidden xl:flex'}`}>
+      <div className={`w-full lg:w-[350px] h-[calc(100vh-120px)] lg:h-full overflow-y-auto flex-col gap-4 p-4 z-30 bg-[#0B0E14] lg:bg-transparent lg:relative absolute left-0 ${mobileTab === 'bank' || mobileTab === 'logs' ? 'flex' : 'hidden lg:flex'}`}>
 
         {/* Render Bank/Power ONLY if active on mobile, OR always on desktop */}
-        <div className={`flex-col gap-4 ${mobileTab === 'bank' || mobileTab === 'board' ? 'flex' : 'hidden xl:flex'}`}>
+        <div className={`flex-col gap-4 ${mobileTab === 'bank' || mobileTab === 'board' ? 'flex' : 'hidden lg:flex'}`}>
           {/* ---> INSERT EXISTING GovtBank COMPONENT HERE <--- */}
           <GovernmentBank
             gameState={gameState}
@@ -607,7 +758,7 @@ function GameRoomContent() {
         </div>
 
         {/* Render Logs ONLY if active on mobile, OR always on desktop */}
-        <div className={`flex-col gap-4 flex-1 min-h-0 ${mobileTab === 'logs' || mobileTab === 'board' ? 'flex' : 'hidden xl:flex'}`}>
+        <div className={`flex-col gap-4 flex-1 min-h-0 ${mobileTab === 'logs' || mobileTab === 'board' ? 'flex' : 'hidden lg:flex'}`}>
           {/* ---> INSERT EXISTING ChatBox / Telemetry COMPONENT HERE <--- */}
           <ChatBox entries={telemetryEntries} userId={userId} />
         </div>
@@ -617,26 +768,11 @@ function GameRoomContent() {
       {/* =========================================
           PIECE 2: MIDDLE AREA (The Board)
           ========================================= */}
-      <div className="flex-1 min-h-0 h-[calc(100vh-120px)] xl:h-screen flex flex-col relative z-10 w-full overflow-hidden bg-[#0B0E14]">
-        
-        {/* MOBILE ZOOM CONTROLS (Hidden on xl screens) */}
-        <div className="xl:hidden absolute top-4 right-4 z-50 flex flex-col items-center gap-1 bg-[#0B0E14]/80 backdrop-blur-md p-1.5 rounded-xl border border-indigo-500/50 shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-          <button onClick={() => setBoardZoom(z => Math.min(z + 0.1, 1.5))} className="w-8 h-8 flex items-center justify-center bg-indigo-600/50 hover:bg-indigo-500 text-white rounded-lg text-lg font-bold transition-all">+</button>
-          <button onClick={() => setBoardZoom(1)} className="text-[9px] font-bold text-indigo-300 tracking-widest py-1">{Math.round(boardZoom * 100)}%</button>
-          <button onClick={() => setBoardZoom(z => Math.max(z - 0.1, 0.4))} className="w-8 h-8 flex items-center justify-center bg-indigo-600/50 hover:bg-indigo-500 text-white rounded-lg text-lg font-bold transition-all">-</button>
-        </div>
+      <div className="flex-1 min-h-0 h-[calc(100vh-120px)] lg:h-screen flex flex-col relative z-10 w-full overflow-hidden bg-[#0B0E14]">
 
-        {/* BOARD SCALING WRAPPER */}
-        {/* overflow-auto allows tactical map panning if they zoom in! */}
-        <div className="w-full h-full flex items-center justify-center overflow-auto custom-scrollbar relative">
-          
-          {/* We use CSS 'zoom' to natively scale the layout without leaving black voids */}
-          <div 
-            className="flex items-center justify-center p-4 md:p-8"
-            style={{ zoom: boardZoom }}
-          >
-            {/* ---> INSERT EXISTING Board COMPONENT HERE <--- */}
-            <main className="relative flex flex-col items-center justify-center h-full w-full text-slate-200">
+        {/* BOARD WRAPPER */}
+        <div className="w-full h-full flex items-center justify-center p-2 lg:p-4 overflow-auto custom-scrollbar">
+          <main className="relative flex flex-col items-center justify-center text-slate-200 aspect-square h-full w-auto flex-shrink-0">
               {/* Alert Banner for Validation Errors */}
               {errorMessage && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-50">
@@ -692,59 +828,60 @@ function GameRoomContent() {
                 onDevGivePardonCard={devGivePardonCard}
                 onDevTestPoliceNotification={() => setDevShowPoliceNotification(true)}
               />
-            </main>
-          </div>
-
+          </main>
         </div>
-        
+
       </div>
 
       {/* =========================================
           RIGHT COLUMN (Desktop Sidebar OR Mobile Overlay)
           ========================================= */}
-      <div className={`w-full xl:w-[380px] h-[calc(100vh-120px)] xl:h-full overflow-y-auto flex-col gap-4 p-4 z-30 bg-[#0B0E14] xl:bg-transparent xl:relative absolute top-[60px] left-0 ${mobileTab === 'players' || mobileTab === 'properties' ? 'flex' : 'hidden xl:flex'}`}>
+      <div className={`w-full lg:w-[350px] h-[calc(100vh-120px)] lg:h-full flex-col gap-4 p-4 z-30 bg-[#0B0E14] lg:bg-transparent lg:relative absolute left-0 ${mobileTab === 'players' || mobileTab === 'properties' ? 'flex' : 'hidden lg:flex'}`}>
 
-        {/* Render Players/Trade ONLY if active on mobile, OR always on desktop */}
-        <div className={`flex-col gap-4 ${mobileTab === 'players' || mobileTab === 'board' ? 'flex' : 'hidden xl:flex'}`}>
-          {/* ---> INSERT EXISTING Sound/Music Sliders HERE <--- */}
-          <div className="glass-card p-3"><SoundControls /></div>
-          {/* ---> INSERT EXISTING PlayerList COMPONENT HERE <--- */}
+        {/* These controls are always visible at the top of the right sidebar */}
+        <div className="glass-card p-3 flex items-center justify-between gap-3 bg-slate-950/40 border border-slate-900 backdrop-blur-md shrink-0">
+          <div className="flex-1">
+            <SoundControls />
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setActiveModal('KICK')}
+              className="px-2.5 py-1.5 bg-red-950/80 border border-red-500/30 hover:bg-red-900/80 text-red-200 text-[10px] font-orbitron font-bold tracking-widest rounded transition-all active:scale-[0.98] cursor-pointer"
+            >
+              ভোটকিক
+            </button>
+            <button
+              onClick={declareBankruptcy}
+              className="px-2.5 py-1.5 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 text-white text-[10px] font-orbitron font-bold tracking-widest rounded transition-all active:scale-[0.98] cursor-pointer"
+            >
+              দেউলিয়া
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable content area for players and trade */}
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 custom-scrollbar pr-1">
           <PlayerList gameState={gameState} boardTiles={boardTiles} userId={userId} />
-          {/* ---> INSERT EXISTING Trade COMPONENT HERE <--- */}
-          <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrade={pendingTrade} onProposeTrade={proposeTrade} onRespondToTrade={respondToTrade} />
+          <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrades={pendingTrades} onProposeTrade={proposeTrade} onRespondToTrade={respondToTrade} />
         </div>
-
-        {/* Render Properties ONLY if active on mobile, OR always on desktop */}
-        <div className={`flex-col gap-4 flex-1 min-h-0 ${mobileTab === 'properties' || mobileTab === 'board' ? 'flex' : 'hidden xl:flex'}`}>
-          {/* ---> INSERT EXISTING MyProperties COMPONENT HERE <--- */}
-          {/* Note: MyProperties is part of TradePanel, so we re-insert TradePanel here for the 'properties' tab */}
-          <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrade={pendingTrade} onProposeTrade={proposeTrade} onRespondToTrade={respondToTrade} />
-        </div>
-
       </div>
 
       {/* =========================================
           PIECE 3: MOBILE BOTTOM NAV (Hidden on Desktop)
           ========================================= */}
-      <div className="xl:hidden w-full h-[60px] shrink-0 bg-[#0B0E14] border-t border-indigo-500/20 flex items-center justify-between px-4 z-40 relative shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.5)]">
+      <div className="lg:hidden w-full h-[60px] shrink-0 bg-[#0B0E14] border-t border-indigo-500/20 flex items-center justify-between px-4 z-40 relative shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.5)]">
         <div className="flex gap-2 w-full">
           <button
             onClick={() => setMobileTab(t => t === 'players' ? 'board' : 'players')}
-            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded border transition-all ${mobileTab === 'players' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-[#0B0E14] text-indigo-300 border-indigo-500/50'}`}
+            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded border transition-all ${mobileTab === 'players' || mobileTab === 'properties' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-[#0B0E14] text-indigo-300 border-indigo-500/50'}`}
           >
-            PLAYERS
+            PLAYERS & ASSETS
           </button>
           <button
             onClick={() => setMobileTab('board')}
-            className={`flex-[1.5] py-2 text-xs font-black rounded border transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)] ${mobileTab === 'board' ? 'bg-indigo-500 text-white border-indigo-300 shadow-[0_0_15px_rgba(79,70,229,0.5)]' : 'bg-indigo-900/60 text-indigo-100 border-indigo-400'}`}
+            className={`flex-1 py-2 text-xs font-black rounded border transition-all shadow-[0_0_10px_rgba(79,70,229,0.2)] ${mobileTab === 'board' ? 'bg-indigo-500 text-white border-indigo-300 shadow-[0_0_15px_rgba(79,70,229,0.5)]' : 'bg-indigo-900/60 text-indigo-100 border-indigo-400'}`}
           >
             BOARD
-          </button>
-          <button
-            onClick={() => setMobileTab(t => t === 'properties' ? 'board' : 'properties')}
-            className={`flex-1 py-2 text-[10px] sm:text-xs font-bold rounded border transition-all ${mobileTab === 'properties' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-[#0B0E14] text-indigo-300 border-indigo-500/50'}`}
-          >
-            ASSETS
           </button>
         </div>
       </div>

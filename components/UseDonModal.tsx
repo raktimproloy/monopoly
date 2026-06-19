@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { GameState, BoardTile } from '../../../shared/types';
+import { GameState, BoardTile } from '../../shared/types';
 import { X, ShieldAlert, ChevronRight, Home, Building2, Crosshair } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 
@@ -9,7 +9,7 @@ interface UseDonModalProps {
   boardTiles: BoardTile[];
   playerId: string;
   onClose: () => void;
-  onConfirm: (targetTileIndex: number) => void;
+  onConfirm: (targetTileIndexes: number[]) => void;
 }
 
 const getGroupColor = (group: string | undefined): string => {
@@ -28,16 +28,28 @@ const getGroupColor = (group: string | undefined): string => {
 
 export default function UseDonModal({ state, boardTiles, playerId, onClose, onConfirm }: UseDonModalProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [selectedTile, setSelectedTile] = useState<number | null>(null);
+  const [selectedTiles, setSelectedTiles] = useState<number[]>([]);
 
   const otherPlayers = Object.values(state.players).filter(p => p.id !== playerId && !p.isBankrupt);
   
   const targetProperties = Object.values(state.properties).filter(p => p.ownerId === selectedPlayer);
 
   const handleConfirm = () => {
-    if (selectedTile !== null) {
-      onConfirm(selectedTile);
+    if (selectedTiles.length > 0) {
+      onConfirm(selectedTiles);
     }
+  };
+
+  const toggleTile = (index: number) => {
+    setSelectedTiles(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      }
+      if (prev.length >= 3) {
+        return prev;
+      }
+      return [...prev, index];
+    });
   };
 
   const calculateRent = (p: any, tile: BoardTile) => {
@@ -81,7 +93,7 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
             <h2 className="text-lg font-orbitron font-extrabold tracking-widest text-[#C8B6FF] uppercase">
               Become a Don
             </h2>
-            <p className="text-xs text-slate-400 font-mono">Select a player and hijack their property for 3 rounds.</p>
+            <p className="text-xs text-slate-400 font-mono">Select a player and hijack up to 3 properties for 1 round.</p>
           </div>
         </div>
 
@@ -101,7 +113,7 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
                     key={p.id}
                     onClick={() => {
                       setSelectedPlayer(p.id);
-                      setSelectedTile(null);
+                      setSelectedTiles([]);
                     }}
                     className={`rounded-xl py-3 px-3 flex items-center gap-3 text-white font-extrabold text-sm transition-all cursor-pointer w-full text-left shadow-sm border ${
                       selectedPlayer === p.id 
@@ -126,8 +138,9 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
 
           {/* Right Column: Properties Selection */}
           <div className="flex flex-col gap-3 h-[280px] md:h-[400px] overflow-hidden md:border-l md:border-[#241F3C] md:pl-6">
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              {selectedPlayer ? "Select Property to Hijack" : "Awaiting Player Selection"}
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex justify-between">
+              <span>{selectedPlayer ? "Select up to 3 Properties" : "Awaiting Player Selection"}</span>
+              {selectedTiles.length > 0 && <span className="text-[#A78BFA]">{selectedTiles.length}/3 Selected</span>}
             </span>
             
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-2">
@@ -144,14 +157,15 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
                   {targetProperties.map(p => {
                     const tile = boardTiles[p.tileIndex];
                     if (!tile) return null;
-                    const isSelected = selectedTile === p.tileIndex;
+                    const isSelected = selectedTiles.includes(p.tileIndex);
+                    const selectionIndex = selectedTiles.indexOf(p.tileIndex);
                     const rent = calculateRent(p, tile);
                     const isMortgaged = p.isMortgaged;
 
                     return (
                       <div
                         key={p.tileIndex}
-                        onClick={() => setSelectedTile(p.tileIndex)}
+                        onClick={() => toggleTile(p.tileIndex)}
                         className={`relative rounded-xl overflow-hidden border cursor-pointer transition-all ${
                           isSelected
                             ? 'bg-[#5B37E8]/20 border-[#7B5BF2] scale-[1.02] z-10'
@@ -187,7 +201,9 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
                         </div>
                         
                         {isSelected && (
-                          <div className="absolute top-2 right-2 w-3 h-3 bg-[#7B5BF2] rounded-full border border-[#131122]" />
+                          <div className="absolute top-2 right-2 w-4 h-4 bg-[#7B5BF2] rounded-full border border-[#131122] flex items-center justify-center text-[9px] font-bold text-white font-mono">
+                            {selectionIndex + 1}
+                          </div>
                         )}
                       </div>
                     );
@@ -208,7 +224,7 @@ export default function UseDonModal({ state, boardTiles, playerId, onClose, onCo
           </button>
           <button
             onClick={handleConfirm}
-            disabled={selectedTile === null}
+            disabled={selectedTiles.length === 0}
             className="bg-gradient-to-r from-[#7B5BF2] to-[#6F4FF0] hover:from-[#6A47E8] hover:to-[#5E3CCF] text-white px-6 py-2.5 rounded-xl font-orbitron font-extrabold text-xs tracking-widest transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-md flex items-center gap-2"
           >
             <Crosshair size={14} />

@@ -9,7 +9,7 @@ interface TradePanelProps {
   gameState: GameState;
   boardTiles: BoardTile[];
   userId: string;
-  pendingTrade: { tradeId: string; offer: TradeOfferPayload } | null;
+  pendingTrades: { tradeId: string; offer: TradeOfferPayload }[];
   onProposeTrade: (offer: Omit<TradeOfferPayload, 'senderId'>) => void;
   onRespondToTrade: (tradeId: string, accept: boolean) => void;
   onMortgageProperty?: (index: number) => void;
@@ -114,13 +114,17 @@ export default function TradePanel({
   gameState,
   boardTiles,
   userId,
-  pendingTrade,
+  pendingTrades,
   onProposeTrade,
   onRespondToTrade,
   onMortgageProperty,
   onUnmortgageProperty
 }: TradePanelProps) {
   const self = gameState.players[userId];
+  
+  const selfEffectiveBalance = gameState.pendingRentOwed?.debtorId === self.id 
+    ? self.balance - gameState.pendingRentOwed.remainingAmount 
+    : self.balance;
 
   // Active counterparties (not me, not bankrupt, not in jail if jailLoss is active)
   const counterparties = Object.values(gameState.players).filter(
@@ -132,6 +136,11 @@ export default function TradePanel({
   // Modals state: 'NONE' | 'SELECT_COUNTERPARTY' | 'CREATE_TRADE' | 'VIEW_TRADE'
   const [activeModal, setActiveModal] = useState<'NONE' | 'SELECT_COUNTERPARTY' | 'CREATE_TRADE' | 'VIEW_TRADE'>('NONE');
   const [receiverId, setReceiverId] = useState<string>('');
+  
+  const receiverEffectiveBalance = receiverId && gameState.players[receiverId] ? 
+    (gameState.pendingRentOwed?.debtorId === receiverId 
+      ? gameState.players[receiverId].balance - gameState.pendingRentOwed!.remainingAmount 
+      : gameState.players[receiverId].balance) : 0;
   const [offerCash, setOfferCash] = useState<number>(0);
   const [requestCash, setRequestCash] = useState<number>(0);
   const [selectedOfferProps, setSelectedOfferProps] = useState<number[]>([]);
@@ -143,32 +152,38 @@ export default function TradePanel({
   const [useTimer, setUseTimer] = useState<boolean>(false);
   const [timerSeconds, setTimerSeconds] = useState<number>(120); // default 2 mins
 
-  // Countdown timer for active proposal
-  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+  const pendingTrade = pendingTrades.find(t => t.tradeId === selectedTradeId) || null;
+
+  // Countdown timer for active proposals
+  const [timeRemaining, setTimeRemaining] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (!pendingTrade || !pendingTrade.offer.expiresAt) {
-      setTimeLeft(0);
+    if (pendingTrades.length === 0) {
+      setTimeRemaining({});
       return;
     }
 
     const calculateTimeLeft = () => {
-      const diff = pendingTrade.offer.expiresAt! - Date.now();
-      return Math.max(0, Math.floor(diff / 1000));
+      const now = Date.now();
+      const updated: Record<string, number> = {};
+      pendingTrades.forEach(t => {
+        if (t.offer.expiresAt) {
+          const diff = t.offer.expiresAt - now;
+          updated[t.tradeId] = Math.max(0, Math.floor(diff / 1000));
+        }
+      });
+      return updated;
     };
 
-    setTimeLeft(calculateTimeLeft());
+    setTimeRemaining(calculateTimeLeft());
 
     const interval = setInterval(() => {
-      const remaining = calculateTimeLeft();
-      setTimeLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(interval);
-      }
+      setTimeRemaining(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [pendingTrade]);
+  }, [pendingTrades]);
 
   // Automatically reset states when a modal closes or values change
   const handleOpenCreateModal = () => {
@@ -197,10 +212,9 @@ export default function TradePanel({
     setActiveModal('CREATE_TRADE');
   };
 
-  const handleOpenViewTradeModal = () => {
-    if (pendingTrade) {
-      setActiveModal('VIEW_TRADE');
-    }
+  const handleOpenViewTradeModal = (tradeId: string) => {
+    setSelectedTradeId(tradeId);
+    setActiveModal('VIEW_TRADE');
   };
 
   const handleSendOffer = () => {
@@ -300,41 +314,50 @@ export default function TradePanel({
 
         {/* Trade proposals */}
         <div className="flex flex-col gap-2 max-h-[140px] overflow-y-auto pr-0.5">
-          {pendingTrade ? (
-            <div
-              onClick={handleOpenViewTradeModal}
-              className="bg-white/5 hover:bg-white/10 border border-[#3A335E] rounded-xl p-3B flex items-center justify-between cursor-pointer hover:bg-[#2C274B] hover:border-[#4E467D] transition-all duration-200 shadow-md group p-3.5"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div
-                  style={{ backgroundColor: pendingSender?.avatar || '#8BA4F9' }}
-                  className="w-5.5 h-5.5 rounded-full border border-white/10 flex items-center justify-center shrink-0"
-                />
-                <span className="text-xs font-sans font-bold text-slate-200 truncate group-hover:text-white transition-colors max-w-[75px]">
-                  {pendingSender?.name || 'Operator'}
-                </span>
-              </div>
+          {pendingTrades.length > 0 ? (
+            pendingTrades.map((trade) => {
+              const sender = gameState.players[trade.offer.senderId];
+              const receiver = gameState.players[trade.offer.receiverId];
+              const tLeft = timeRemaining[trade.tradeId] || 0;
 
-              <div className="flex flex-col items-center shrink-0 px-2.5">
-                <span className="text-[#8B5CF6] text-sm font-mono font-bold">↔</span>
-                {timeLeft > 0 && (
-                  <div className="flex items-center gap-1 mt-0.5 bg-red-950/60 border border-red-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono text-red-400 font-extrabold animate-pulse">
-                    <ClockIcon size={9} />
-                    <span>{formatTime(timeLeft)}</span>
+              return (
+                <div
+                  key={trade.tradeId}
+                  onClick={() => handleOpenViewTradeModal(trade.tradeId)}
+                  className="bg-white/5 hover:bg-white/10 border border-[#3A335E] rounded-xl p-3.5 flex items-center justify-between cursor-pointer hover:bg-[#2C274B] hover:border-[#4E467D] transition-all duration-200 shadow-md group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      style={{ backgroundColor: sender?.avatar || '#8BA4F9' }}
+                      className="w-5.5 h-5.5 rounded-full border border-white/10 flex items-center justify-center shrink-0"
+                    />
+                    <span className="text-xs font-sans font-bold text-slate-200 truncate group-hover:text-white transition-colors max-w-[75px]">
+                      {sender?.name || 'Operator'}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="text-xs font-sans font-bold text-slate-200 truncate group-hover:text-white transition-colors max-w-[75px]">
-                  {pendingReceiver?.name || 'Operator'}
-                </span>
-                <div
-                  style={{ backgroundColor: pendingReceiver?.avatar || '#8BA4F9' }}
-                  className="w-5.5 h-5.5 rounded-full border border-white/10 flex items-center justify-center shrink-0"
-                />
-              </div>
-            </div>
+                  <div className="flex flex-col items-center shrink-0 px-2.5">
+                    <span className="text-[#8B5CF6] text-sm font-mono font-bold">↔</span>
+                    {tLeft > 0 && (
+                      <div className="flex items-center gap-1 mt-0.5 bg-red-950/60 border border-red-500/20 px-2 py-0.5 rounded-full text-[10px] font-mono text-red-400 font-extrabold animate-pulse">
+                        <ClockIcon size={9} />
+                        <span>{formatTime(tLeft)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xs font-sans font-bold text-slate-200 truncate group-hover:text-white transition-colors max-w-[75px]">
+                      {receiver?.name || 'Operator'}
+                    </span>
+                    <div
+                      style={{ backgroundColor: receiver?.avatar || '#8BA4F9' }}
+                      className="w-5.5 h-5.5 rounded-full border border-white/10 flex items-center justify-center shrink-0"
+                    />
+                  </div>
+                </div>
+              );
+            })
           ) : (
             <div className="text-center py-7 bg-[#121021]/50 border border-[#241F3C] rounded-xl text-slate-500 font-mono text-xs uppercase tracking-widest leading-relaxed">
               কোনো প্রস্তাব নেই
@@ -431,9 +454,9 @@ export default function TradePanel({
                           if (onUnmortgageProperty) onUnmortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('unmortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={self.balance < unmortgageCost || isJailLossRestricted || isDonFrozen}
+                        disabled={selfEffectiveBalance < unmortgageCost || isJailLossRestricted || isDonFrozen}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          self.balance >= unmortgageCost && !isJailLossRestricted && !isDonFrozen
+                          selfEffectiveBalance >= unmortgageCost && !isJailLossRestricted && !isDonFrozen
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -577,14 +600,14 @@ export default function TradePanel({
                   <input
                     type="range"
                     min={0}
-                    max={self.balance}
+                    max={Math.max(0, selfEffectiveBalance)}
                     value={offerCash}
                     onChange={(e) => setOfferCash(Number(e.target.value))}
                     className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>৳{self.balance}</span>
+                    <span>৳{selfEffectiveBalance}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
@@ -677,14 +700,14 @@ export default function TradePanel({
                   <input
                     type="range"
                     min={0}
-                    max={gameState.players[receiverId]?.balance || 0}
+                    max={Math.max(0, receiverEffectiveBalance)}
                     value={requestCash}
                     onChange={(e) => setRequestCash(Number(e.target.value))}
                     className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>৳{gameState.players[receiverId]?.balance || 0}</span>
+                    <span>৳{receiverEffectiveBalance}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
@@ -961,10 +984,10 @@ export default function TradePanel({
             </div>
 
             {/* Countdown notice on View trade if timer is running */}
-            {timeLeft > 0 && (
+            {pendingTrade.offer.expiresAt && (timeRemaining[pendingTrade.tradeId] || 0) > 0 && (
               <div className="flex justify-center items-center gap-2 bg-red-950/20 border border-red-500/20 px-3.5 py-1.5 rounded-xl text-xs font-mono text-red-400 font-bold animate-pulse mt-1 select-none">
                 <ClockIcon size={12} className="stroke-current" />
-                <span>EXPIRES IN {formatTime(timeLeft)}</span>
+                <span>EXPIRES IN {formatTime(timeRemaining[pendingTrade.tradeId] || 0)}</span>
               </div>
             )}
 

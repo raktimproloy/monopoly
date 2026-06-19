@@ -21,7 +21,7 @@ export function useBoardHistoryLogs(logs: string[], gameState: GameState, delayM
   const prevLogsRef = useRef(logs);
   const prevPositionsRef = useRef<Record<string, number>>({});
   const latestLogsRef = useRef(logs);
-  const delayTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   latestLogsRef.current = logs;
 

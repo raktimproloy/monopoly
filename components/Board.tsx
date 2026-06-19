@@ -8,7 +8,7 @@ import { toBanglaNum } from '../utils/format';
 import { getCompleteSets } from '../utils/propertySets';
 import { historyTheme, parseBoardHistoryLog } from '../utils/boardHistory';
 import { useBoardHistoryLogs } from '../hooks/useBoardHistoryLogs';
-import { isPropertyFrozenForOwner } from '../utils/donPower';
+import { isPropertyFrozenForOwner, isPropertyHijackedByDon } from '../utils/donPower';
 
 interface BoardProps {
   gameState: GameState;
@@ -155,10 +155,14 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
   const [isVisible, setIsVisible] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [displayPosition, setDisplayPosition] = useState(player.position);
-  const [displayBalance, setDisplayBalance] = useState(player.balance);
+
+  const initialEffectiveBalance = gameState.pendingRentOwed?.debtorId === player.id
+    ? player.balance - gameState.pendingRentOwed.remainingAmount
+    : player.balance;
+  const [displayBalance, setDisplayBalance] = useState(initialEffectiveBalance);
 
   const [floaters, setFloaters] = useState<{ id: number; diff: number }[]>([]);
-  const prevBalance = useRef(player.balance);
+  const prevBalance = useRef(initialEffectiveBalance);
   const prevGameState = useRef<GameState>(gameState);
 
   const isCurrentTurn = gameState.currentTurnPlayerId === player.id;
@@ -228,10 +232,10 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
         if (Number(displayPosition) === 10) {
           if (player.inJail) {
-            multX = 0.5;  
+            multX = 0.5;
             multY = 0.62; // Mathematically centered over the 60% height icon
           } else {
-            multX = 0.8;  
+            multX = 0.8;
             multY = 0.2;
           }
         }
@@ -266,9 +270,13 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
     const prevState = prevGameState.current;
     prevGameState.current = gameState;
 
-    if (player.balance !== prevBalance.current) {
-      const diff = player.balance - prevBalance.current;
-      prevBalance.current = player.balance;
+    const effectiveBalance = gameState.pendingRentOwed?.debtorId === player.id
+      ? player.balance - gameState.pendingRentOwed.remainingAmount
+      : player.balance;
+
+    if (effectiveBalance !== prevBalance.current) {
+      const diff = effectiveBalance - prevBalance.current;
+      prevBalance.current = effectiveBalance;
 
       // Determine if a movement occurred during this state update
       const currentActiveId = gameState.currentTurnPlayerId;
@@ -279,7 +287,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
       const delay = activeMoved ? 2200 : 0; // Wait for dice (1.5s) + move (0.7s)
 
       setTimeout(() => {
-        setDisplayBalance(player.balance);
+        setDisplayBalance(effectiveBalance);
         const fId = Math.random();
         setFloaters(prev => [...prev, { id: fId, diff }]);
 
@@ -339,18 +347,16 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 function OwnerColorBar({ color, isMortgaged, vertical = false }: { color: string; isMortgaged: boolean; vertical?: boolean }) {
   return (
     <div
-      className={`relative flex items-center justify-center rounded-none shadow-md overflow-hidden ${
-        vertical ? 'w-[22px] md:w-[26px] h-full' : 'h-[18px] md:h-[22px] w-full'
-      }`}
+      className={`relative flex items-center justify-center rounded-none shadow-md overflow-hidden ${vertical ? 'w-[22px] md:w-[26px] h-full' : 'h-[18px] md:h-[22px] w-full'
+        }`}
       style={{ backgroundColor: color }}
     >
       {isMortgaged && (
         <img
           src="/images/Mortgage.png"
           alt="বন্ধক"
-          className={`object-contain pointer-events-none drop-shadow-sm ${
-            vertical ? 'w-[18px] md:w-[22px] h-auto max-h-full' : 'h-[16px] md:h-[20px] w-auto max-w-full'
-          }`}
+          className={`object-contain pointer-events-none drop-shadow-sm ${vertical ? 'w-[18px] md:w-[22px] h-auto max-h-full' : 'h-[16px] md:h-[20px] w-auto max-w-full'
+            }`}
           draggable={false}
         />
       )}
@@ -571,13 +577,7 @@ export default function Board({
 
   return (
     <div
-      className="relative mx-auto flex flex-col justify-between shadow-2xl rounded-sm md:rounded-md ring-2 ring-[#2D284B] shrink-0"
-      style={{ 
-        aspectRatio: '1 / 1', 
-        width: '100%',
-        minWidth: '700px', /* MAGIC FIX: Forces text/tiles to ALWAYS render perfectly */
-        maxWidth: 'calc(100vh - 2rem)' /* Desktop height constraint */
-      }}
+      className="relative mx-auto flex flex-col justify-between shadow-2xl rounded-sm md:rounded-md ring-2 ring-[#2D284B] shrink-0 w-full h-full"
     >
       {/* Dev Mode Toggle Button */}
       <button
@@ -826,7 +826,7 @@ export default function Board({
           else if (orientation === 'LEFT') hoverPositionClass = 'left-[calc(100%+8px)] top-1/2 -translate-y-1/2';
           else if (orientation === 'RIGHT') hoverPositionClass = 'right-[calc(100%+8px)] top-1/2 -translate-y-1/2';
 
-          const isHijacked = gameState.activeDonPower?.targetTileIndex === tile.index;
+          const isHijacked = gameState.activeDonPower?.targetTileIndexes.includes(tile.index);
           const hasPolice = gameState.trafficPolice?.active && gameState.trafficPolice?.position === tile.index;
           const glowColor = glowingTiles[tile.index];
 
@@ -875,7 +875,7 @@ export default function Board({
               {hasPolice && (
                 <div className="absolute inset-0 z-[35] pointer-events-none flex items-center justify-center rounded-md">
                   <div className="relative animate-bounce drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">
-                     <img src="/images/trafic-plice.png" alt="Traffic Police" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
+                    <img src="/images/trafic-plice.png" alt="Traffic Police" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
                   </div>
                 </div>
               )}
@@ -921,7 +921,7 @@ export default function Board({
                   if (h === 2) return '/images/House_2.Png';
                   if (h === 3) return '/images/House_3.Png';
                   if (h === 4) return '/images/House_4.png';
-                  return '/images/Hotel.Png';
+                  return '/images/hotel.Png';
                 };
 
                 const houseNode = houses > 0 ? (
@@ -1149,7 +1149,7 @@ export default function Board({
           </div>
 
           {/* Status & Action Buttons directly under the dice (No card frame) */}
-          <div className="w-full z-10 flex flex-col items-center justify-center select-none shrink-0">
+          <div className="w-full z-10 flex flex-col items-center justify-center select-none shrink-0 pointer-events-auto">
             {!isMyTurn ? (
               <div className="text-center flex items-center justify-center gap-2 py-1.5 w-full">
                 <span
@@ -1250,7 +1250,7 @@ export default function Board({
           </div>
 
           {/* Real-time Activity History Log — short lines, player dot only */}
-          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0">
+          <div className="w-full relative select-none h-36 pt-2 flex flex-col justify-start shrink-0 pointer-events-auto">
             <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2 scrollbar-thin select-none max-h-[120px] pb-10">
               {(() => {
                 const entries = boardHistoryLogs
@@ -1485,6 +1485,14 @@ export default function Board({
                               <span style={{ backgroundColor: owner.avatar }} className="w-4 h-4 rounded-full border border-slate-400" />
                               <span className="font-bold text-slate-900">{owner.name}</span>
                             </div>
+                            {isPropertyHijackedByDon(gameState, selectedTileIndex) && (
+                              <div className="mt-2 text-center text-[11px] text-red-600 font-bold bg-red-500/10 border border-red-500/20 rounded px-2.5 py-1.5 flex flex-col items-center gap-0.5">
+                                <span className="flex items-center gap-1">🕴️ ডন দ্বারা হাইজ্যাককৃত!</span>
+                                <span className="text-[10px] text-slate-500 font-normal">
+                                  ভাড়া পাবেন: {gameState.players[gameState.activeDonPower!.donPlayerId]?.name || 'ডন'}
+                                </span>
+                              </div>
+                            )}
                             {selProp.isMortgaged && <span className="text-xs text-red-500 font-bold mt-1">বন্ধক রাখা হয়েছে</span>}
                             {!selProp.isMortgaged && selProp.houses > 0 && (
                               <span className="text-xs text-emerald-600 font-bold mt-1">

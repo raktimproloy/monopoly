@@ -11,10 +11,10 @@ interface PoliceNotificationProps {
 
 export default function PoliceNotification({ state, playerId, forceShow, onCloseForceShow }: PoliceNotificationProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [lastHijackedProperty, setLastHijackedProperty] = useState<number | null>(null);
-
   const donPower = state.activeDonPower;
   const isVictim = donPower?.originalOwnerId === playerId;
+  const currentKeys = donPower?.targetTileIndexes?.join(',') || '';
+  const [lastHijackedKeys, setLastHijackedKeys] = useState<string>('');
 
   useEffect(() => {
     if (forceShow) {
@@ -22,17 +22,17 @@ export default function PoliceNotification({ state, playerId, forceShow, onClose
       return;
     }
     
-    if (donPower && isVictim && donPower.targetTileIndex !== lastHijackedProperty) {
-      setLastHijackedProperty(donPower.targetTileIndex);
+    if (donPower && isVictim && currentKeys !== lastHijackedKeys) {
+      setLastHijackedKeys(currentKeys);
       setIsVisible(true);
     } else if (!donPower && isVisible && !forceShow) {
       setIsVisible(false);
     }
-  }, [donPower, isVictim, lastHijackedProperty, isVisible, forceShow]);
+  }, [donPower, isVictim, currentKeys, lastHijackedKeys, isVisible, forceShow]);
 
   if (!isVisible || (!donPower && !forceShow)) return null;
 
-  const displayTile = donPower?.targetTileIndex ?? 12;
+  const displayTile = donPower?.targetTileIndexes ? donPower.targetTileIndexes.join(', #') : '12';
   const displayRounds = donPower?.remainingRounds ?? 3;
 
   return (
@@ -62,7 +62,8 @@ export default function PoliceNotification({ state, playerId, forceShow, onClose
           </h2>
 
           <p className="text-slate-300 text-[13px] leading-relaxed mb-5 font-mono">
-            Tile <span className="text-white font-bold">#{displayTile}</span> has been seized by the Don.
+            {donPower?.targetTileIndexes && donPower.targetTileIndexes.length > 1 ? 'Tiles' : 'Tile'}{' '}
+            <span className="text-white font-bold">#{displayTile}</span> {donPower?.targetTileIndexes && donPower.targetTileIndexes.length > 1 ? 'have' : 'has'} been seized by the Don.
             Rent is redirected for <span className="text-red-400 font-bold">{displayRounds} turns</span>.
           </p>
 

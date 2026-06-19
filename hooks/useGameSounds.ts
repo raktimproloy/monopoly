@@ -7,14 +7,14 @@ export function useGameSounds(
   gameState: GameState | null,
   logs: string[],
   userId: string,
-  pendingTrade: { tradeId: string } | null,
+  pendingTrades: { tradeId: string }[] = [],
   boardTiles: BoardTile[] = []
 ) {
   const prevGameStatus = useRef<string | null>(null);
   const prevTurnPlayerId = useRef<string | null>(null);
   const prevLogsLength = useRef<number>(0);
   const prevPlayersCount = useRef<number>(0);
-  const prevPendingTradeId = useRef<string | null>(null);
+  const prevPendingTradesCount = useRef<number>(0);
   const prevCompleteSets = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -56,12 +56,12 @@ export function useGameSounds(
     prevPlayersCount.current = currentPlayersCount;
 
     // Detect Trade Open
-    if (pendingTrade && pendingTrade.tradeId !== prevPendingTradeId.current) {
+    if (pendingTrades.length > prevPendingTradesCount.current) {
       soundManager.playEventSound('TRADE_OPEN');
     }
-    prevPendingTradeId.current = pendingTrade ? pendingTrade.tradeId : null;
+    prevPendingTradesCount.current = pendingTrades.length;
 
-  }, [gameState, userId, pendingTrade, boardTiles]);
+  }, [gameState, userId, pendingTrades, boardTiles]);
 
   useEffect(() => {
     // Detect new events from logs

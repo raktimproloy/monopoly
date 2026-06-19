@@ -44,8 +44,11 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
     if (!initialized.current) {
       const initialBalances: Record<string, number> = {};
       Object.values(gameState.players).forEach(p => {
-        initialBalances[p.id] = p.balance;
-        prevBalances.current[p.id] = p.balance;
+        const effectiveBalance = gameState.pendingRentOwed?.debtorId === p.id 
+          ? p.balance - gameState.pendingRentOwed.remainingAmount 
+          : p.balance;
+        initialBalances[p.id] = effectiveBalance;
+        prevBalances.current[p.id] = effectiveBalance;
       });
       setDisplayBalances(initialBalances);
       initialized.current = true;
@@ -65,11 +68,14 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
     const changes: { id: string, diff: number, newBalance: number }[] = [];
 
     Object.values(gameState.players).forEach(p => {
+      const effectiveBalance = gameState.pendingRentOwed?.debtorId === p.id 
+        ? p.balance - gameState.pendingRentOwed.remainingAmount 
+        : p.balance;
       const prev = prevBalances.current[p.id];
-      if (prev !== undefined && prev !== p.balance) {
-        changes.push({ id: p.id, diff: p.balance - prev, newBalance: p.balance });
+      if (prev !== undefined && prev !== effectiveBalance) {
+        changes.push({ id: p.id, diff: effectiveBalance - prev, newBalance: effectiveBalance });
       }
-      prevBalances.current[p.id] = p.balance;
+      prevBalances.current[p.id] = effectiveBalance;
     });
 
     // --- LOCATION & STATUS AUDIO TRACKER ---
@@ -86,8 +92,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
       // TRIGGER 2: Player lands on "Obosor" (Position changes, and new tile is Obosor)
       if (prevPlayer.position !== player.position) {
         const landedTile = boardTiles[player.position];
-        // Match the tile by name (e.g., 'অবসর') or type if applicable
-        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'REST' || landedTile?.type === 'FREE_PARKING') {
+        if (landedTile?.name?.includes('অবসর') || landedTile?.type === 'FREE_PARKING') {
           eventsToPlay.push('PRISON_SOUND');
         }
       }

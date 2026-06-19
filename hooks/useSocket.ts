@@ -15,7 +15,7 @@ export function useSocket(
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
   const [telemetryEntries, setTelemetryEntries] = useState<TelemetryEntry[]>([]);
   const gameStateRef = useRef<GameState | null>(null);
-  const [pendingTrade, setPendingTrade] = useState<{ tradeId: string; offer: TradeOfferPayload } | null>(null);
+  const [pendingTrades, setPendingTrades] = useState<{ tradeId: string; offer: TradeOfferPayload }[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomDetails, setRoomDetails] = useState<{
     exists: boolean;
@@ -46,12 +46,24 @@ export function useSocket(
   useEffect(() => {
     if (!roomId || !userId) return;
 
-    // Dynamically grab the PC's IP address
-    const dynamicServerUrl = typeof window !== 'undefined' 
-      ? `http://${window.location.hostname}:3001` 
-      : 'http://localhost:3001';
+    // Dynamically resolve the server URL based on the window location
+    let dynamicServerUrl = 'http://localhost:3001';
+    if (typeof window !== 'undefined' && window.location) {
+      const { hostname, protocol } = window.location;
+      if (hostname && hostname.includes('devtunnels.ms')) {
+        // Devtunnels format: https://<tunnel>-3000.asse.devtunnels.ms
+        // Replace port -3000 with -3001 for backend socket server
+        const secureHost = hostname.replace('-3000', '-3001');
+        dynamicServerUrl = `https://${secureHost}`;
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        dynamicServerUrl = `http://${hostname}:3001`;
+      } else if (hostname) {
+        const isSecure = protocol === 'https:';
+        dynamicServerUrl = `${isSecure ? 'https' : 'http'}://${hostname}:3001`;
+      }
+    }
 
-    // Connect directly to the dynamic URL, ignoring the .env file completely
+    // Connect directly to the dynamic URL
     const socket = io(dynamicServerUrl, {
       auth: { userId },
       query: { userId },
@@ -118,7 +130,11 @@ export function useSocket(
 
     // Handle trade negotiations
     socket.on('trade_proposed', (data: { tradeId: string; offer: TradeOfferPayload }) => {
-      setPendingTrade(data);
+      setPendingTrades((prev) => {
+        // Prevent duplicate offers
+        if (prev.some(t => t.tradeId === data.tradeId)) return prev;
+        return [...prev, data];
+      });
     });
 
     // Handle being kicked from lobby
@@ -132,7 +148,7 @@ export function useSocket(
     });
 
     socket.on('trade_resolved', (data: { tradeId: string }) => {
-      setPendingTrade((prev) => (prev && prev.tradeId === data.tradeId ? null : prev));
+      setPendingTrades((prev) => prev.filter(t => t.tradeId !== data.tradeId));
     });
 
     // Handle server resets
@@ -209,7 +225,7 @@ export function useSocket(
         tradeId,
         accept
       });
-      setPendingTrade(null);
+      setPendingTrades([]);
     }
   }, [userId]);
 
@@ -451,7 +467,7 @@ export function useSocket(
     boardTiles,
     logs,
     telemetryEntries,
-    pendingTrade,
+    pendingTrades,
     errorMessage,
     clearError: () => setErrorMessage(null),
     roomDetails,

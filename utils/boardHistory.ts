@@ -17,6 +17,7 @@ function findPlayerInLog(log: string, players: Player[]): Player | null {
 
 function cleanText(text: string): string {
   return text
+    .replace(/\n/g, ' ')
     .replace(/\s*\(ডাবল!\)\s*/g, '')
     .replace(/[।.]+$/g, '')
     .trim();

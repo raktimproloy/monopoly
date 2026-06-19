@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState } from '../../../shared/types';
+import { GameState } from '../../shared/types';
 import UseDonModal from './UseDonModal';
 import { Zap, ShieldAlert, Key } from 'lucide-react';
 
@@ -36,8 +36,8 @@ export default function PowerSection({ state, boardTiles, playerId, onUsePowerCa
     );
   }
 
-  const handleUseDon = (targetTileIndex: number) => {
-    onUsePowerCard?.('BECOME_A_DON', { targetTileIndex });
+  const handleUseDon = (targetTileIndexes: number[]) => {
+    onUsePowerCard?.('BECOME_A_DON', { targetTileIndexes });
     setIsDonModalOpen(false);
   };
 
