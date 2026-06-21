@@ -47,19 +47,36 @@ export function useSocket(
     if (!roomId || !userId) return;
 
     // Dynamically resolve the server URL based on the window location
-    let dynamicServerUrl = 'http://localhost:3001';
+    let dynamicServerUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:6001';
+    let serverPort = '6001';
+    try {
+      const url = new URL(dynamicServerUrl);
+      if (url.port) {
+        serverPort = url.port;
+      }
+    } catch (e) {
+      // Ignore URL parsing error
+    }
+
     if (typeof window !== 'undefined' && window.location) {
       const { hostname, protocol } = window.location;
       if (hostname && hostname.includes('devtunnels.ms')) {
         // Devtunnels format: https://<tunnel>-3000.asse.devtunnels.ms
-        // Replace port -3000 with -3001 for backend socket server
-        const secureHost = hostname.replace('-3000', '-3001');
+        // Replace port -3000 with backend port for backend socket server
+        const secureHost = hostname.replace('-3000', `-${serverPort}`);
         dynamicServerUrl = `https://${secureHost}`;
       } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        dynamicServerUrl = `http://${hostname}:3001`;
-      } else if (hostname) {
-        const isSecure = protocol === 'https:';
-        dynamicServerUrl = `${isSecure ? 'https' : 'http'}://${hostname}:3001`;
+        dynamicServerUrl = `http://${hostname}:${serverPort}`;
+      } else {
+        // Respect custom API domains (like bdpoly-api.aftonix.com) if configured
+        const hasCustomServerUrl = process.env.NEXT_PUBLIC_SERVER_URL && 
+          !process.env.NEXT_PUBLIC_SERVER_URL.includes('localhost') && 
+          !process.env.NEXT_PUBLIC_SERVER_URL.includes('127.0.0.1');
+        
+        if (!hasCustomServerUrl && hostname) {
+          const isSecure = protocol === 'https:';
+          dynamicServerUrl = `${isSecure ? 'https' : 'http'}://${hostname}:${serverPort}`;
+        }
       }
     }
 
@@ -75,7 +92,7 @@ export function useSocket(
     socket.on('connect', () => {
       setIsConnected(true);
       setErrorMessage(null);
-      
+
       // Fetch room details on connect
       socket.emit('get_room_details', { roomId }, (response: any) => {
         if (response && !response.error) {
@@ -443,14 +460,14 @@ export function useSocket(
     const handleCustomMortgage = (e: any) => mortgageProperty(e.detail);
     const handleCustomUnmortgage = (e: any) => unmortgageProperty(e.detail);
     const handleCustomSellPardon = () => sellPardonCard();
-    
+
     window.addEventListener('place_bid', handleCustomBid);
     window.addEventListener('auction_property', handleCustomAuction);
     window.addEventListener('declare_bankruptcy', handleCustomBankrupt);
     window.addEventListener('mortgage_property', handleCustomMortgage);
     window.addEventListener('unmortgage_property', handleCustomUnmortgage);
     window.addEventListener('sell_pardon_card', handleCustomSellPardon);
-    
+
     return () => {
       window.removeEventListener('place_bid', handleCustomBid);
       window.removeEventListener('auction_property', handleCustomAuction);

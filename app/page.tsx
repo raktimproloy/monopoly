@@ -129,7 +129,7 @@ export default function Lobby() {
           onClick={async () => {
             if (window.confirm("WARNING: This will forcefully close all active game servers and wipe the database. Continue?")) {
               try {
-                const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+                const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:6001';
                 const res = await fetch(`${baseUrl}/api/clear-db`, { method: 'POST' });
                 if (res.ok) {
                   alert("Servers shut down and database cleared successfully.");
