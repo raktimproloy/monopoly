@@ -27,6 +27,7 @@ interface BoardProps {
   onSellHouse?: (tileIndex: number) => void;
   onSellProperty?: (tileIndex: number) => void;
   onAuctionProperty?: (tileIndex: number) => void;
+  onStartLottery?: () => void;
   onTeleportPlayer?: (targetTileIndex: number) => void;
   onDevRollDice?: (d1: number, d2: number) => void;
   onDevAddFunds?: (amount: number) => void;
@@ -175,23 +176,17 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
         const expectedPos = (displayPosition + diceSum) % 40;
 
         let t1: ReturnType<typeof setTimeout>;
-        let t2: ReturnType<typeof setTimeout>;
 
         if (player.position === 10 && player.inJail && expectedPos === 30 && displayPosition !== 30) {
-          // Delay for dice roll, move to 30 (Go To Jail), wait, then move to 10 (Jail)
+          // Move to 30 (Go To Jail), wait, then move to 10 (Jail)
+          setDisplayPosition(30);
           t1 = setTimeout(() => {
-            setDisplayPosition(30);
-            t2 = setTimeout(() => {
-              setDisplayPosition(10);
-            }, 800);
-          }, 1500);
-          return () => { clearTimeout(t1); clearTimeout(t2); };
+            setDisplayPosition(10);
+          }, 800);
+          return () => clearTimeout(t1);
         } else {
           // Normal movement
-          t1 = setTimeout(() => {
-            setDisplayPosition(player.position);
-          }, 1500);
-          return () => clearTimeout(t1);
+          setDisplayPosition(player.position);
         }
       } else {
         setDisplayPosition(player.position);
@@ -381,6 +376,7 @@ export default function Board({
   onSellHouse,
   onSellProperty,
   onAuctionProperty,
+  onStartLottery,
   onTeleportPlayer,
   onDevRollDice,
   onDevAddFunds,
@@ -908,6 +904,7 @@ export default function Board({
                   if (tile.type === 'RAILROAD') return <TramFront className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-slate-300 drop-shadow-md shrink-0" />;
                   if (tile.type === 'CHEST') return <Gift className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-amber-300 drop-shadow-md shrink-0" />;
                   if (tile.type === 'CHANCE') return <img src="/images/treasure-chest.png" alt="Chance" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0" />;
+                  if (tile.type === 'LOTTERY') return <img src="/images/ticket.png" alt="Lottery" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0 filter brightness-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />;
                   if (tile.type === 'UTILITY') {
                     if (districtName.includes('বিদ্যুৎ')) return <Lightbulb className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-yellow-400 drop-shadow-md shrink-0" />;
                     if (districtName.includes('পানি')) return <Droplet className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-blue-400 drop-shadow-md shrink-0" />;
@@ -934,7 +931,7 @@ export default function Board({
                         </span>
                       </div>
                     ) : (
-                      <img src="/images/Hotel.Png" alt="Hotel" className="w-5 h-5 md:w-6 md:h-6 object-contain drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
+                      <img src="/images/hotel.Png" alt="Hotel" className="w-5 h-5 md:w-6 md:h-6 object-contain drop-shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
                     )}
                   </div>
                 ) : null;
@@ -1245,6 +1242,23 @@ export default function Board({
                     </button>
                   </div>
                 )}
+
+                {gameState.turnStatus === 'MUST_RESOLVE_LOTTERY' && isActionReady && (
+                  <div className="flex flex-col gap-2 w-full items-center">
+                    {gameState.activeLottery?.hasStarted ? (
+                      <span className="text-amber-500 font-bold uppercase tracking-wider text-[10px] md:text-xs animate-pulse text-center">
+                        লটারির জন্য অপেক্ষা করা হচ্ছে...
+                      </span>
+                    ) : (
+                      <button
+                        onClick={onStartLottery}
+                        className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-orbitron font-extrabold text-[10px] md:text-[12px] px-6 py-2 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)] transition-all duration-200 hover:scale-105 active:scale-95 uppercase tracking-widest"
+                      >
+                        লটারি শুরু করুন
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1539,14 +1553,14 @@ export default function Board({
                           className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center gap-1 ${canMortgageHere ? 'bg-red-500 hover:bg-red-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                           onClick={() => { if (canMortgageHere) { onMortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                         >
-                          {canMortgageHere ? `Mortgage (+৳${selTile.mortgageValue})` : `Cannot Mortgage: ${mortgageDisabledReason}`}
+                          {canMortgageHere ? `মর্টগেজ (+৳${toBanglaNum(selTile.mortgageValue)})` : `মর্টগেজ করা যাবে না: ${mortgageDisabledReason}`}
                         </button>
                       ) : (
                         <button
                           className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-2 rounded-lg text-xs transition-colors shadow-md active:scale-[0.98]"
                           onClick={() => { onUnmortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); }}
                         >
-                          Unmortgage (-৳${Math.ceil((selTile.mortgageValue || 0) * 1.1)})
+                          আনমর্টগেজ (-৳${toBanglaNum(Math.ceil((selTile.mortgageValue || 0) * 1.1))})
                         </button>
                       )}
 
@@ -1555,7 +1569,7 @@ export default function Board({
                         className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md ${canSellPropertyHere ? 'bg-amber-600 hover:bg-amber-700 text-white active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                         onClick={() => { if (canSellPropertyHere) { onSellProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                       >
-                        {canSellPropertyHere ? `Sell Property (+৳${selTile.mortgageValue || Math.floor((selTile.price || 0) / 2)})` : `Cannot Sell: Group Has Houses`}
+                        {canSellPropertyHere ? `সম্পদ বিক্রি (+৳${toBanglaNum(selTile.mortgageValue || Math.floor((selTile.price || 0) / 2))})` : `বিক্রি সম্ভব নয়: গ্রুপে বাড়ি আছে`}
                       </button>
 
                       {/* Auction Property */}
@@ -1563,7 +1577,7 @@ export default function Board({
                         className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center shadow-md ${canSellPropertyHere ? 'bg-purple-600 hover:bg-purple-700 text-white active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
                         onClick={() => { if (canSellPropertyHere) { onAuctionProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
                       >
-                        {canSellPropertyHere ? `Auction Property (Starts at ${selProp.isMortgaged ? '40%' : '70%'})` : `Cannot Auction: Group Has Houses`}
+                        {canSellPropertyHere ? `নিলামে তুলুন (${selProp.isMortgaged ? '৪০%' : '৭০%'} থেকে শুরু)` : `নিলাম সম্ভব নয়: গ্রুপে বাড়ি আছে`}
                       </button>
 
                       {/* Build / Break Houses */}
@@ -1575,12 +1589,12 @@ export default function Board({
                           >
                             {canBuildHere ? (
                               <>
-                                <span>Build House</span>
-                                <span className="text-[9px] font-mono font-normal">Cost: ৳{houseCost}</span>
+                                <span>বাড়ি তৈরি করুন</span>
+                                <span className="text-[9px] font-mono font-normal">খরচ: ৳{toBanglaNum(houseCost)}</span>
                               </>
                             ) : (
                               <>
-                                <span>Cannot Build</span>
+                                <span>তৈরি করা যাবে না</span>
                                 <span className="text-[8px] font-mono font-normal">{buildDisabledReason}</span>
                               </>
                             )}
@@ -1592,12 +1606,12 @@ export default function Board({
                           >
                             {canSellHere ? (
                               <>
-                                <span>Break House</span>
-                                <span className="text-[9px] font-mono font-normal">Gain: +৳${houseCost / 2}</span>
+                                <span>বাড়ি ভাঙুন</span>
+                                <span className="text-[9px] font-mono font-normal">লাভ: +৳{toBanglaNum(houseCost / 2)}</span>
                               </>
                             ) : (
                               <>
-                                <span>Cannot Break</span>
+                                <span>ভাঙা যাবে না</span>
                                 <span className="text-[8px] font-mono font-normal">{sellDisabledReason}</span>
                               </>
                             )}

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Landmark, X, Banknote, Percent, ShieldCheck } from 'lucide-react';
+import { toBanglaNum } from '../utils/format';
 
 interface BankModalProps {
   onClose: () => void;
@@ -30,8 +31,8 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
               <Landmark className="text-emerald-400" size={24} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-orbitron font-bold text-slate-100 tracking-wide">GOVERNMENT LOAN</h2>
-              <p className="text-xs text-emerald-500/80 font-mono tracking-wider uppercase">Secure Capital Funding</p>
+              <h2 className="text-xl md:text-2xl font-orbitron font-bold text-slate-100 tracking-wide">সরকারি লোন</h2>
+              <p className="text-xs text-emerald-500/80 font-mono tracking-wider uppercase">জরুরি আর্থিক সহায়তা</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors relative z-10">
@@ -42,7 +43,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
         {/* Content */}
         <div className="p-4 md:p-6 flex flex-col gap-6">
           <p className="text-sm text-slate-400 text-center max-w-lg mx-auto">
-            Select a financial package. Loans are automatically deducted from your balance over 5 turns. You may only carry one active loan at a time.
+            একটি আর্থিক প্যাকেজ নির্বাচন করুন। লোন বা ঋণের টাকা পরবর্তী ৫ দানের মধ্যে আপনার ব্যালেন্স থেকে স্বয়ংক্রিয়ভাবে কেটে নেওয়া হবে। আপনি একসাথে কেবল একটি সচল লোন বহন করতে পারবেন।
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -62,23 +63,23 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
                     <ShieldCheck size={16} />
                   </div>
                 )}
-                <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Package</div>
-                <div className="text-2xl md:text-3xl font-orbitron font-black text-white">৳{opt.amount}</div>
+                <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">প্যাকেজ</div>
+                <div className="text-2xl md:text-3xl font-orbitron font-black text-white">৳{toBanglaNum(opt.amount)}</div>
                 
                 <div className="w-full h-px bg-slate-700/50 my-1" />
                 
                 <div className="flex flex-col gap-1 w-full text-left">
                   <div className="flex justify-between text-[10px] md:text-xs text-slate-400">
-                    <span>Interest:</span>
-                    <span className="text-rose-400 font-mono">{opt.interest}%</span>
+                    <span>সুদ:</span>
+                    <span className="text-rose-400 font-mono">{toBanglaNum(opt.interest)}%</span>
                   </div>
                   <div className="flex justify-between text-[10px] md:text-xs text-slate-400">
-                    <span>Repay:</span>
-                    <span className="text-amber-400 font-mono">৳{opt.total}</span>
+                    <span>পরিশোধ:</span>
+                    <span className="text-amber-400 font-mono">৳{toBanglaNum(opt.total)}</span>
                   </div>
                   <div className="flex justify-between text-[10px] md:text-xs text-slate-400">
-                    <span>Deduction:</span>
-                    <span className="text-white font-mono">৳{opt.deduction}/turn</span>
+                    <span>কিস্তি:</span>
+                    <span className="text-white font-mono">৳{toBanglaNum(opt.deduction)}/দান</span>
                   </div>
                 </div>
               </div>
@@ -92,7 +93,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
             onClick={onClose}
             className="px-6 py-2.5 rounded-xl font-bold text-sm text-slate-300 hover:bg-slate-800 transition-colors"
           >
-            CANCEL
+            বাতিল করুন
           </button>
           <button 
             disabled={!selectedLoan}
@@ -105,7 +106,7 @@ export default function BankModal({ onClose, onTakeLoan }: BankModalProps) {
             className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white flex items-center gap-2 px-8 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-md"
           >
             <Banknote size={16} />
-            CONFIRM LOAN
+            লোন নিশ্চিত করুন
           </button>
         </div>
       </div>

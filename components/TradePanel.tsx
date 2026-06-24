@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameState, BoardTile, TradeOfferPayload } from '../../shared/types';
 import { toBanglaNum } from '../utils/format';
 import { isPropertyFrozenForOwner } from '../utils/donPower';
@@ -398,9 +398,9 @@ export default function TradePanel({
                     <button
                       onClick={() => window.dispatchEvent(new CustomEvent('sell_pardon_card'))}
                       className="px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer"
-                      title="Sell to Bank for ৳50"
+                      title="ব্যাংকের কাছে ৳৫০ এ বিক্রি করুন"
                     >
-                      SELL ৳50
+                      বিক্রি ৳৫০
                     </button>
                   </div>
                 </div>
@@ -441,7 +441,7 @@ export default function TradePanel({
                             ).length;
                             currentRent = tile.rent ? tile.rent[count - 1] || 25 : 25;
                           }
-                          return `Rent: ৳${currentRent}`;
+                          return `ভাড়া: ৳${toBanglaNum(currentRent)}`;
                         })()}
                       </span>
                     </div>
@@ -460,9 +460,9 @@ export default function TradePanel({
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
-                        title={`Unmortgage for ৳${unmortgageCost}`}
+                        title={`আনমর্টগেজ করুন ৳${toBanglaNum(unmortgageCost)}`}
                       >
-                        UNMTG ({unmortgageCost})
+                        আনমর্টগেজ ({toBanglaNum(unmortgageCost)})
                       </button>
                     ) : (
                       <button
@@ -476,9 +476,9 @@ export default function TradePanel({
                             ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
-                        title={`Mortgage for ৳${mortgageVal}`}
+                        title={`মর্টগেজ করুন ৳${toBanglaNum(mortgageVal)}`}
                       >
-                        MTG ({mortgageVal})
+                        মর্টগেজ ({toBanglaNum(mortgageVal)})
                       </button>
                     )}
                     <button
@@ -607,11 +607,11 @@ export default function TradePanel({
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>৳{selfEffectiveBalance}</span>
+                    <span>৳{toBanglaNum(selfEffectiveBalance)}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {toBanglaNum(offerCash)} ৳
+                      ৳{toBanglaNum(offerCash)}
                     </span>
                   </div>
                 </div>
@@ -707,11 +707,11 @@ export default function TradePanel({
                   />
                   <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
                     <span>0</span>
-                    <span>৳{receiverEffectiveBalance}</span>
+                    <span>৳{toBanglaNum(receiverEffectiveBalance)}</span>
                   </div>
                   <div className="flex justify-center mt-2">
                     <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {requestCash} ৳
+                      ৳{toBanglaNum(requestCash)}
                     </span>
                   </div>
                 </div>
@@ -762,7 +762,7 @@ export default function TradePanel({
                               />
                               <span className="truncate">{tile.name}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(p.tileIndex)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{toBanglaNum(getPropPrice(p.tileIndex))}</span>
                           </div>
                         );
                       })}
@@ -864,27 +864,27 @@ export default function TradePanel({
 
                 {/* Cash offer value */}
                 <div className="flex flex-col gap-1 w-full text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Offered Cash</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">প্রস্তাবিত নগদ</span>
                   <div className="flex justify-center my-1.5">
                     <span className="bg-[#2D225C] text-[#A78BFA] text-sm font-mono font-extrabold px-3.5 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {pendingTrade.offer.offerCash} ৳
+                      ৳{toBanglaNum(pendingTrade.offer.offerCash)}
                     </span>
                   </div>
                 </div>
 
                 {/* Properties offered - OPEN DESIGN */}
                 <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Offered Properties</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">প্রস্তাবিত সম্পদ</span>
                   <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
                     {pendingTrade.offer.offerPropertyIndexes.length === 0 && (pendingTrade.offer.offerPardonCards || 0) === 0 ? (
-                      <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">No properties offered</span>
+                      <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">কোনো সম্পদ দেওয়া হয়নি</span>
                     ) : (
                       <>
                       {(pendingTrade.offer.offerPardonCards || 0) > 0 && (
                           <div className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]">
                             <div className="flex items-center gap-1.5 truncate mr-2">
                               <span>🗝️</span>
-                              <span className="truncate">Pardon Card x{pendingTrade.offer.offerPardonCards}</span>
+                              <span className="truncate">পার্ডন কার্ড x{toBanglaNum(pendingTrade.offer.offerPardonCards)}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
                           </div>
@@ -903,7 +903,7 @@ export default function TradePanel({
                               />
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{toBanglaNum(getPropPrice(idx))}</span>
                           </div>
                         );
                       })}
@@ -933,27 +933,27 @@ export default function TradePanel({
 
                 {/* Cash request value */}
                 <div className="flex flex-col gap-1 w-full text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Requested Cash</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">কাঙ্ক্ষিত নগদ</span>
                   <div className="flex justify-center my-1.5">
                     <span className="bg-[#2D225C] text-[#A78BFA] text-sm font-mono font-extrabold px-3.5 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      {pendingTrade.offer.requestCash} ৳
+                      ৳{toBanglaNum(pendingTrade.offer.requestCash)}
                     </span>
                   </div>
                 </div>
 
                 {/* Properties requested - OPEN DESIGN */}
                 <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">Requested Properties</span>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">কাঙ্ক্ষিত সম্পদ</span>
                   <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
                     {pendingTrade.offer.requestPropertyIndexes.length === 0 && (pendingTrade.offer.requestPardonCards || 0) === 0 ? (
-                      <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">No properties requested</span>
+                      <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">কোনো সম্পদ চাওয়া হয়নি</span>
                     ) : (
                       <>
                       {(pendingTrade.offer.requestPardonCards || 0) > 0 && (
                           <div className="bg-[#5B37E8]/25 border border-[#7B5BF2] text-white p-2.5 rounded-xl flex items-center justify-between text-sm font-bold shadow-[0_2px_8px_rgba(111,79,240,0.15)]">
                             <div className="flex items-center gap-1.5 truncate mr-2">
                               <span>🗝️</span>
-                              <span className="truncate">Pardon Card x{pendingTrade.offer.requestPardonCards}</span>
+                              <span className="truncate">পার্ডন কার্ড x{toBanglaNum(pendingTrade.offer.requestPardonCards)}</span>
                             </div>
                             <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0 uppercase">Asset</span>
                           </div>
@@ -972,7 +972,7 @@ export default function TradePanel({
                               />
                               <span className="truncate">{getPropName(idx)}</span>
                             </div>
-                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{getPropPrice(idx)}</span>
+                            <span className="text-xs font-mono text-[#A78BFA] font-extrabold shrink-0">৳{toBanglaNum(getPropPrice(idx))}</span>
                           </div>
                         );
                       })}

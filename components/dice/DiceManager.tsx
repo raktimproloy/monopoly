@@ -15,27 +15,15 @@ export default function DiceManager({ gameState }: DiceManagerProps) {
   );
 
   const prevDice = useRef<[number, number]>(gameState.dice || [0, 0]);
-  const prevPlayer = useRef<string>(gameState.currentTurnPlayerId || '');
-  const prevDoubleCount = useRef<number>(gameState.doubleRollCount || 0);
-  const prevTurnStatus = useRef<string>(gameState.turnStatus || 'MUST_ROLL');
+  const prevRollCounter = useRef<number>(gameState.rollCounter || 0);
 
   useEffect(() => {
     if (!gameState) return;
 
-    const wasMustRoll = prevTurnStatus.current === 'MUST_ROLL';
-    const isMustActOrEnd = gameState.turnStatus === 'MUST_ACT_OR_END';
-    const isMustResolveCard = gameState.turnStatus === 'MUST_RESOLVE_CARD';
-    const doubleRollIncreased = gameState.doubleRollCount > prevDoubleCount.current;
-    const isSamePlayer = gameState.currentTurnPlayerId === prevPlayer.current;
+    // Detect if a roll event occurred using the new rollCounter
+    const rollCounterIncreased = (gameState.rollCounter || 0) > prevRollCounter.current;
 
-    // Detect if a roll event occurred
-    const rolled = isSamePlayer && (
-      (wasMustRoll && isMustActOrEnd) ||
-      (wasMustRoll && isMustResolveCard) ||
-      (wasMustRoll && doubleRollIncreased)
-    );
-
-    if (rolled) {
+    if (rollCounterIncreased) {
       // Use the actual rolled values from the game state
       setDisplayValues(gameState.dice);
       // Increment trigger to start 3D physics roll animation
@@ -52,9 +40,7 @@ export default function DiceManager({ gameState }: DiceManagerProps) {
     }
 
     // Sync refs
-    prevTurnStatus.current = gameState.turnStatus;
-    prevDoubleCount.current = gameState.doubleRollCount;
-    prevPlayer.current = gameState.currentTurnPlayerId;
+    prevRollCounter.current = gameState.rollCounter || 0;
     prevDice.current = gameState.dice || [0, 0];
   }, [gameState]);
 

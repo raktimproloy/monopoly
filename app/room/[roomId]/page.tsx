@@ -18,6 +18,7 @@ import GovernmentBank from '../../../components/GovernmentBank';
 import BankModal from '../../../components/BankModal';
 import KickVoteModal from '../../../components/KickVoteModal';
 import GameOverOverlay from '../../../components/GameOverOverlay';
+import LotteryMachine from '../../../components/LotteryMachine';
 import { Wifi, WifiOff, AlertOctagon, RotateCw, Settings, Users, Sparkles, Play, UserX, Flag } from 'lucide-react';
 import { Suspense } from 'react';
 
@@ -93,7 +94,9 @@ function GameRoomContent() {
     repayLoan,
     castKickVote,
     restartGame,
-    kickPlayerFromLobby
+    kickPlayerFromLobby,
+    revealLotteryDigit,
+    startLottery
   } = useSocket(roomId, playerName, userId, avatar);
 
   // Initialize sound manager to listen to game events
@@ -755,10 +758,17 @@ function GameRoomContent() {
             onUsePowerCard={usePowerCard}
             onUsePardonCard={usePardonCard}
           />
+          {/* ---> INSERT NEW LotteryMachine COMPONENT HERE <--- */}
+          <LotteryMachine 
+            gameState={gameState} 
+            userId={userId} 
+            onRevealDigit={revealLotteryDigit}
+            onStartLottery={startLottery}
+          />
         </div>
 
         {/* Render Logs ONLY if active on mobile, OR always on desktop */}
-        <div className={`flex-col gap-4 flex-1 min-h-0 ${mobileTab === 'logs' || mobileTab === 'board' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`flex-col gap-4 shrink-0 ${mobileTab === 'logs' || mobileTab === 'board' ? 'flex' : 'hidden lg:flex'}`}>
           {/* ---> INSERT EXISTING ChatBox / Telemetry COMPONENT HERE <--- */}
           <ChatBox entries={telemetryEntries} userId={userId} />
         </div>
@@ -817,6 +827,7 @@ function GameRoomContent() {
                 onSellHouse={sellHouse}
                 onSellProperty={sellProperty}
                 onAuctionProperty={auctionProperty}
+                onStartLottery={startLottery}
                 onTeleportPlayer={teleportPlayer}
                 onDevRollDice={devRollDice}
                 onDevAddFunds={devAddFunds}

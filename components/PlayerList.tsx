@@ -58,13 +58,9 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
     const prevState = prevGameState.current;
     prevGameState.current = gameState;
 
-    // Calculate sync delay if the active player moved
-    const currentActiveId = gameState.currentTurnPlayerId;
-    const prevActivePos = prevState.players[currentActiveId]?.position;
-    const newActivePos = gameState.players[currentActiveId]?.position;
-    const activeMoved = prevActivePos !== undefined && prevActivePos !== newActivePos;
-    
-    const delay = activeMoved ? 2200 : 0;
+    // Calculate sync delay
+    // Note: Delay logic is now handled globally by the Visual State Sequencer in useSocket.ts
+    const delay = 0;
     const changes: { id: string, diff: number, newBalance: number }[] = [];
 
     Object.values(gameState.players).forEach(p => {

@@ -15,6 +15,10 @@ export function useSocket(
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
   const [telemetryEntries, setTelemetryEntries] = useState<TelemetryEntry[]>([]);
   const gameStateRef = useRef<GameState | null>(null);
+  // Tracks whether a roll animation sequence is currently in progress
+  const isSequencingRef = useRef<boolean>(false);
+  // Queued non-roll state update to apply after the sequence finishes
+  const pendingStateUpdateRef = useRef<{ state: GameState; log: string } | null>(null);
   const [pendingTrades, setPendingTrades] = useState<{ tradeId: string; offer: TradeOfferPayload }[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomDetails, setRoomDetails] = useState<{
@@ -69,10 +73,10 @@ export function useSocket(
         dynamicServerUrl = `http://${hostname}:${serverPort}`;
       } else {
         // Respect custom API domains (like bdpoly-api.aftonix.com) if configured
-        const hasCustomServerUrl = process.env.NEXT_PUBLIC_SERVER_URL && 
-          !process.env.NEXT_PUBLIC_SERVER_URL.includes('localhost') && 
+        const hasCustomServerUrl = process.env.NEXT_PUBLIC_SERVER_URL &&
+          !process.env.NEXT_PUBLIC_SERVER_URL.includes('localhost') &&
           !process.env.NEXT_PUBLIC_SERVER_URL.includes('127.0.0.1');
-        
+
         if (!hasCustomServerUrl && hostname) {
           const isSecure = protocol === 'https:';
           dynamicServerUrl = `${isSecure ? 'https' : 'http'}://${hostname}:${serverPort}`;
@@ -124,24 +128,119 @@ export function useSocket(
       ]);
     });
 
-    // Handle state mutations
-    socket.on('state_updated', (data: { state: GameState; log: string; lastRoll?: [number, number] }) => {
-      gameStateRef.current = data.state;
-      setGameState(data.state);
-      pushTelemetry(data.log, data.state);
+    // Handle state mutations with Visual Sequencer
+    socket.on('state_updated', (data: { state: GameState; log: string }) => {
+      const oldState = gameStateRef.current;
+      const newState = data.state;
 
-      // Refresh room details if we receive updates, to keep taken avatars synced
-      if (data.state) {
-        const playersList = Object.values(data.state.players).map(p => ({
-          id: p.id,
-          name: p.name,
-          avatar: p.avatar
-        }));
-        setRoomDetails({
-          exists: true,
-          gameStatus: data.state.gameStatus,
-          players: playersList
-        });
+      const rollCounterIncreased = (newState.rollCounter || 0) > (oldState?.rollCounter || 0);
+
+      if (rollCounterIncreased && oldState) {
+        // Mark that a roll sequence is in progress — queues any incoming non-roll events
+        isSequencingRef.current = true;
+        pendingStateUpdateRef.current = null;
+
+        // Phase 1: Update dice & rollCounter ONLY (triggers 3D dice animation)
+        // Keep player positions at their OLD values so token doesn't jump yet
+        const phase1State = JSON.parse(JSON.stringify(oldState)) as GameState;
+        phase1State.dice = newState.dice;
+        phase1State.rollCounter = newState.rollCounter;
+        phase1State.turnStatus = 'MUST_ROLL'; // hold turn UI while dice spin
+
+        gameStateRef.current = phase1State;
+        setGameState(phase1State);
+
+        // Capture newState in closure so Phase 2/3 always use the correct server state,
+        // regardless of any intervening non-roll events that may overwrite gameStateRef.
+        const capturedNewState = newState;
+        const capturedLog = data.log;
+
+        // Phase 2: After dice animation finishes (~1300ms), move the player token
+        setTimeout(() => {
+          // Build phase2 from the captured server state but keep old balance/turnStatus
+          // so only the position visually changes here.
+          const phase2State = JSON.parse(JSON.stringify(phase1State)) as GameState;
+
+          // Copy the new positions from the server state
+          Object.values(capturedNewState.players).forEach(p => {
+            if (phase2State.players[p.id]) {
+              phase2State.players[p.id].position = p.position;
+              // Also carry over inJail so jail animation triggers correctly
+              phase2State.players[p.id].inJail = p.inJail;
+            }
+          });
+
+          gameStateRef.current = phase2State;
+          setGameState(phase2State);
+
+          // Phase 3: After token finishes moving (~800ms), apply full server state
+          setTimeout(() => {
+            gameStateRef.current = capturedNewState;
+            setGameState(capturedNewState);
+            pushTelemetry(capturedLog, capturedNewState);
+
+            if (capturedNewState) {
+              const playersList = Object.values(capturedNewState.players).map(p => ({
+                id: p.id,
+                name: p.name,
+                avatar: p.avatar
+              }));
+              setRoomDetails({
+                exists: true,
+                gameStatus: capturedNewState.gameStatus,
+                players: playersList
+              });
+            }
+
+            // Sequencing complete — apply any queued non-roll update
+            isSequencingRef.current = false;
+            const pending = pendingStateUpdateRef.current;
+            if (pending) {
+              pendingStateUpdateRef.current = null;
+              gameStateRef.current = pending.state;
+              setGameState(pending.state);
+              pushTelemetry(pending.log, pending.state);
+
+              const playersList = Object.values(pending.state.players).map(p => ({
+                id: p.id,
+                name: p.name,
+                avatar: p.avatar
+              }));
+              setRoomDetails({
+                exists: true,
+                gameStatus: pending.state.gameStatus,
+                players: playersList
+              });
+            }
+          }, 800);
+
+        }, 1300);
+
+      } else {
+        // Non-roll update: if a roll sequence is currently animating, queue this
+        // update to be applied after the animation finishes.
+        if (isSequencingRef.current) {
+          pendingStateUpdateRef.current = { state: data.state, log: data.log };
+          return;
+        }
+
+        // Standard immediate update
+        gameStateRef.current = data.state;
+        setGameState(data.state);
+        pushTelemetry(data.log, data.state);
+
+        if (data.state) {
+          const playersList = Object.values(data.state.players).map(p => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar
+          }));
+          setRoomDetails({
+            exists: true,
+            gameStatus: data.state.gameStatus,
+            players: playersList
+          });
+        }
       }
     });
 
@@ -400,6 +499,20 @@ export function useSocket(
     }
   }, [userId]);
 
+  const revealLotteryDigit = useCallback(() => {
+    console.log('[Socket Emit] lottery_reveal', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('lottery_reveal', { playerId: userId });
+    }
+  }, [userId]);
+
+  const startLottery = useCallback(() => {
+    console.log('[Socket Emit] lottery_start', { playerId: userId });
+    if (socketRef.current) {
+      socketRef.current.emit('lottery_start', { playerId: userId });
+    }
+  }, [userId]);
+
   const sellPardonCard = useCallback(() => {
     console.log('[Socket Emit] sell_pardon_card', { playerId: userId });
     if (socketRef.current) {
@@ -515,6 +628,8 @@ export function useSocket(
     addBot,
     updateAppearance,
     resolveCard,
+    revealLotteryDigit,
+    startLottery,
     sellPardonCard,
     usePardonCard,
     devGivePowerCard,
