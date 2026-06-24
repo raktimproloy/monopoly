@@ -285,6 +285,20 @@ export default function TradePanel({
   const pendingSender = pendingTrade ? gameState.players[pendingTrade.offer.senderId] : null;
   const pendingReceiver = pendingTrade ? gameState.players[pendingTrade.offer.receiverId] : null;
 
+  const senderBalance = pendingSender ? 
+    (gameState.pendingRentOwed?.debtorId === pendingSender.id 
+      ? pendingSender.balance - gameState.pendingRentOwed.remainingAmount 
+      : pendingSender.balance) : 0;
+
+  const receiverBalance = pendingReceiver ? 
+    (gameState.pendingRentOwed?.debtorId === pendingReceiver.id 
+      ? pendingReceiver.balance - gameState.pendingRentOwed.remainingAmount 
+      : pendingReceiver.balance) : 0;
+
+  const isTradeAcceptable = pendingTrade && pendingSender && pendingReceiver &&
+    senderBalance >= pendingTrade.offer.offerCash &&
+    receiverBalance >= pendingTrade.offer.requestCash;
+
   return (
     <div className="w-full flex flex-col gap-4 h-full">
       {/* 1. TRADES LIST CARD */}
@@ -592,27 +606,27 @@ export default function TradePanel({
                   <span className="text-sm font-extrabold text-white truncate">{self.name}</span>
                 </div>
 
-                {/* Cash slider */}
-                <div className="flex flex-col gap-2 w-full">
+                {/* Cash Input */}
+                <div className="flex flex-col gap-1 w-full">
                   <div className="flex justify-between items-center text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
                     <span>নগদ দিন</span>
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={Math.max(0, selfEffectiveBalance)}
-                    value={offerCash}
-                    onChange={(e) => setOfferCash(Number(e.target.value))}
-                    className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
-                    <span>0</span>
-                    <span>৳{toBanglaNum(selfEffectiveBalance)}</span>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={offerCash}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        setOfferCash(val);
+                      }}
+                      className="w-full pl-8 pr-4 py-2.5 bg-white/5 hover:bg-white/10 focus:bg-slate-950/60 border border-[#2D284F] focus:border-[#7B5BF2] text-white font-mono text-sm rounded-xl outline-none transition-all"
+                      placeholder="অ্যামাউন্ট লিখুন"
+                    />
                   </div>
-                  <div className="flex justify-center mt-2">
-                    <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      ৳{toBanglaNum(offerCash)}
-                    </span>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-0.5 px-1">
+                    <span>আমার ব্যালেন্স: ৳{toBanglaNum(selfEffectiveBalance)}</span>
                   </div>
                 </div>
 
@@ -692,27 +706,27 @@ export default function TradePanel({
                   </span>
                 </div>
 
-                {/* Cash slider */}
-                <div className="flex flex-col gap-2 w-full">
+                {/* Cash Input */}
+                <div className="flex flex-col gap-1 w-full">
                   <div className="flex justify-between items-center text-xs text-slate-300 font-bold uppercase tracking-wider mb-1">
                     <span>নগদ চান</span>
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={Math.max(0, receiverEffectiveBalance)}
-                    value={requestCash}
-                    onChange={(e) => setRequestCash(Number(e.target.value))}
-                    className="w-full accent-[#7B5BF2] bg-white/5 hover:bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="flex justify-between text-xs text-slate-400 font-mono mt-0.5">
-                    <span>0</span>
-                    <span>৳{toBanglaNum(receiverEffectiveBalance)}</span>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={requestCash}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        setRequestCash(val);
+                      }}
+                      className="w-full pl-8 pr-4 py-2.5 bg-white/5 hover:bg-white/10 focus:bg-slate-950/60 border border-[#2D284F] focus:border-[#7B5BF2] text-white font-mono text-sm rounded-xl outline-none transition-all"
+                      placeholder="অ্যামাউন্ট লিখুন"
+                    />
                   </div>
-                  <div className="flex justify-center mt-2">
-                    <span className="bg-[#261E4E] text-[#A78BFA] text-sm font-mono font-extrabold px-4 py-1.5 rounded-full border border-[#4C1D95]/40 shadow-inner">
-                      ৳{toBanglaNum(requestCash)}
-                    </span>
+                  <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-0.5 px-1">
+                    <span>প্লেয়ারের ব্যালেন্স: ৳{toBanglaNum(receiverEffectiveBalance)}</span>
                   </div>
                 </div>
 
@@ -991,18 +1005,33 @@ export default function TradePanel({
               </div>
             )}
 
+            {pendingTrade && !isTradeAcceptable && (
+              <div className="bg-red-950/40 border border-red-500/30 rounded-xl p-3.5 text-center text-xs text-red-400 font-bold mt-2 animate-fade-in select-none">
+                {senderBalance < pendingTrade.offer.offerCash ? (
+                  `ট্রেড সম্পন্ন করার জন্য প্রস্তাবকারী ${pendingSender?.name}-এর কাছে পর্যাপ্ত নগদ (৳${toBanglaNum(pendingTrade.offer.offerCash)}) নেই।`
+                ) : (
+                  `ট্রেড সম্পন্ন করার জন্য আপনার কাছে পর্যাপ্ত নগদ (৳${toBanglaNum(pendingTrade.offer.requestCash)}) নেই।`
+                )}
+              </div>
+            )}
+
             {/* Action Buttons for viewer */}
             <div className="flex justify-center gap-3.5 border-t border-[#241F3C] pt-4 mt-1">
               {userId === pendingTrade.offer.receiverId ? (
                 <>
                   <button
+                    disabled={!isTradeAcceptable}
                     onClick={() => {
                       onRespondToTrade(pendingTrade.tradeId, true);
                       setActiveModal('NONE');
                     }}
-                    className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-[0.97] cursor-pointer shadow-md"
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 shadow-md ${
+                      isTradeAcceptable 
+                        ? 'bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white active:scale-[0.97] cursor-pointer' 
+                        : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                    }`}
                   >
-                    <CheckIcon size={12} className="stroke-white" />
+                    <CheckIcon size={12} className={isTradeAcceptable ? "stroke-white" : "stroke-slate-500"} />
                     রাজি
                   </button>
                   <button

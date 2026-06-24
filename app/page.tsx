@@ -56,7 +56,7 @@ export default function Lobby() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#151525] overflow-hidden cyber-grid">
+    <div className="relative min-h-screen flex items-center justify-center bg-board-image overflow-hidden">
       {/* Decorative solid glow spots with high blur */}
       <div className="absolute top-[20%] left-[15%] w-72 h-72 rounded-full bg-[#8BA4F9]/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[20%] right-[15%] w-72 h-72 rounded-full bg-[#D8B4F8]/5 blur-[120px] pointer-events-none" />
