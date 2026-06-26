@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from 'react';
-import { GameState, BoardTile, Player } from '../../shared/types';
+import { GameState, BoardTile, Player } from '@/shared/types';
 import { Gavel } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 
