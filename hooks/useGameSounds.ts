@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { GameState, BoardTile } from '../../shared/types';
+import { GameState, BoardTile } from '@/shared/types';
 import { soundManager } from '../utils/soundManager';
 import { getCompleteSets } from '../utils/propertySets';
 

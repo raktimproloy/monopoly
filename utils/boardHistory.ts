@@ -1,4 +1,4 @@
-import { Player } from '../../shared/types';
+import { Player } from '@/shared/types';
 import historyTheme from './dummy.json';
 
 export interface BoardHistoryEntry {

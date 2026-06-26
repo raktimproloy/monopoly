@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 import { Landmark, Landmark as BankIcon, Banknote, Percent, CheckCircle2 } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 

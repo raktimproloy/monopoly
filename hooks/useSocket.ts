@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '../../shared/types';
+import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '@/shared/types';
 import { createTelemetryEntry, TelemetryEntry } from '../utils/telemetryLog';
 
 export function useSocket(

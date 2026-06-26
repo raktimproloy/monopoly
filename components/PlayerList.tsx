@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { GameState, BoardTile } from '../../shared/types';
+import { GameState, BoardTile } from '@/shared/types';
 import { toBanglaNum } from '../utils/format';
 import { soundManager } from '../utils/soundManager';
 // No icon imports needed since we use native emojis and custom SVGs

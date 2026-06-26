@@ -1,6 +1,6 @@
 "use client";
 
-import { GameState, BoardTile } from '../../shared/types';
+import { GameState, BoardTile } from '@/shared/types';
 
 interface PropertyManagerProps {
   gameState: GameState;

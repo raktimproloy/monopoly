@@ -1,4 +1,4 @@
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 
 export function isPropertyHijackedByDon(gameState: GameState, tileIndex: number): boolean {
   const donPower = gameState.activeDonPower;

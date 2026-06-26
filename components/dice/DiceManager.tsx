@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { GameState } from '../../../shared/types';
+import { GameState } from '@/shared/types';
 import Dice3D from './Dice3D';
 
 interface DiceManagerProps {

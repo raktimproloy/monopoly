@@ -1,4 +1,4 @@
-import { GameState, BoardTile } from '../../shared/types';
+import { GameState, BoardTile } from '@/shared/types';
 
 export type CompleteSetKey = string; // `${ownerId}:${group}`
 

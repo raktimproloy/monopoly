@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 import UseDonModal from './UseDonModal';
 import { Zap, ShieldAlert, Key } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';

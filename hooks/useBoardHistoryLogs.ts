@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 
 const ROLL_MOVEMENT_LOG = /রোল:|➡️/;
 

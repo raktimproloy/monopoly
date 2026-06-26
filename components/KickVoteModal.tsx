@@ -3,7 +3,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { X, UserX, Check } from 'lucide-react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 
 interface KickVoteModalProps {
   gameState: GameState;

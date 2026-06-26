@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 
 interface LotteryMachineProps {
   gameState: GameState;

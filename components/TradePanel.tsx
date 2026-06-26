@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { GameState, BoardTile, TradeOfferPayload } from '../../shared/types';
+import { GameState, BoardTile, TradeOfferPayload } from '@/shared/types';
 import { toBanglaNum } from '../utils/format';
 import { isPropertyFrozenForOwner } from '../utils/donPower';
 

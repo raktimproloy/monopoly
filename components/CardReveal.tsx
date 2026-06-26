@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 import { soundManager } from '../utils/soundManager';
 import { toBanglaNum } from '../utils/format';
 

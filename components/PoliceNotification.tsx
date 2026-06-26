@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GameState } from '../../shared/types';
+import { GameState } from '@/shared/types';
 import { ShieldAlert, X } from 'lucide-react';
 
 interface PoliceNotificationProps {

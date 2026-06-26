@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { GameState, BoardTile, Player } from '../../shared/types';
+import { GameState, BoardTile, Player } from '@/shared/types';
 import DiceManager from './dice/DiceManager';
 import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown, ShieldAlert } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';

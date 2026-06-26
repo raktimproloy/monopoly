@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { GameState, BoardTile } from '../../shared/types';
+import { GameState, BoardTile } from '@/shared/types';
 import { X, ShieldAlert, ChevronRight, Home, Building2, Crosshair } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 
