@@ -355,7 +355,7 @@ function GameRoomContent() {
                 </div>
 
                 <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1">
-                  {players.map((p) => {
+                  {players.map((p: any) => {
                     const isMe = p.id === userId;
                     return (
                       <div
