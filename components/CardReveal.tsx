@@ -28,17 +28,17 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
       setCanResolve(false);
       setVisible(false);
 
-      // Wait 2.2 seconds for dice roll and player movement animations
+      // Wait 1.0 seconds (reduced from 2.2s) for player movement
       const showTimer = setTimeout(() => {
         setVisible(true);
-        // Automatically flip the card after 1 second for dramatic effect
+        // Automatically flip the card after 0.3 seconds (reduced from 1s)
         setTimeout(() => {
           setFlipped(true);
           soundManager.playEventSound('CARD_FLIP');
-        }, 1000);
-        // Allow resolving 1.5 seconds after flip so they have time to read
-        setTimeout(() => setCanResolve(true), 2500);
-      }, 2200);
+        }, 300);
+        // Allow resolving after 1.0 second total (reduced from 2.5s)
+        setTimeout(() => setCanResolve(true), 1000);
+      }, 1000);
       
       return () => {
         clearTimeout(showTimer);

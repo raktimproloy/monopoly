@@ -406,6 +406,20 @@ export default function Board({
   const prevCompleteSetsRef = useRef<Set<string>>(new Set());
   const prevGameStatusForGlowRef = useRef<string | null>(null);
   const glowTimeoutsRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const expectingAutoRoll = useRef(false);
+
+  // Auto-roll dice when transitioning to MUST_ROLL after a double roll
+  useEffect(() => {
+    if (expectingAutoRoll.current) {
+      if (gameState.turnStatus === 'MUST_ROLL' && gameState.currentTurnPlayerId === userId) {
+        expectingAutoRoll.current = false;
+        setIsActionReady(false);
+        onRollDice();
+        setTimeout(() => setIsActionReady(true), 2200);
+      }
+    }
+  }, [gameState.turnStatus, gameState.currentTurnPlayerId, userId, onRollDice]);
+
   const boardHistoryLogs = useBoardHistoryLogs(
     logs,
     gameState,
@@ -1234,11 +1248,16 @@ export default function Board({
                     {/* NO JAIL OPTIONS HERE ANYMORE */}
 
                     <button
-                      onClick={onEndTurn}
+                      onClick={() => {
+                        if (gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0) {
+                          expectingAutoRoll.current = true;
+                        }
+                        onEndTurn();
+                      }}
                       className="flex-1 min-w-[80px] sm:flex-none sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white font-orbitron font-extrabold text-[9px] md:text-[12px] px-2 sm:px-4 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl flex items-center justify-center gap-1 sm:gap-2 shadow-lg shadow-emerald-500/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
                     >
                       <CheckIcon size={12} className="stroke-white shrink-0" />
-                      {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'আবার মারুন' : 'টার্ন শেষ'}
+                      {gameState.dice?.[0] === gameState.dice?.[1] && gameState.doubleRollCount > 0 && gameState.dice?.[0] !== 0 ? 'ছক্কা মারুন' : 'টার্ন শেষ'}
                     </button>
                   </div>
                 )}
