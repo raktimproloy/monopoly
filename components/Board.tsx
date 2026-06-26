@@ -6,7 +6,7 @@ import DiceManager from './dice/DiceManager';
 import { TramFront, Gift, Lightbulb, Droplet, BanknoteArrowDown, ShieldAlert } from 'lucide-react';
 import { toBanglaNum } from '../utils/format';
 import { getCompleteSets } from '../utils/propertySets';
-import { historyTheme, parseBoardHistoryLog } from '../utils/boardHistory';
+import { historyTheme, parseBoardHistoryLogs } from '../utils/boardHistory';
 import { useBoardHistoryLogs } from '../hooks/useBoardHistoryLogs';
 import { isPropertyFrozenForOwner, isPropertyHijackedByDon } from '../utils/donPower';
 
@@ -171,28 +171,9 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
   useEffect(() => {
     if (player.position !== displayPosition) {
-      if (isCurrentTurn) {
-        const diceSum = gameState.dice ? gameState.dice[0] + gameState.dice[1] : 0;
-        const expectedPos = (displayPosition + diceSum) % 40;
-
-        let t1: ReturnType<typeof setTimeout>;
-
-        if (player.position === 10 && player.inJail && expectedPos === 30 && displayPosition !== 30) {
-          // Move to 30 (Go To Jail), wait, then move to 10 (Jail)
-          setDisplayPosition(30);
-          t1 = setTimeout(() => {
-            setDisplayPosition(10);
-          }, 800);
-          return () => clearTimeout(t1);
-        } else {
-          // Normal movement
-          setDisplayPosition(player.position);
-        }
-      } else {
-        setDisplayPosition(player.position);
-      }
+      setDisplayPosition(player.position);
     }
-  }, [player.position, displayPosition, isCurrentTurn, gameState.dice, player.inJail]);
+  }, [player.position, displayPosition]);
 
   useEffect(() => {
     const updatePosition = () => {
@@ -401,7 +382,6 @@ export default function Board({
   const [devPoliceDelay, setDevPoliceDelay] = useState<number>(5);
   const [countdownText, setCountdownText] = useState<string>('');
   const [policeCountdownText, setPoliceCountdownText] = useState<string>('');
-  const [isActionReady, setIsActionReady] = useState<boolean>(true);
   const [glowingTiles, setGlowingTiles] = useState<Record<number, string>>({});
   const prevCompleteSetsRef = useRef<Set<string>>(new Set());
   const prevGameStatusForGlowRef = useRef<string | null>(null);
@@ -413,9 +393,7 @@ export default function Board({
     if (expectingAutoRoll.current) {
       if (gameState.turnStatus === 'MUST_ROLL' && gameState.currentTurnPlayerId === userId) {
         expectingAutoRoll.current = false;
-        setIsActionReady(false);
         onRollDice();
-        setTimeout(() => setIsActionReady(true), 2200);
       }
     }
   }, [gameState.turnStatus, gameState.currentTurnPlayerId, userId, onRollDice]);
@@ -423,7 +401,7 @@ export default function Board({
   const boardHistoryLogs = useBoardHistoryLogs(
     logs,
     gameState,
-    historyTheme.settings.movementDelayMs ?? 2200
+    historyTheme.settings.movementDelayMs ?? 1400
   );
 
   // One-shot glow when a color set is newly completed
@@ -488,6 +466,7 @@ export default function Board({
   }, []);
 
   const isMyTurn = gameState.currentTurnPlayerId === userId;
+  const canManageProperty = isMyTurn && gameState.gameStatus === 'ACTIVE';
   const activePlayer = gameState.players[gameState.currentTurnPlayerId];
   const myPlayer = gameState.players[userId];
 
@@ -635,11 +614,7 @@ export default function Board({
               className="w-8 bg-[#0B0E14] border border-[#2A2E3B] rounded px-1 py-1 text-xs text-white font-mono text-center outline-none focus:border-purple-500"
             />
             <button
-              onClick={() => {
-                setIsActionReady(false);
-                onDevRollDice?.(devD1, devD2);
-                setTimeout(() => setIsActionReady(true), 2200);
-              }}
+              onClick={() => onDevRollDice?.(devD1, devD2)}
               className="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded text-[10px] font-bold tracking-widest uppercase transition-all shadow-[0_0_10px_rgba(147,51,234,0.4)] active:scale-95 flex-1"
             >
               মারুন
@@ -1089,7 +1064,7 @@ export default function Board({
                   )}
 
                   {/* Floating Action Menu */}
-                  {propState?.ownerId === userId && !isPropertyFrozenForOwner(gameState, tile.index, userId) && (
+                  {propState?.ownerId === userId && canManageProperty && !isPropertyFrozenForOwner(gameState, tile.index, userId) && (
                     <div className={`absolute z-[100] flex flex-col gap-1.5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none group-hover:pointer-events-auto backdrop-blur-md bg-[#0B0E14]/90 p-2.5 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.8)] w-max ${orientation === 'TOP' ? 'top-full left-1/2 -translate-x-1/2 mt-2 before:absolute before:-top-4 before:left-0 before:w-full before:h-4' :
                       orientation === 'BOTTOM' ? 'bottom-full left-1/2 -translate-x-1/2 mb-2 before:absolute before:-bottom-4 before:left-0 before:w-full before:h-4' :
                         orientation === 'LEFT' ? 'left-full top-1/2 -translate-y-1/2 ml-2 before:absolute before:-left-4 before:top-0 before:w-4 before:h-full' :
@@ -1174,7 +1149,7 @@ export default function Board({
             ) : (
               <div className="flex gap-4 items-center justify-center w-full">
                 {/* Extreme Case: Negative Balance Check */}
-                {gameState.turnStatus === 'BANKRUPTCY_PENDING' && isActionReady && (
+                {gameState.turnStatus === 'BANKRUPTCY_PENDING' && (
                   <div className="flex flex-col items-center gap-2 w-full px-4 animate-fade-in">
                     <span className="text-red-500 font-bold uppercase tracking-wider text-sm animate-pulse text-center text-shadow-neon-purple">
                       সতর্কতা: আপনার ব্যালেন্স নেগেটিভ
@@ -1186,14 +1161,10 @@ export default function Board({
                 )}
 
                 {/* Roll the dice OR Conclude Turn */}
-                {gameState.turnStatus === 'MUST_ROLL' && isActionReady && (
+                {gameState.turnStatus === 'MUST_ROLL' && (
                   <div className="flex flex-col gap-2 w-full items-center">
                     <button
-                      onClick={() => {
-                        setIsActionReady(false);
-                        onRollDice();
-                        setTimeout(() => setIsActionReady(true), 2200);
-                      }}
+                      onClick={onRollDice}
                       className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
                     >
                       <DiceIcon size={14} className="stroke-white" />
@@ -1224,7 +1195,7 @@ export default function Board({
                   </div>
                 )}
 
-                {gameState.turnStatus === 'MUST_ACT_OR_END' && isActionReady && (
+                {gameState.turnStatus === 'MUST_ACT_OR_END' && (
                   <div className="flex gap-2 w-full px-2 sm:px-0 justify-center flex-wrap">
                     {canBuyCurrent && (
                       <button
@@ -1262,7 +1233,7 @@ export default function Board({
                   </div>
                 )}
 
-                {gameState.turnStatus === 'MUST_RESOLVE_LOTTERY' && isActionReady && (
+                {gameState.turnStatus === 'MUST_RESOLVE_LOTTERY' && (
                   <div className="flex flex-col gap-2 w-full items-center">
                     {gameState.activeLottery?.hasStarted ? (
                       <span className="text-amber-500 font-bold uppercase tracking-wider text-[10px] md:text-xs animate-pulse text-center">
@@ -1287,8 +1258,7 @@ export default function Board({
             <div className="overflow-y-auto w-full h-full pr-1 flex flex-col gap-2 scrollbar-thin select-none max-h-[120px] pb-10">
               {(() => {
                 const entries = boardHistoryLogs
-                  .map((log) => parseBoardHistoryLog(log, Object.values(gameState.players)))
-                  .filter((e): e is NonNullable<typeof e> => e !== null)
+                  .flatMap((log) => parseBoardHistoryLogs(log, Object.values(gameState.players)))
                   .slice(0, historyTheme.settings.maxEntries);
 
                 if (entries.length === 0) {
@@ -1397,12 +1367,16 @@ export default function Board({
                 selectedTileIndex !== null &&
                 isPropertyFrozenForOwner(gameState, selectedTileIndex, userId);
 
-              const canBuildHere = !isJailRestricted && !isDonFrozen && ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
-              const canSellHere = !isJailRestricted && !isDonFrozen && currentHouses > 0 && currentHouses === maxHouses;
-              const canMortgageHere = !isJailRestricted && !isDonFrozen && !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
+              const canBuildHere = canManageProperty && !isJailRestricted && !isDonFrozen && ownsFullSet && !anyMortgaged && currentHouses === minHouses && currentHouses < 5 && hasEnoughMoney;
+              const canSellHere = canManageProperty && !isJailRestricted && !isDonFrozen && currentHouses > 0 && currentHouses === maxHouses;
+              const canMortgageHere = canManageProperty && !isJailRestricted && !isDonFrozen && !selProp?.isMortgaged && currentHouses === 0 && !groupHasHouses;
+
+              const unmortgageCost = Math.ceil((selTile.mortgageValue || 0) * 1.1);
+              const canUnmortgageHere = canManageProperty && !isJailRestricted && !isDonFrozen && !!selProp?.isMortgaged && (myPlayer?.balance || 0) >= unmortgageCost;
 
               let buildDisabledReason = "";
-              if (isDonFrozen) buildDisabledReason = "Don Hijacked";
+              if (!canManageProperty) buildDisabledReason = "আপনার টার্ন নয়";
+              else if (isDonFrozen) buildDisabledReason = "Don Hijacked";
               else if (isJailRestricted) buildDisabledReason = "Jail Loss Active";
               else if (!ownsFullSet) buildDisabledReason = "Requires Full Set";
               else if (anyMortgaged) buildDisabledReason = "Group is Mortgaged";
@@ -1411,15 +1385,17 @@ export default function Board({
               else if (!hasEnoughMoney) buildDisabledReason = "Insufficient Funds";
 
               let sellDisabledReason = "";
-              if (isDonFrozen) sellDisabledReason = "Don Hijacked";
+              if (!canManageProperty) sellDisabledReason = "আপনার টার্ন নয়";
+              else if (isDonFrozen) sellDisabledReason = "Don Hijacked";
               else if (isJailRestricted) sellDisabledReason = "Jail Loss Active";
               else if (currentHouses === 0) sellDisabledReason = "No Houses To Break";
               else if (currentHouses < maxHouses) sellDisabledReason = "Break Evenly";
 
-              const canSellPropertyHere = !isJailRestricted && !isDonFrozen && !groupHasHouses;
+              const canSellPropertyHere = canManageProperty && !isJailRestricted && !isDonFrozen && !groupHasHouses;
 
               let mortgageDisabledReason = "";
-              if (isDonFrozen) mortgageDisabledReason = "Don Hijacked";
+              if (!canManageProperty) mortgageDisabledReason = "আপনার টার্ন নয়";
+              else if (isDonFrozen) mortgageDisabledReason = "Don Hijacked";
               else if (isJailRestricted) mortgageDisabledReason = "Jail Loss Active";
               else if (selProp?.isMortgaged) mortgageDisabledReason = "Already Mortgaged";
               else if (currentHouses > 0) mortgageDisabledReason = "Has Houses";
@@ -1576,10 +1552,11 @@ export default function Board({
                         </button>
                       ) : (
                         <button
-                          className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-2 rounded-lg text-xs transition-colors shadow-md active:scale-[0.98]"
-                          onClick={() => { onUnmortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); }}
+                          className={`w-full font-bold py-2.5 px-2 rounded-lg text-xs transition-colors flex justify-center items-center gap-1 ${canUnmortgageHere ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md active:scale-[0.98]' : 'bg-slate-300 text-slate-500 cursor-not-allowed'}`}
+                          onClick={() => { if (canUnmortgageHere) { onUnmortgageProperty?.(selectedTileIndex); setSelectedTileIndex(null); } }}
+                          disabled={!canUnmortgageHere}
                         >
-                          আনমর্টগেজ (-৳${toBanglaNum(Math.ceil((selTile.mortgageValue || 0) * 1.1))})
+                          {canUnmortgageHere ? `আনমর্টগেজ (-৳${toBanglaNum(unmortgageCost)})` : 'আনমর্টগেজ করা যাবে না'}
                         </button>
                       )}
 

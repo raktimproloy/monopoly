@@ -3,6 +3,21 @@ import { io, Socket } from 'socket.io-client';
 import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '@/shared/types';
 import { createTelemetryEntry, TelemetryEntry } from '../utils/telemetryLog';
 
+const GO_TO_JAIL_TILE = 30;
+const JAIL_TILE = 10;
+const DICE_ANIM_MS = 1300;
+const JAIL_TRANSFER_MS = 900;
+
+function isJailViaGoToJailTile(oldState: GameState, newState: GameState, log: string): boolean {
+  const activeId = newState.currentTurnPlayerId;
+  const activeNew = newState.players[activeId];
+  const activeOld = oldState.players[activeId];
+  if (!activeNew?.inJail || activeNew.position !== JAIL_TILE || !activeOld) return false;
+  if (log.includes('পরপর ৩ বার')) return false;
+  const [d1, d2] = newState.dice || [0, 0];
+  return (activeOld.position + d1 + d2) % 40 === GO_TO_JAIL_TILE;
+}
+
 export function useSocket(
   roomId: string | null,
   playerName: string | null,
@@ -15,11 +30,10 @@ export function useSocket(
   const [boardTiles, setBoardTiles] = useState<BoardTile[]>([]);
   const [telemetryEntries, setTelemetryEntries] = useState<TelemetryEntry[]>([]);
   const gameStateRef = useRef<GameState | null>(null);
-  // Tracks whether a roll animation sequence is currently in progress
-  const isSequencingRef = useRef<boolean>(false);
-  // Queued non-roll state update to apply after the sequence finishes
-  const pendingStateUpdateRef = useRef<{ state: GameState; log: string } | null>(null);
+  const positionAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const jailTransferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pendingTrades, setPendingTrades] = useState<{ tradeId: string; offer: TradeOfferPayload }[]>([]);
+  const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomDetails, setRoomDetails] = useState<{
     exists: boolean;
@@ -128,7 +142,27 @@ export function useSocket(
       ]);
     });
 
-    // Handle state mutations with Visual Sequencer
+    const syncRoomDetails = (state: GameState) => {
+      const playersList = Object.values(state.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        avatar: p.avatar
+      }));
+      setRoomDetails({
+        exists: true,
+        gameStatus: state.gameStatus,
+        players: playersList
+      });
+    };
+
+    const applyStateUpdate = (state: GameState, log: string) => {
+      gameStateRef.current = state;
+      setGameState(state);
+      pushTelemetry(log, state);
+      syncRoomDetails(state);
+    };
+
+    // Handle state mutations — apply gameplay state immediately; only delay token movement
     socket.on('state_updated', (data: { state: GameState; log: string }) => {
       const oldState = gameStateRef.current;
       const newState = data.state;
@@ -136,112 +170,58 @@ export function useSocket(
       const rollCounterIncreased = (newState.rollCounter || 0) > (oldState?.rollCounter || 0);
 
       if (rollCounterIncreased && oldState) {
-        // Mark that a roll sequence is in progress — queues any incoming non-roll events
-        isSequencingRef.current = true;
-        pendingStateUpdateRef.current = null;
+        if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
+        if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
 
-        // Phase 1: Update dice & rollCounter ONLY (triggers 3D dice animation)
-        // Keep player positions at their OLD values so token doesn't jump yet
-        const phase1State = JSON.parse(JSON.stringify(oldState)) as GameState;
-        phase1State.dice = newState.dice;
-        phase1State.rollCounter = newState.rollCounter;
-        phase1State.turnStatus = 'MUST_ROLL'; // hold turn UI while dice spin
-
-        gameStateRef.current = phase1State;
-        setGameState(phase1State);
-
-        // Capture newState in closure so Phase 2/3 always use the correct server state,
-        // regardless of any intervening non-roll events that may overwrite gameStateRef.
         const capturedNewState = newState;
-        const capturedLog = data.log;
+        const jailViaGoToJail = isJailViaGoToJailTile(oldState, newState, data.log);
+        const activeId = newState.currentTurnPlayerId;
 
-        // Phase 2: After dice animation finishes (~1300ms), move the player token
-        setTimeout(() => {
-          // Build phase2 from the captured server state but keep old balance/turnStatus
-          // so only the position visually changes here.
-          const phase2State = JSON.parse(JSON.stringify(phase1State)) as GameState;
+        const visualState = JSON.parse(JSON.stringify(newState)) as GameState;
+        Object.values(oldState.players).forEach((p) => {
+          if (visualState.players[p.id]) {
+            visualState.players[p.id].position = p.position;
+            visualState.players[p.id].inJail = p.inJail;
+          }
+        });
 
-          // Copy the new positions from the server state
-          Object.values(capturedNewState.players).forEach(p => {
-            if (phase2State.players[p.id]) {
-              phase2State.players[p.id].position = p.position;
-              // Also carry over inJail so jail animation triggers correctly
-              phase2State.players[p.id].inJail = p.inJail;
-            }
-          });
+        applyStateUpdate(visualState, data.log);
 
-          gameStateRef.current = phase2State;
-          setGameState(phase2State);
+        positionAnimTimerRef.current = setTimeout(() => {
+          positionAnimTimerRef.current = null;
 
-          // Phase 3: After token finishes moving (~800ms), apply full server state
-          setTimeout(() => {
+          if (jailViaGoToJail && visualState.players[activeId]) {
+            const atGoToJail = JSON.parse(JSON.stringify(capturedNewState)) as GameState;
+            atGoToJail.players[activeId].position = GO_TO_JAIL_TILE;
+            atGoToJail.players[activeId].inJail = true;
+            gameStateRef.current = atGoToJail;
+            setGameState(atGoToJail);
+
+            jailTransferTimerRef.current = setTimeout(() => {
+              jailTransferTimerRef.current = null;
+              gameStateRef.current = capturedNewState;
+              setGameState(capturedNewState);
+            }, JAIL_TRANSFER_MS);
+          } else {
             gameStateRef.current = capturedNewState;
             setGameState(capturedNewState);
-            pushTelemetry(capturedLog, capturedNewState);
-
-            if (capturedNewState) {
-              const playersList = Object.values(capturedNewState.players).map(p => ({
-                id: p.id,
-                name: p.name,
-                avatar: p.avatar
-              }));
-              setRoomDetails({
-                exists: true,
-                gameStatus: capturedNewState.gameStatus,
-                players: playersList
-              });
-            }
-
-            // Sequencing complete — apply any queued non-roll update
-            isSequencingRef.current = false;
-            const pending = pendingStateUpdateRef.current;
-            if (pending) {
-              pendingStateUpdateRef.current = null;
-              gameStateRef.current = pending.state;
-              setGameState(pending.state);
-              pushTelemetry(pending.log, pending.state);
-
-              const playersList = Object.values(pending.state.players).map(p => ({
-                id: p.id,
-                name: p.name,
-                avatar: p.avatar
-              }));
-              setRoomDetails({
-                exists: true,
-                gameStatus: pending.state.gameStatus,
-                players: playersList
-              });
-            }
-          }, 800);
-
-        }, 1300);
-
+          }
+        }, DICE_ANIM_MS);
       } else {
-        // Non-roll update: if a roll sequence is currently animating, queue this
-        // update to be applied after the animation finishes.
-        if (isSequencingRef.current) {
-          pendingStateUpdateRef.current = { state: data.state, log: data.log };
-          return;
+        if (positionAnimTimerRef.current) {
+          clearTimeout(positionAnimTimerRef.current);
+          positionAnimTimerRef.current = null;
         }
-
-        // Standard immediate update
-        gameStateRef.current = data.state;
-        setGameState(data.state);
-        pushTelemetry(data.log, data.state);
-
-        if (data.state) {
-          const playersList = Object.values(data.state.players).map(p => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.avatar
-          }));
-          setRoomDetails({
-            exists: true,
-            gameStatus: data.state.gameStatus,
-            players: playersList
-          });
+        if (jailTransferTimerRef.current) {
+          clearTimeout(jailTransferTimerRef.current);
+          jailTransferTimerRef.current = null;
         }
+        applyStateUpdate(newState, data.log);
       }
+    });
+
+    socket.on('player_pings_updated', (pings: Record<string, number>) => {
+      setPlayerPings(pings);
     });
 
     // Handle trade negotiations
@@ -282,10 +262,26 @@ export function useSocket(
       }, 4000);
     });
 
+    const measurePing = () => {
+      if (!socket.connected || !roomId) return;
+      const start = Date.now();
+      socket.emit('ping_check', start, () => {
+        const rtt = Date.now() - start;
+        setPlayerPings((prev) => ({ ...prev, [userId]: rtt }));
+        socket.emit('report_ping', { roomId, playerId: userId, ping: rtt });
+      });
+    };
+
+    measurePing();
+    const pingInterval = setInterval(measurePing, 3000);
+
     return () => {
+      clearInterval(pingInterval);
+      if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
+      if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
       socket.disconnect();
     };
-  }, [roomId, playerName, userId, currentAvatar]);
+  }, [roomId, playerName, userId, currentAvatar, pushTelemetry]);
 
   // Actions
   const updateAppearance = useCallback((newAvatar: string) => {
@@ -596,6 +592,7 @@ export function useSocket(
     gameState,
     boardTiles,
     logs,
+    playerPings,
     telemetryEntries,
     pendingTrades,
     errorMessage,

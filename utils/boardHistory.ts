@@ -302,8 +302,25 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
 }
 
 export function parseBoardHistoryLogs(log: string, players: Player[]): BoardHistoryEntry[] {
-  const entry = parseBoardHistoryLog(log, players);
-  return entry ? [entry] : [];
+  const entries: BoardHistoryEntry[] = [];
+  const primary = parseBoardHistoryLog(log, players);
+  if (primary) entries.push(primary);
+
+  // Extract peer-to-peer cash lines (trade, rent debt, etc.)
+  const paymentRe = /([^\s(,]+)\s+([^\s-]+)-কে\s+৳([\d,]+)\s+দিয়েছেন/gi;
+  let match: RegExpExecArray | null;
+  while ((match = paymentRe.exec(log)) !== null) {
+    const payerName = cleanText(match[1]);
+    const receiverName = cleanText(match[2]);
+    const amount = match[3];
+    const payer = players.find((p) => p.name === payerName) || findPlayerInLog(log, players);
+    const text = `${payerName} ${receiverName}-কে ৳${amount} দিয়েছেন`;
+    if (!entries.some((e) => e.text === text)) {
+      entries.push({ player: payer, text });
+    }
+  }
+
+  return entries;
 }
 
 export { historyTheme };

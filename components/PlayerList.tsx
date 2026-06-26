@@ -10,9 +10,16 @@ interface PlayerListProps {
   gameState: GameState;
   boardTiles: BoardTile[];
   userId: string;
+  playerPings?: Record<string, number>;
 }
 
-export default function PlayerList({ gameState, boardTiles, userId }: PlayerListProps) {
+function pingColor(ms: number): string {
+  if (ms < 80) return 'text-emerald-400';
+  if (ms < 150) return 'text-yellow-400';
+  return 'text-red-400';
+}
+
+export default function PlayerList({ gameState, boardTiles, userId, playerPings = {} }: PlayerListProps) {
 
   // Animation tracking states
   const [floaters, setFloaters] = useState<Record<string, { id: number; diff: number }[]>>({});
@@ -143,7 +150,7 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
         });
       }, delay);
     }
-  }, [gameState.players]);
+  }, [gameState]);
 
   return (
     <div className="w-full p-3 glass-card flex flex-col gap-3.5 select-none relative h-auto">
@@ -252,8 +259,13 @@ export default function PlayerList({ gameState, boardTiles, userId }: PlayerList
                 </div>
               </div>
 
-              {/* Right block: Balance */}
+              {/* Right block: Ping + Balance */}
               <div className="text-right shrink-0 ml-2 relative">
+                {playerPings[playerId] !== undefined && (
+                  <div className={`text-[9px] font-mono font-bold tracking-wider mb-0.5 ${pingColor(playerPings[playerId])}`}>
+                    {playerPings[playerId]}ms
+                  </div>
+                )}
                 <span className={`text-[13px] font-sans font-bold tracking-wide ${(displayBalances[player.id] ?? player.balance) < 0 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
                   ৳{toBanglaNum(displayBalances[player.id] ?? player.balance)}
                 </span>

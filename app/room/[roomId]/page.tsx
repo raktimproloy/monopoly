@@ -53,6 +53,7 @@ function GameRoomContent() {
     gameState,
     boardTiles,
     logs,
+    playerPings,
     telemetryEntries,
     pendingTrades,
     errorMessage,
@@ -872,7 +873,7 @@ function GameRoomContent() {
 
         {/* Scrollable content area for players and trade */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 custom-scrollbar pr-1">
-          <PlayerList gameState={gameState} boardTiles={boardTiles} userId={userId} />
+          <PlayerList gameState={gameState} boardTiles={boardTiles} userId={userId} playerPings={playerPings} />
           <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrades={pendingTrades} onProposeTrade={proposeTrade} onRespondToTrade={respondToTrade} />
         </div>
       </div>

@@ -121,6 +121,8 @@ export default function TradePanel({
   onUnmortgageProperty
 }: TradePanelProps) {
   const self = gameState.players[userId];
+  const isMyTurn = gameState.currentTurnPlayerId === userId;
+  const canManageProperty = isMyTurn && gameState.gameStatus === 'ACTIVE';
   
   const selfEffectiveBalance = gameState.pendingRentOwed?.debtorId === self.id 
     ? self.balance - gameState.pendingRentOwed.remainingAmount 
@@ -468,9 +470,9 @@ export default function TradePanel({
                           if (onUnmortgageProperty) onUnmortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('unmortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={selfEffectiveBalance < unmortgageCost || isJailLossRestricted || isDonFrozen}
+                        disabled={!canManageProperty || selfEffectiveBalance < unmortgageCost || isJailLossRestricted || isDonFrozen}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          selfEffectiveBalance >= unmortgageCost && !isJailLossRestricted && !isDonFrozen
+                          canManageProperty && selfEffectiveBalance >= unmortgageCost && !isJailLossRestricted && !isDonFrozen
                             ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -484,9 +486,9 @@ export default function TradePanel({
                           if (onMortgageProperty) onMortgageProperty(prop.tileIndex);
                           else window.dispatchEvent(new CustomEvent('mortgage_property', { detail: prop.tileIndex }));
                         }}
-                        disabled={prop.houses > 0 || isJailLossRestricted || isDonFrozen}
+                        disabled={!canManageProperty || prop.houses > 0 || isJailLossRestricted || isDonFrozen}
                         className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                          prop.houses === 0 && !isJailLossRestricted && !isDonFrozen
+                          canManageProperty && prop.houses === 0 && !isJailLossRestricted && !isDonFrozen
                             ? 'text-red-400 border-red-500/30 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500 cursor-pointer'
                             : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                         }`}
@@ -501,9 +503,9 @@ export default function TradePanel({
                           window.dispatchEvent(new CustomEvent('auction_property', { detail: prop.tileIndex }));
                         }
                       }}
-                      disabled={prop.houses > 0 || isJailLossRestricted}
+                      disabled={!canManageProperty || prop.houses > 0 || isJailLossRestricted}
                       className={`px-2 py-1.5 rounded-lg font-orbitron font-extrabold text-[9px] border tracking-wider transition-all select-none ${
-                        prop.houses === 0 && !isJailLossRestricted
+                        canManageProperty && prop.houses === 0 && !isJailLossRestricted
                           ? 'text-purple-400 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 hover:border-purple-500 cursor-pointer'
                           : 'text-slate-600 border-slate-800 bg-slate-900/50 cursor-not-allowed opacity-50'
                       }`}
