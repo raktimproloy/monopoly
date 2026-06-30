@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '@/shared/types';
 import { createTelemetryEntry, TelemetryEntry } from '../utils/telemetryLog';
+import { mergeServerPayload, StateDeltaPayload } from '../utils/stateDelta';
+import { resolveServerUrl } from '../utils/serverUrl';
 
 const GO_TO_JAIL_TILE = 30;
 const JAIL_TILE = 10;
@@ -32,8 +34,10 @@ export function useSocket(
   const gameStateRef = useRef<GameState | null>(null);
   const positionAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jailTransferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [pendingTrades, setPendingTrades] = useState<{ tradeId: string; offer: TradeOfferPayload }[]>([]);
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
+  const [isPredictingRoll, setIsPredictingRoll] = useState(false);
+  const stateVersionRef = useRef(0);
+  const pendingRollRef = useRef<{ issuedAt: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [roomDetails, setRoomDetails] = useState<{
     exists: boolean;
@@ -61,48 +65,26 @@ export function useSocket(
 
   const logs = useMemo(() => telemetryEntries.map((e) => e.text), [telemetryEntries]);
 
+  const pendingTrades = useMemo(
+    () =>
+      (gameState?.pendingTrades || []).map((t) => ({
+        tradeId: t.tradeId,
+        offer: t.offer,
+      })),
+    [gameState?.pendingTrades]
+  );
+
   useEffect(() => {
     if (!roomId || !userId) return;
 
-    // Dynamically resolve the server URL based on the window location
-    let dynamicServerUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:6001';
-    let serverPort = '6001';
-    try {
-      const url = new URL(dynamicServerUrl);
-      if (url.port) {
-        serverPort = url.port;
-      }
-    } catch (e) {
-      // Ignore URL parsing error
-    }
+    const dynamicServerUrl = resolveServerUrl();
 
-    if (typeof window !== 'undefined' && window.location) {
-      const { hostname, protocol } = window.location;
-      if (hostname && hostname.includes('devtunnels.ms')) {
-        // Devtunnels format: https://<tunnel>-3000.asse.devtunnels.ms
-        // Replace port -3000 with backend port for backend socket server
-        const secureHost = hostname.replace('-3000', `-${serverPort}`);
-        dynamicServerUrl = `https://${secureHost}`;
-      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        dynamicServerUrl = `http://${hostname}:${serverPort}`;
-      } else {
-        // Respect custom API domains (like bdpoly-api.aftonix.com) if configured
-        const hasCustomServerUrl = process.env.NEXT_PUBLIC_SERVER_URL &&
-          !process.env.NEXT_PUBLIC_SERVER_URL.includes('localhost') &&
-          !process.env.NEXT_PUBLIC_SERVER_URL.includes('127.0.0.1');
-
-        if (!hasCustomServerUrl && hostname) {
-          const isSecure = protocol === 'https:';
-          dynamicServerUrl = `${isSecure ? 'https' : 'http'}://${hostname}:${serverPort}`;
-        }
-      }
-    }
-
-    // Connect directly to the dynamic URL
     const socket = io(dynamicServerUrl, {
       auth: { userId },
       query: { userId },
-      transports: ['websocket']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 10,
     });
 
     socketRef.current = socket;
@@ -155,18 +137,19 @@ export function useSocket(
       });
     };
 
-    const applyStateUpdate = (state: GameState, log: string) => {
+    const applyStateUpdate = (state: GameState, log: string, version?: number) => {
+      if (version !== undefined) stateVersionRef.current = version;
       gameStateRef.current = state;
       setGameState(state);
       pushTelemetry(log, state);
       syncRoomDetails(state);
+      setIsPredictingRoll(false);
+      pendingRollRef.current = null;
     };
 
-    // Handle state mutations — apply gameplay state immediately; only delay token movement
-    socket.on('state_updated', (data: { state: GameState; log: string }) => {
+    /** Shared transition pipeline for full + delta authoritative updates. */
+    const handleAuthoritativeState = (newState: GameState, log: string, version?: number) => {
       const oldState = gameStateRef.current;
-      const newState = data.state;
-
       const rollCounterIncreased = (newState.rollCounter || 0) > (oldState?.rollCounter || 0);
 
       if (rollCounterIncreased && oldState) {
@@ -174,7 +157,7 @@ export function useSocket(
         if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
 
         const capturedNewState = newState;
-        const jailViaGoToJail = isJailViaGoToJailTile(oldState, newState, data.log);
+        const jailViaGoToJail = isJailViaGoToJailTile(oldState, newState, log);
         const activeId = newState.currentTurnPlayerId;
 
         const visualState = JSON.parse(JSON.stringify(newState)) as GameState;
@@ -185,7 +168,7 @@ export function useSocket(
           }
         });
 
-        applyStateUpdate(visualState, data.log);
+        applyStateUpdate(visualState, log, version);
 
         positionAnimTimerRef.current = setTimeout(() => {
           positionAnimTimerRef.current = null;
@@ -201,10 +184,12 @@ export function useSocket(
               jailTransferTimerRef.current = null;
               gameStateRef.current = capturedNewState;
               setGameState(capturedNewState);
+              if (version !== undefined) stateVersionRef.current = version;
             }, JAIL_TRANSFER_MS);
           } else {
             gameStateRef.current = capturedNewState;
             setGameState(capturedNewState);
+            if (version !== undefined) stateVersionRef.current = version;
           }
         }, DICE_ANIM_MS);
       } else {
@@ -216,22 +201,27 @@ export function useSocket(
           clearTimeout(jailTransferTimerRef.current);
           jailTransferTimerRef.current = null;
         }
-        applyStateUpdate(newState, data.log);
+        applyStateUpdate(newState, log, version);
       }
+    };
+
+    // Primary path: compact jsondiffpatch delta from server
+    socket.on('state_delta', (payload: StateDeltaPayload) => {
+      const merged = mergeServerPayload(gameStateRef.current, payload);
+      if (!merged) return;
+      handleAuthoritativeState(merged, payload.log, payload.version);
+    });
+
+    // Legacy / full-sync fallback (reconnect, large mutations)
+    socket.on('state_updated', (data: { state: GameState; log: string; version?: number }) => {
+      handleAuthoritativeState(data.state, data.log, data.version);
     });
 
     socket.on('player_pings_updated', (pings: Record<string, number>) => {
       setPlayerPings(pings);
     });
 
-    // Handle trade negotiations
-    socket.on('trade_proposed', (data: { tradeId: string; offer: TradeOfferPayload }) => {
-      setPendingTrades((prev) => {
-        // Prevent duplicate offers
-        if (prev.some(t => t.tradeId === data.tradeId)) return prev;
-        return [...prev, data];
-      });
-    });
+    // Trade list syncs via gameState.pendingTrades in authoritative state updates
 
     // Handle being kicked from lobby
     socket.on('kicked_from_lobby', () => {
@@ -241,10 +231,6 @@ export function useSocket(
 
     socket.on('trade_declined', (data: { tradeId: string; log: string }) => {
       pushTelemetry(data.log, gameStateRef.current);
-    });
-
-    socket.on('trade_resolved', (data: { tradeId: string }) => {
-      setPendingTrades((prev) => prev.filter(t => t.tradeId !== data.tradeId));
     });
 
     // Handle server resets
@@ -292,7 +278,19 @@ export function useSocket(
   }, [roomId, playerName]);
 
   const rollDice = useCallback(() => {
-    console.log('[Socket Emit] roll_dice', { playerId: userId });
+    const current = gameStateRef.current;
+    if (!current || current.currentTurnPlayerId !== userId) return;
+
+    // Optimistic UI: lock roll button + start dice animation immediately (reconciled on state_delta)
+    setIsPredictingRoll(true);
+    pendingRollRef.current = { issuedAt: Date.now() };
+    setTimeout(() => {
+      if (pendingRollRef.current) {
+        setIsPredictingRoll(false);
+        pendingRollRef.current = null;
+      }
+    }, 8000);
+
     if (socketRef.current) {
       socketRef.current.emit('roll_dice', { playerId: userId });
     }
@@ -319,12 +317,22 @@ export function useSocket(
     }
   }, [userId]);
 
-  const proposeTrade = useCallback((offer: Omit<TradeOfferPayload, 'senderId'>) => {
+  const proposeTrade = useCallback((offer: Omit<TradeOfferPayload, 'senderId'> & { replacesTradeId?: string }) => {
     console.log('[Socket Emit] propose_trade', { ...offer, senderId: userId });
     if (socketRef.current) {
       socketRef.current.emit('propose_trade', {
         ...offer,
         senderId: userId
+      });
+    }
+  }, [userId]);
+
+  const cancelTrade = useCallback((tradeId: string) => {
+    console.log('[Socket Emit] cancel_trade', { playerId: userId, tradeId });
+    if (socketRef.current) {
+      socketRef.current.emit('cancel_trade', {
+        playerId: userId,
+        tradeId
       });
     }
   }, [userId]);
@@ -337,7 +345,6 @@ export function useSocket(
         tradeId,
         accept
       });
-      setPendingTrades([]);
     }
   }, [userId]);
 
@@ -593,6 +600,7 @@ export function useSocket(
     boardTiles,
     logs,
     playerPings,
+    isPredictingRoll,
     telemetryEntries,
     pendingTrades,
     errorMessage,
@@ -604,6 +612,7 @@ export function useSocket(
     mortgageProperty,
     unmortgageProperty,
     proposeTrade,
+    cancelTrade,
     respondToTrade,
     endTurn,
     updateSettings,

@@ -16,6 +16,7 @@ interface BoardProps {
   userId: string;
   logs: string[];
   onRollDice: () => void;
+  isPredictingRoll?: boolean;
   onEndTurn: () => void;
   onPayJailFine: () => void;
   onUsePardonCard?: () => void;
@@ -346,6 +347,7 @@ export default function Board({
   userId,
   logs,
   onRollDice,
+  isPredictingRoll = false,
   onEndTurn,
   onPayJailFine,
   onUsePardonCard,
@@ -856,11 +858,27 @@ export default function Board({
                 </div>
               )}
 
-              {/* Traffic Police Overlay */}
+              {/* Traffic Police Overlay — anchored to outer board edge so side tiles don't bleed inward */}
               {hasPolice && (
-                <div className="absolute inset-0 z-[35] pointer-events-none flex items-center justify-center rounded-md">
-                  <div className="relative animate-bounce drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">
-                    <img src="/images/trafic-plice.png" alt="Traffic Police" className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 object-contain" />
+                <div
+                  className={`absolute inset-0 z-[35] pointer-events-none rounded-md overflow-hidden ${
+                    orientation === 'LEFT'
+                      ? 'flex items-center justify-start'
+                      : orientation === 'RIGHT'
+                        ? 'flex items-center justify-end'
+                        : orientation === 'TOP'
+                          ? 'flex items-start justify-center'
+                          : orientation === 'BOTTOM'
+                            ? 'flex items-end justify-center'
+                            : 'flex items-center justify-center'
+                  }`}
+                >
+                  <div className="relative animate-bounce drop-shadow-[0_0_15px_rgba(59,130,246,0.6)] shrink-0 leading-none">
+                    <img
+                      src="/images/trafic-plice.png"
+                      alt="Traffic Police"
+                      className="w-7 h-7 md:w-9 md:h-9 lg:w-10 lg:h-10 object-contain"
+                    />
                   </div>
                 </div>
               )}
@@ -891,8 +909,8 @@ export default function Board({
 
                 const iconNode = (() => {
                   if (tile.type === 'RAILROAD') return <TramFront className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-slate-300 drop-shadow-md shrink-0" />;
-                  if (tile.type === 'CHEST') return <Gift className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-amber-300 drop-shadow-md shrink-0" />;
-                  if (tile.type === 'CHANCE') return <img src="/images/treasure-chest.png" alt="Chance" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0" />;
+                  if (tile.type === 'CHEST') return <img src="/images/treasure-chest.png" alt="গুপ্তধন" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0" />;
+                  if (tile.type === 'CHANCE') return <Gift className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-amber-300 drop-shadow-md shrink-0" />;
                   if (tile.type === 'LOTTERY') return <img src="/images/ticket.png" alt="Lottery" className="w-7 h-7 md:w-8 md:h-8 object-contain drop-shadow-md shrink-0 filter brightness-110 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]" />;
                   if (tile.type === 'UTILITY') {
                     if (districtName.includes('বিদ্যুৎ')) return <Lightbulb className="w-3 h-3 md:w-4 md:h-4 xl:w-5 xl:h-5 text-yellow-400 drop-shadow-md shrink-0" />;
@@ -1131,7 +1149,7 @@ export default function Board({
 
           {/* 3D Physics Dice Display - Centered wrapper with standard height constraint */}
           <div className="w-full h-40 md:h-48 flex items-center justify-center relative shrink-0 transform-gpu perspective-1000">
-            <DiceManager gameState={gameState} />
+            <DiceManager gameState={gameState} isPredictingRoll={isPredictingRoll} />
           </div>
 
           {/* Status & Action Buttons directly under the dice (No card frame) */}
@@ -1165,7 +1183,8 @@ export default function Board({
                   <div className="flex flex-col gap-2 w-full items-center">
                     <button
                       onClick={onRollDice}
-                      className="bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] cursor-pointer w-[80%] sm:w-auto"
+                      disabled={isPredictingRoll}
+                      className={`bg-[#6F4FF0] hover:bg-[#5C3ED9] text-white font-orbitron font-extrabold text-[10px] md:text-[12px] px-4 md:px-6 py-2 md:py-3 rounded-lg md:rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-[#6F4FF0]/30 transition-all duration-200 active:scale-[0.98] w-[80%] sm:w-auto ${isPredictingRoll ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <DiceIcon size={14} className="stroke-white" />
                       ছক্কা মারুন

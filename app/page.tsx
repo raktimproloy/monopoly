@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Terminal, Users, Sparkles } from 'lucide-react';
+import { resolveServerUrl } from '@/utils/serverUrl';
 
 const AVATAR_COLORS = [
   { hex: '#ffffff', name: 'Titanium White' },
@@ -129,7 +130,7 @@ export default function Lobby() {
           onClick={async () => {
             if (window.confirm("WARNING: This will forcefully close all active game servers and wipe the database. Continue?")) {
               try {
-                const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:6001';
+                const baseUrl = resolveServerUrl();
                 const res = await fetch(`${baseUrl}/api/clear-db`, { method: 'POST' });
                 if (res.ok) {
                   alert("Servers shut down and database cleared successfully.");

@@ -10,7 +10,8 @@ interface TradePanelProps {
   boardTiles: BoardTile[];
   userId: string;
   pendingTrades: { tradeId: string; offer: TradeOfferPayload }[];
-  onProposeTrade: (offer: Omit<TradeOfferPayload, 'senderId'>) => void;
+  onProposeTrade: (offer: Omit<TradeOfferPayload, 'senderId'> & { replacesTradeId?: string }) => void;
+  onCancelTrade: (tradeId: string) => void;
   onRespondToTrade: (tradeId: string, accept: boolean) => void;
   onMortgageProperty?: (index: number) => void;
   onUnmortgageProperty?: (index: number) => void;
@@ -116,6 +117,7 @@ export default function TradePanel({
   userId,
   pendingTrades,
   onProposeTrade,
+  onCancelTrade,
   onRespondToTrade,
   onMortgageProperty,
   onUnmortgageProperty
@@ -155,6 +157,7 @@ export default function TradePanel({
   const [timerSeconds, setTimerSeconds] = useState<number>(120); // default 2 mins
 
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
+  const [negotiatingFromTradeId, setNegotiatingFromTradeId] = useState<string | null>(null);
   const pendingTrade = pendingTrades.find(t => t.tradeId === selectedTradeId) || null;
 
   // Countdown timer for active proposals
@@ -187,8 +190,16 @@ export default function TradePanel({
     return () => clearInterval(interval);
   }, [pendingTrades]);
 
+  useEffect(() => {
+    if (activeModal === 'VIEW_TRADE' && selectedTradeId && !pendingTrades.some((t) => t.tradeId === selectedTradeId)) {
+      setActiveModal('NONE');
+      setSelectedTradeId(null);
+    }
+  }, [pendingTrades, activeModal, selectedTradeId]);
+
   // Automatically reset states when a modal closes or values change
   const handleOpenCreateModal = () => {
+    setNegotiatingFromTradeId(null);
     setReceiverId(counterparties[0]?.id || '');
     setOfferCash(0);
     setRequestCash(0);
@@ -229,17 +240,20 @@ export default function TradePanel({
       requestPropertyIndexes: selectedRequestProps,
       offerPardonCards,
       requestPardonCards,
-      durationSeconds: useTimer ? timerSeconds : undefined
+      durationSeconds: useTimer ? timerSeconds : undefined,
+      replacesTradeId: negotiatingFromTradeId || undefined,
     });
+    setNegotiatingFromTradeId(null);
+    setSelectedTradeId(null);
     setActiveModal('NONE');
   };
 
   const handleNegotiate = () => {
     if (!pendingTrade) return;
-    // Swap roles: prefill proposal with reversed cash & properties
     const currentOffer = pendingTrade.offer;
     const opponentId = currentOffer.senderId;
 
+    setNegotiatingFromTradeId(pendingTrade.tradeId);
     setReceiverId(opponentId);
     setOfferCash(currentOffer.requestCash);
     setRequestCash(currentOffer.offerCash);
@@ -329,7 +343,7 @@ export default function TradePanel({
         </div>
 
         {/* Trade proposals */}
-        <div className="flex flex-col gap-2 max-h-[140px] overflow-y-auto pr-0.5">
+        <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-0.5 custom-scrollbar">
           {pendingTrades.length > 0 ? (
             pendingTrades.map((trade) => {
               const sender = gameState.players[trade.offer.senderId];
@@ -580,7 +594,7 @@ export default function TradePanel({
       {/* MODAL 2: CREATE TRADE */}
       {activeModal === 'CREATE_TRADE' && (
         <div className="glass-overlay">
-          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-5 animate-scale-up border-indigo-500/30">
+          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-4 animate-scale-up border-indigo-500/30 min-h-0">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}
@@ -597,9 +611,9 @@ export default function TradePanel({
             </div>
 
             {/* Split Screen Layout - FULLY OPEN (no nested column card backgrounds/borders) */}
-            <div className="grid grid-cols-[1fr_24px_1fr] gap-4 items-stretch select-none">
+            <div className="grid grid-cols-[1fr_24px_1fr] gap-4 items-stretch select-none flex-1 min-h-0">
               {/* LEFT COLUMN: ME (SENDER) - OPEN DESIGN */}
-              <div className="p-3 flex flex-col gap-4">
+              <div className="p-3 flex flex-col gap-3 min-h-0">
                 <div className="flex items-center gap-2.5 border-b border-[#241F3C] pb-2.5">
                   <div
                     style={{ backgroundColor: self.avatar }}
@@ -633,11 +647,11 @@ export default function TradePanel({
                 </div>
 
                 {/* Properties to trade - OPEN DESIGN (no inner card backgrounds) */}
-                <div className="flex flex-col gap-2 flex-1 min-h-[160px]">
-                  <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                <div className="flex flex-col gap-2 flex-1 min-h-0">
+                  <span className="text-xs text-slate-300 font-bold uppercase tracking-wider shrink-0">
                     সম্পদ দিন
                   </span>
-                  <div className="flex-1 overflow-y-auto max-h-[160px] pr-1 flex flex-col gap-2 py-1">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2 py-1 custom-scrollbar">
                     {myTradableProps.length === 0 && (self.getOutOfJailFreeCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-1 block text-center">No tradable items</span>
                     ) : (
@@ -697,7 +711,7 @@ export default function TradePanel({
               </div>
 
               {/* RIGHT COLUMN: OPPONENT (RECEIVER) - OPEN DESIGN */}
-              <div className="p-3 flex flex-col gap-4">
+              <div className="p-3 flex flex-col gap-3 min-h-0">
                 <div className="flex items-center gap-2.5 border-b border-[#241F3C] pb-2.5">
                   <div
                     style={{ backgroundColor: gameState.players[receiverId]?.avatar || '#8BA4F9' }}
@@ -733,11 +747,11 @@ export default function TradePanel({
                 </div>
 
                 {/* Properties to trade - OPEN DESIGN (no inner card backgrounds) */}
-                <div className="flex flex-col gap-2 flex-1 min-h-[160px]">
-                  <span className="text-xs text-slate-300 font-bold uppercase tracking-wider">
+                <div className="flex flex-col gap-2 flex-1 min-h-0">
+                  <span className="text-xs text-slate-300 font-bold uppercase tracking-wider shrink-0">
                     Wanted properties
                   </span>
-                  <div className="flex-1 overflow-y-auto max-h-[160px] pr-1 flex flex-col gap-2 py-1">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2 py-1 custom-scrollbar">
                     {opponentTradableProps.length === 0 && (gameState.players[receiverId]?.getOutOfJailFreeCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-1 block text-center">No tradable items</span>
                     ) : (
@@ -850,7 +864,7 @@ export default function TradePanel({
       {/* MODAL 3: VIEW TRADE */}
       {activeModal === 'VIEW_TRADE' && pendingTrade && (
         <div className="glass-overlay">
-          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-4 animate-scale-up border-indigo-500/30">
+          <div className="glass-modal max-w-5xl h-[85vh] w-full p-6 flex flex-col gap-4 animate-scale-up border-indigo-500/30 min-h-0">
             {/* Close Button */}
             <button
               onClick={() => setActiveModal('NONE')}
@@ -867,9 +881,9 @@ export default function TradePanel({
             </div>
 
             {/* Split Screen Layout - FULLY OPEN (no nested card backgrounds/borders) */}
-            <div className="grid grid-cols-[1fr_24px_1fr] gap-4 items-stretch select-none">
+            <div className="grid grid-cols-[1fr_24px_1fr] gap-4 items-stretch select-none flex-1 min-h-0">
               {/* LEFT COLUMN: OFFER DETAILS - OPEN DESIGN */}
-              <div className="p-3 flex flex-col gap-4">
+              <div className="p-3 flex flex-col gap-3 min-h-0">
                 <div className="flex items-center gap-2.5 border-b border-[#241F3C] pb-2.5">
                   <div
                     style={{ backgroundColor: pendingSender?.avatar || '#8BA4F9' }}
@@ -889,9 +903,9 @@ export default function TradePanel({
                 </div>
 
                 {/* Properties offered - OPEN DESIGN */}
-                <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">প্রস্তাবিত সম্পদ</span>
-                  <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5 shrink-0">প্রস্তাবিত সম্পদ</span>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2 py-1 custom-scrollbar">
                     {pendingTrade.offer.offerPropertyIndexes.length === 0 && (pendingTrade.offer.offerPardonCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">কোনো সম্পদ দেওয়া হয়নি</span>
                     ) : (
@@ -938,7 +952,7 @@ export default function TradePanel({
               </div>
 
               {/* RIGHT COLUMN: REQUEST DETAILS - OPEN DESIGN */}
-              <div className="p-3 flex flex-col gap-4">
+              <div className="p-3 flex flex-col gap-3 min-h-0">
                 <div className="flex items-center gap-2.5 border-b border-[#241F3C] pb-2.5">
                   <div
                     style={{ backgroundColor: pendingReceiver?.avatar || '#8BA4F9' }}
@@ -958,9 +972,9 @@ export default function TradePanel({
                 </div>
 
                 {/* Properties requested - OPEN DESIGN */}
-                <div className="flex flex-col gap-1.5 flex-1 min-h-[140px]">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">কাঙ্ক্ষিত সম্পদ</span>
-                  <div className="flex-1 overflow-y-auto max-h-[140px] pr-1 flex flex-col gap-2 py-1">
+                <div className="flex flex-col gap-1.5 flex-1 min-h-0">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5 shrink-0">কাঙ্ক্ষিত সম্পদ</span>
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-2 py-1 custom-scrollbar">
                     {pendingTrade.offer.requestPropertyIndexes.length === 0 && (pendingTrade.offer.requestPardonCards || 0) === 0 ? (
                       <span className="text-xs text-slate-500 font-mono italic p-2 block text-center">কোনো সম্পদ চাওয়া হয়নি</span>
                     ) : (
@@ -1058,9 +1072,8 @@ export default function TradePanel({
                 // Sender or Spectator
                 <button
                   onClick={() => {
-                    // Sender can cancel, spectator can just close
                     if (userId === pendingTrade.offer.senderId) {
-                      onRespondToTrade(pendingTrade.tradeId, false);
+                      onCancelTrade(pendingTrade.tradeId);
                     }
                     setActiveModal('NONE');
                   }}

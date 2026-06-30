@@ -67,10 +67,75 @@ function extractTileName(log: string, match: RegExpMatchArray | null, player: Pl
   return '';
 }
 
+const AMOUNT = '[0-9০-৯,]+';
+
 function extractAmount(log: string, match?: RegExpMatchArray | null): string | null {
   if (match?.[2]) return match[2];
-  const m = log.match(/\(৳([\d,]+)\)|কিনেছেন\s+৳([\d,]+)|\+\s*৳([\d,]+)|৳([\d,]+)/);
+  const m = log.match(new RegExp(`\\(৳(${AMOUNT})\\)|কিনেছেন\\s+৳(${AMOUNT})|\\+\\s*৳(${AMOUNT})|৳(${AMOUNT})`));
   return m ? m[1] || m[2] || m[3] || m[4] : null;
+}
+
+function parseSimpleMoney(log: string, players: Player[]): BoardHistoryEntry | null {
+  const player = findPlayerInLog(log, players);
+
+  const gain = log.match(new RegExp(`\\+৳(${AMOUNT})\\s*পেয়েছেন`));
+  if (gain && !/GO\s*পার|GO-তে/i.test(log)) {
+    return { player, text: `${player?.name || ''} ৳${gain[1]} পেয়েছেন` };
+  }
+
+  const loss = log.match(new RegExp(`-৳(${AMOUNT})\\s*দ(?:িয়|িয়)েছেন`));
+  if (loss && !/\S+-কে\s*৳/.test(log)) {
+    return { player, text: `${player?.name || ''} ৳${loss[1]} দিয়েছেন` };
+  }
+
+  const birthday = log.match(new RegExp(`প্রত্যেকে আপনাকে ৳(${AMOUNT})`));
+  if (birthday) {
+    return { player, text: `সবাই ${player?.name || ''}-কে ৳${birthday[1]} দিয়েছেন` };
+  }
+
+  const celebration = log.match(new RegExp(`প্রত্যেকে ৳(${AMOUNT})\\s*করে\\s*দ(?:িয়|িয়)েছেন`));
+  if (celebration && /খেলোয়াড়কে|খেলোয়াড়কে/.test(log)) {
+    return { player, text: `${player?.name || ''} সবাইকে ৳${celebration[1]} দিয়েছেন` };
+  }
+
+  return null;
+}
+
+function parsePeerPayment(log: string, players: Player[]): BoardHistoryEntry | null {
+  const re = new RegExp(
+    `([^\\s(,]+)\\s+([^\\s-]+)-কে\\s+৳(${AMOUNT})\\s+দ(?:িয়|িয়)েছেন`,
+    'gi'
+  );
+  const matches = [...log.matchAll(re)];
+  if (matches.length === 0) return null;
+
+  if (/চুক্তি সম্পন্ন|trade complete/i.test(log)) {
+    const names = new Set<string>();
+    for (const m of matches) {
+      names.add(cleanText(m[1]));
+      names.add(cleanText(m[2]));
+    }
+    const [a, b] = [...names];
+    if (a && b) {
+      const payer = players.find((p) => p.name === a) || findPlayerInLog(log, players);
+      if (matches.length === 1) {
+        return {
+          player: payer,
+          text: `${cleanText(matches[0][1])} ${cleanText(matches[0][2])}-কে ৳${matches[0][3]} দিয়েছেন`,
+        };
+      }
+      return { player: payer, text: `${a} ও ${b} ট্রেড করেছেন` };
+    }
+  }
+
+  const m = matches[0];
+  const payerName = cleanText(m[1]);
+  const receiverName = cleanText(m[2]);
+  const payer = players.find((p) => p.name === payerName) || findPlayerInLog(log, players);
+  return {
+    player: payer,
+    text: `${payerName} ${receiverName}-কে ৳${m[3]} দিয়েছেন`,
+  };
 }
 
 function findTwoPlayers(log: string, players: Player[]): [Player | null, Player | null] {
@@ -79,7 +144,7 @@ function findTwoPlayers(log: string, players: Player[]): [Player | null, Player 
 }
 
 function extractTrafficReason(log: string): string {
-  const m = log.match(/ট্রাফিক পুলিশের হাতে ধরা!\s*(.+?)\s*৳[\d,]+\s*জরিমানা/i);
+  const m = log.match(new RegExp(`ট্রাফিক পুলিশের হাতে ধরা!\\s*(.+?)\\s*৳${AMOUNT}\\s*জরিমানা`, 'i'));
   return m ? cleanText(m[1]) : '';
 }
 
@@ -92,8 +157,9 @@ function splitLogClauses(log: string): string[] {
 
 function isIntermediateClause(clause: string, fullLog: string): boolean {
   if (shouldSkipSegment(clause)) return true;
-  if (/GO পার|লোন বাবদ|🏦/i.test(clause)) return true;
-  if (/-এ ভাড়া ৳/i.test(clause) && /ভাড়া দিয়েছেন/i.test(fullLog)) return true;
+  if (/লোন বাবদ|🏦/i.test(clause)) return true;
+  if (/GO পার/i.test(clause) && /ভাড়া দি(?:য়|িয়)েছেন/i.test(fullLog)) return true;
+  if (/-এ ভাড়া ৳/i.test(clause) && /ভাড়া দি(?:য়|িয়)েছেন/i.test(fullLog)) return true;
   return false;
 }
 
@@ -107,7 +173,7 @@ function findLastOutcomeClause(log: string): string | null {
 }
 
 function parseRentPaid(clause: string, fullLog: string, players: Player[]): BoardHistoryEntry | null {
-  let m = clause.match(/(.+?)\s+ভাড়া দিয়েছেন\s+৳([\d,]+)\s*\(([^)]+)-কে\)/i);
+  let m = clause.match(new RegExp(`^(.+?)\\s+ভাড়া\\s+\\S+\\s+৳(${AMOUNT})\\s*\\((.+?)-কে\\)`, 'i'));
   if (m) {
     const payerName = cleanText(m[1]);
     const payer = players.find((p) => p.name === payerName) || findPlayerInLog(fullLog, players);
@@ -121,7 +187,7 @@ function parseRentPaid(clause: string, fullLog: string, players: Player[]): Boar
   for (const p of sorted) {
     if (!clause.startsWith(p.name)) continue;
     const rest = clause.slice(p.name.length).trim();
-    const rm = rest.match(/^(.+?)-কে\s+৳([\d,]+)\s+ভাড়া দিয়েছেন/i);
+    const rm = rest.match(new RegExp(`^(.+?)-কে(?:\\s+আরও)?\\s+৳(${AMOUNT})\\s+ভাড়া\\s+\\S+`, 'i'));
     if (rm) {
       return {
         player: p,
@@ -138,14 +204,14 @@ function extractRentPayer(log: string): string | null {
   if (m) return cleanText(m[1]);
 
   for (const clause of splitLogClauses(log).reverse()) {
-    const payerMatch = clause.match(/^(.+?)\s+.+?-কে\s+৳[\d,]+\s+ভাড়া দিয়েছেন/i);
+    const payerMatch = clause.match(new RegExp(`^(.+?)\\s+.+?-কে\\s+৳${AMOUNT}\\s+ভাড়া দি(?:য়|িয়)েছেন`, 'i'));
     if (payerMatch) return cleanText(payerMatch[1]);
   }
   return null;
 }
 
 function extractRentReceiver(log: string): string | null {
-  const m = log.match(/ভাড়া দিয়েছেন\s+৳[\d,]+\s*\(([^)]+)-কে\)/i);
+  const m = log.match(new RegExp(`ভাড়া\\s+\\S+\\s+৳${AMOUNT}\\s*\\((.+?)-কে\\)`, 'i'));
   return m ? cleanText(m[1]) : null;
 }
 
@@ -230,7 +296,7 @@ function applyRule(
 }
 
 function varsHasAmount(log: string): boolean {
-  return /\+\s*৳[\d,]+|\(৳[\d,]+\)/.test(log);
+  return new RegExp(`\\+\\s*৳${AMOUNT}|\\(৳${AMOUNT}\\)`).test(log);
 }
 
 function parseTrafficLog(
@@ -274,17 +340,23 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
     if (trafficEntry) return trafficEntry;
   }
 
+  if (/ভাড়া দি(?:য়|িয়)েছেন/i.test(log)) {
+    const clauses = splitLogClauses(log);
+    for (let i = clauses.length - 1; i >= 0; i--) {
+      if (!/ভাড়া দি(?:য়|িয়)েছেন/i.test(clauses[i])) continue;
+      const rentEntry = parseRentPaid(clauses[i], log, players);
+      if (rentEntry) return rentEntry;
+    }
+  }
+
+  const peerPayment = parsePeerPayment(log, players);
+  if (peerPayment) return peerPayment;
+
+  const simpleMoney = parseSimpleMoney(log, players);
+  if (simpleMoney) return simpleMoney;
+
   // Compound roll logs: only show the last meaningful outcome (e.g. rent paid, not GO/loan/rent-due)
   if (/রোল:|➡️/i.test(log)) {
-    if (/ভাড়া দিয়েছেন/i.test(log)) {
-      const clauses = splitLogClauses(log);
-      for (let i = clauses.length - 1; i >= 0; i--) {
-        if (!/ভাড়া দিয়েছেন/i.test(clauses[i])) continue;
-        const rentEntry = parseRentPaid(clauses[i], log, players);
-        if (rentEntry) return rentEntry;
-      }
-    }
-
     const lastClause = findLastOutcomeClause(log);
     if (lastClause) {
       const entry = parseChunk(lastClause, log, players, player);
@@ -293,34 +365,12 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
     return null;
   }
 
-  if (/ভাড়া দিয়েছেন/i.test(log)) {
-    const rentEntry = parseRentPaid(log, log, players);
-    if (rentEntry) return rentEntry;
-  }
-
   return parseChunk(log, log, players, player);
 }
 
 export function parseBoardHistoryLogs(log: string, players: Player[]): BoardHistoryEntry[] {
-  const entries: BoardHistoryEntry[] = [];
-  const primary = parseBoardHistoryLog(log, players);
-  if (primary) entries.push(primary);
-
-  // Extract peer-to-peer cash lines (trade, rent debt, etc.)
-  const paymentRe = /([^\s(,]+)\s+([^\s-]+)-কে\s+৳([\d,]+)\s+দিয়েছেন/gi;
-  let match: RegExpExecArray | null;
-  while ((match = paymentRe.exec(log)) !== null) {
-    const payerName = cleanText(match[1]);
-    const receiverName = cleanText(match[2]);
-    const amount = match[3];
-    const payer = players.find((p) => p.name === payerName) || findPlayerInLog(log, players);
-    const text = `${payerName} ${receiverName}-কে ৳${amount} দিয়েছেন`;
-    if (!entries.some((e) => e.text === text)) {
-      entries.push({ player: payer, text });
-    }
-  }
-
-  return entries;
+  const entry = parseBoardHistoryLog(log, players);
+  return entry ? [entry] : [];
 }
 
 export { historyTheme };

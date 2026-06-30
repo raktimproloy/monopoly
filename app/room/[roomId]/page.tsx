@@ -54,6 +54,7 @@ function GameRoomContent() {
     boardTiles,
     logs,
     playerPings,
+    isPredictingRoll,
     telemetryEntries,
     pendingTrades,
     errorMessage,
@@ -65,6 +66,7 @@ function GameRoomContent() {
     mortgageProperty,
     unmortgageProperty,
     proposeTrade,
+    cancelTrade,
     respondToTrade,
     endTurn,
     updateSettings,
@@ -815,6 +817,7 @@ function GameRoomContent() {
                 userId={userId}
                 logs={logs}
                 onRollDice={rollDice}
+                isPredictingRoll={isPredictingRoll}
                 onEndTurn={endTurn}
                 onPayJailFine={payJailFine}
                 onUsePardonCard={usePardonCard}
@@ -874,7 +877,7 @@ function GameRoomContent() {
         {/* Scrollable content area for players and trade */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 custom-scrollbar pr-1">
           <PlayerList gameState={gameState} boardTiles={boardTiles} userId={userId} playerPings={playerPings} />
-          <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrades={pendingTrades} onProposeTrade={proposeTrade} onRespondToTrade={respondToTrade} />
+          <TradePanel gameState={gameState} boardTiles={boardTiles} userId={userId} pendingTrades={pendingTrades} onProposeTrade={proposeTrade} onCancelTrade={cancelTrade} onRespondToTrade={respondToTrade} />
         </div>
       </div>
 
