@@ -1,5 +1,6 @@
 import { Player } from '@/shared/types';
 import historyTheme from './dummy.json';
+import { expandTelemetryLines } from './telemetryLog';
 
 export interface BoardHistoryEntry {
   player: Player | null;
@@ -9,6 +10,16 @@ export interface BoardHistoryEntry {
 type HistoryRule = (typeof historyTheme.rules)[number];
 
 const TRAFFIC_RULE_IDS = new Set(['traffic_fine', 'traffic_jail', 'police_spawn', 'police_leave']);
+
+/** Matches both Unicode forms of the Bengali retroflex "r" in ভাড়া/ভাড়া. */
+const RENT = 'ভ(?:াড়া|াড়া)';
+const DIYE = 'দ(?:িয়|িয়)েছেন';
+const RENT_PAID = new RegExp(`${RENT}\\s+${DIYE}`, 'i');
+const RENT_DUE = new RegExp(`${RENT}\\s+৳`, 'i');
+
+function normalizeHistoryLog(log: string): string {
+  return log.normalize('NFC').replace(/\u09DC/g, '\u09DC');
+}
 
 function findPlayerInLog(log: string, players: Player[]): Player | null {
   const sorted = [...players].sort((a, b) => b.name.length - a.name.length);
@@ -158,22 +169,38 @@ function splitLogClauses(log: string): string[] {
 function isIntermediateClause(clause: string, fullLog: string): boolean {
   if (shouldSkipSegment(clause)) return true;
   if (/লোন বাবদ|🏦/i.test(clause)) return true;
-  if (/GO পার/i.test(clause) && /ভাড়া দি(?:য়|িয়)েছেন/i.test(fullLog)) return true;
-  if (/-এ ভাড়া ৳/i.test(clause) && /ভাড়া দি(?:য়|িয়)েছেন/i.test(fullLog)) return true;
+  if (/GO পার/i.test(clause) && RENT_PAID.test(fullLog)) return true;
+  // Skip rent-due segments when a paid-rent line exists in the same log.
+  if (RENT_DUE.test(clause) && !RENT_PAID.test(clause) && RENT_PAID.test(fullLog)) return true;
   return false;
 }
 
-function findLastOutcomeClause(log: string): string | null {
-  const clauses = splitLogClauses(log);
-  for (let i = clauses.length - 1; i >= 0; i--) {
-    if (isIntermediateClause(clauses[i], log)) continue;
-    return clauses[i];
-  }
-  return null;
+/** Server paidRent template: "{payer} ভাড়া দিয়েছেন ৳{amount} ({owner}-কে)" */
+function parsePaidRentLog(log: string, players: Player[]): BoardHistoryEntry | null {
+  const re = new RegExp(
+    `([\\w\\u0980-\\u09FF]+)\\s+${RENT}\\s+${DIYE}\\s+৳(${AMOUNT})\\s*\\((.+?)-কে\\)[।.]?`,
+    'gi'
+  );
+
+  let last: RegExpMatchArray | null = null;
+  for (const m of log.matchAll(re)) last = m;
+  if (!last) return null;
+
+  const payerName = cleanText(last[1]);
+  const receiverName = cleanText(last[3]);
+  const payer = players.find((p) => p.name === payerName) || findPlayerInLog(log, players);
+
+  return {
+    player: payer,
+    text: `${payerName} ${receiverName}-কে ৳${last[2]} ভাড়া দিয়েছেন`,
+  };
 }
 
 function parseRentPaid(clause: string, fullLog: string, players: Player[]): BoardHistoryEntry | null {
-  let m = clause.match(new RegExp(`^(.+?)\\s+ভাড়া\\s+\\S+\\s+৳(${AMOUNT})\\s*\\((.+?)-কে\\)`, 'i'));
+  const fromServer = parsePaidRentLog(clause, players);
+  if (fromServer) return fromServer;
+
+  let m = clause.match(new RegExp(`^(.+?)\\s+${RENT}\\s+\\S+\\s+৳(${AMOUNT})\\s*\\((.+?)-কে\\)[।.]?`, 'i'));
   if (m) {
     const payerName = cleanText(m[1]);
     const payer = players.find((p) => p.name === payerName) || findPlayerInLog(fullLog, players);
@@ -187,7 +214,7 @@ function parseRentPaid(clause: string, fullLog: string, players: Player[]): Boar
   for (const p of sorted) {
     if (!clause.startsWith(p.name)) continue;
     const rest = clause.slice(p.name.length).trim();
-    const rm = rest.match(new RegExp(`^(.+?)-কে(?:\\s+আরও)?\\s+৳(${AMOUNT})\\s+ভাড়া\\s+\\S+`, 'i'));
+    const rm = rest.match(new RegExp(`^(.+?)-কে(?:\\s+আরও)?\\s+৳(${AMOUNT})\\s+${RENT}\\s+\\S+`, 'i'));
     if (rm) {
       return {
         player: p,
@@ -200,19 +227,35 @@ function parseRentPaid(clause: string, fullLog: string, players: Player[]): Boar
 }
 
 function extractRentPayer(log: string): string | null {
-  const m = log.match(/^(.+?)\s+ভাড়া দিয়েছেন/i);
-  if (m) return cleanText(m[1]);
+  const re = new RegExp(`([\\w\\u0980-\\u09FF]+)\\s+${RENT}\\s+${DIYE}`, 'gi');
+  let last: string | null = null;
+  for (const m of log.matchAll(re)) last = cleanText(m[1]);
+  if (last) return last;
 
   for (const clause of splitLogClauses(log).reverse()) {
-    const payerMatch = clause.match(new RegExp(`^(.+?)\\s+.+?-কে\\s+৳${AMOUNT}\\s+ভাড়া দি(?:য়|িয়)েছেন`, 'i'));
+    const payerMatch = clause.match(
+      new RegExp(`^(.+?)\\s+.+?-কে\\s+৳${AMOUNT}\\s+${RENT}\\s+${DIYE}`, 'i')
+    );
     if (payerMatch) return cleanText(payerMatch[1]);
   }
   return null;
 }
 
 function extractRentReceiver(log: string): string | null {
-  const m = log.match(new RegExp(`ভাড়া\\s+\\S+\\s+৳${AMOUNT}\\s*\\((.+?)-কে\\)`, 'i'));
-  return m ? cleanText(m[1]) : null;
+  const m = log.match(new RegExp(`${RENT}\\s+${DIYE}\\s+৳${AMOUNT}\\s*\\((.+?)-কে\\)[।.]?`, 'i'));
+  if (m) return cleanText(m[1]);
+
+  const legacy = log.match(new RegExp(`${RENT}\\s+\\S+\\s+৳${AMOUNT}\\s*\\((.+?)-কে\\)`, 'i'));
+  return legacy ? cleanText(legacy[1]) : null;
+}
+
+function findLastOutcomeClause(log: string): string | null {
+  const clauses = splitLogClauses(log);
+  for (let i = clauses.length - 1; i >= 0; i--) {
+    if (isIntermediateClause(clauses[i], log)) continue;
+    return clauses[i];
+  }
+  return null;
 }
 
 function fillTemplate(
@@ -331,41 +374,60 @@ function parseChunk(
 
 /** Narrative board history — templates from client/utils/dummy.json (Bengali). */
 export function parseBoardHistoryLog(log: string, players: Player[]): BoardHistoryEntry | null {
-  if (!log?.trim() || shouldSkipLog(log)) return null;
+  const normalized = normalizeHistoryLog(log);
+  if (!normalized?.trim() || shouldSkipLog(normalized)) return null;
 
-  const player = findPlayerInLog(log, players);
+  const player = findPlayerInLog(normalized, players);
 
-  if (/ট্রাফিক পুলিশ/i.test(log)) {
-    const trafficEntry = parseTrafficLog(log, players, player);
+  if (/ট্রাফিক পুলিশ/i.test(normalized)) {
+    const trafficEntry = parseTrafficLog(normalized, players, player);
     if (trafficEntry) return trafficEntry;
   }
 
-  if (/ভাড়া দি(?:য়|িয়)েছেন/i.test(log)) {
-    const clauses = splitLogClauses(log);
+  const paidRent = parsePaidRentLog(normalized, players);
+  if (paidRent) return paidRent;
+
+  if (RENT_PAID.test(normalized)) {
+    const clauses = splitLogClauses(normalized);
     for (let i = clauses.length - 1; i >= 0; i--) {
-      if (!/ভাড়া দি(?:য়|িয়)েছেন/i.test(clauses[i])) continue;
-      const rentEntry = parseRentPaid(clauses[i], log, players);
+      if (!RENT_PAID.test(clauses[i])) continue;
+      const rentEntry = parseRentPaid(clauses[i], normalized, players);
       if (rentEntry) return rentEntry;
     }
   }
 
-  const peerPayment = parsePeerPayment(log, players);
+  const peerPayment = parsePeerPayment(normalized, players);
   if (peerPayment) return peerPayment;
 
-  const simpleMoney = parseSimpleMoney(log, players);
+  const simpleMoney = parseSimpleMoney(normalized, players);
   if (simpleMoney) return simpleMoney;
 
-  // Compound roll logs: only show the last meaningful outcome (e.g. rent paid, not GO/loan/rent-due)
-  if (/রোল:|➡️/i.test(log)) {
-    const lastClause = findLastOutcomeClause(log);
+  if (/রোল:|➡️/i.test(normalized)) {
+    const rentFromRoll = parsePaidRentLog(normalized, players);
+    if (rentFromRoll) return rentFromRoll;
+
+    const lastClause = findLastOutcomeClause(normalized);
     if (lastClause) {
-      const entry = parseChunk(lastClause, log, players, player);
+      const rentInClause = parsePaidRentLog(lastClause, players);
+      if (rentInClause) return rentInClause;
+
+      const entry = parseChunk(lastClause, normalized, players, player);
       if (entry) return entry;
     }
     return null;
   }
 
-  return parseChunk(log, log, players, player);
+  const chunkEntry = parseChunk(normalized, normalized, players, player);
+  if (chunkEntry) return chunkEntry;
+
+  for (const line of expandTelemetryLines(normalized)) {
+    const rentLine = parsePaidRentLog(line, players);
+    if (rentLine) return rentLine;
+    const lineEntry = parseChunk(line, normalized, players, player);
+    if (lineEntry) return lineEntry;
+  }
+
+  return null;
 }
 
 export function parseBoardHistoryLogs(log: string, players: Player[]): BoardHistoryEntry[] {
