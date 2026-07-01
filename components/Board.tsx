@@ -301,7 +301,7 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
       {/* Balance Floaters originating from the Token */}
       {floaters.map(f => (
         <div key={f.id} className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-1 text-[10px] md:text-sm font-black whitespace-nowrap animate-float-up z-50 ${f.diff > 0 ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]' : 'text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]'}`}>
-          {f.diff > 0 ? '+' : ''}৳{Math.abs(f.diff)}
+          {f.diff > 0 ? '+' : ''}৳{toBanglaNum(Math.abs(f.diff))}
         </div>
       ))}
     </div>
@@ -1149,8 +1149,8 @@ export default function Board({
               </div>
             ) : (
               <div className="flex gap-4 items-center justify-center w-full">
-                {/* Extreme Case: Negative Balance Check */}
-                {gameState.turnStatus === 'BANKRUPTCY_PENDING' && (
+                {/* Negative balance — only block end turn while main balance is below zero */}
+                {(myPlayer?.balance ?? 0) < 0 && (
                   <div className="flex flex-col items-center gap-2 w-full px-4 animate-fade-in">
                     <span className="text-red-500 font-bold uppercase tracking-wider text-sm animate-pulse text-center text-shadow-neon-purple">
                       সতর্কতা: আপনার ব্যালেন্স নেগেটিভ

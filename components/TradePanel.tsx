@@ -3,6 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { GameState, BoardTile, TradeOfferPayload } from '@/shared/types';
 import { toBanglaNum } from '../utils/format';
+
+function parseCashInput(value: string): number {
+  const digits = value.replace(/[^0-9]/g, '');
+  if (!digits) return 0;
+  const n = parseInt(digits, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
 import { isPropertyFrozenForOwner } from '../utils/donPower';
 
 interface TradePanelProps {
@@ -145,8 +152,8 @@ export default function TradePanel({
     (gameState.pendingRentOwed?.debtorId === receiverId 
       ? gameState.players[receiverId].balance - gameState.pendingRentOwed!.remainingAmount 
       : gameState.players[receiverId].balance) : 0;
-  const [offerCash, setOfferCash] = useState<number>(0);
-  const [requestCash, setRequestCash] = useState<number>(0);
+  const [offerCashInput, setOfferCashInput] = useState('0');
+  const [requestCashInput, setRequestCashInput] = useState('0');
   const [selectedOfferProps, setSelectedOfferProps] = useState<number[]>([]);
   const [selectedRequestProps, setSelectedRequestProps] = useState<number[]>([]);
   const [offerPardonCards, setOfferPardonCards] = useState<number>(0);
@@ -201,8 +208,8 @@ export default function TradePanel({
   const handleOpenCreateModal = () => {
     setNegotiatingFromTradeId(null);
     setReceiverId(counterparties[0]?.id || '');
-    setOfferCash(0);
-    setRequestCash(0);
+    setOfferCashInput('0');
+    setRequestCashInput('0');
     setSelectedOfferProps([]);
     setSelectedRequestProps([]);
     setOfferPardonCards(0);
@@ -214,8 +221,8 @@ export default function TradePanel({
 
   const handleSelectCounterparty = (id: string) => {
     setReceiverId(id);
-    setOfferCash(0);
-    setRequestCash(0);
+    setOfferCashInput('0');
+    setRequestCashInput('0');
     setSelectedOfferProps([]);
     setSelectedRequestProps([]);
     setOfferPardonCards(0);
@@ -234,8 +241,8 @@ export default function TradePanel({
     if (!receiverId) return;
     onProposeTrade({
       receiverId,
-      offerCash,
-      requestCash,
+      offerCash: parseCashInput(offerCashInput),
+      requestCash: parseCashInput(requestCashInput),
       offerPropertyIndexes: selectedOfferProps,
       requestPropertyIndexes: selectedRequestProps,
       offerPardonCards,
@@ -255,8 +262,8 @@ export default function TradePanel({
 
     setNegotiatingFromTradeId(pendingTrade.tradeId);
     setReceiverId(opponentId);
-    setOfferCash(currentOffer.requestCash);
-    setRequestCash(currentOffer.offerCash);
+    setOfferCashInput(String(currentOffer.requestCash));
+    setRequestCashInput(String(currentOffer.offerCash));
     setSelectedOfferProps(currentOffer.requestPropertyIndexes);
     setSelectedRequestProps(currentOffer.offerPropertyIndexes);
     setOfferPardonCards(currentOffer.requestPardonCards || 0);
@@ -630,12 +637,16 @@ export default function TradePanel({
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
                     <input
-                      type="number"
-                      min={0}
-                      value={offerCash}
+                      type="text"
+                      inputMode="numeric"
+                      value={offerCashInput}
                       onChange={(e) => {
-                        const val = Math.max(0, parseInt(e.target.value) || 0);
-                        setOfferCash(val);
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setOfferCashInput('');
+                          return;
+                        }
+                        setOfferCashInput(raw.replace(/[^0-9]/g, ''));
                       }}
                       className="w-full pl-8 pr-4 py-2.5 bg-white/5 hover:bg-white/10 focus:bg-slate-950/60 border border-[#2D284F] focus:border-[#7B5BF2] text-white font-mono text-sm rounded-xl outline-none transition-all"
                       placeholder="অ্যামাউন্ট লিখুন"
@@ -730,12 +741,16 @@ export default function TradePanel({
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">৳</span>
                     <input
-                      type="number"
-                      min={0}
-                      value={requestCash}
+                      type="text"
+                      inputMode="numeric"
+                      value={requestCashInput}
                       onChange={(e) => {
-                        const val = Math.max(0, parseInt(e.target.value) || 0);
-                        setRequestCash(val);
+                        const raw = e.target.value;
+                        if (raw === '') {
+                          setRequestCashInput('');
+                          return;
+                        }
+                        setRequestCashInput(raw.replace(/[^0-9]/g, ''));
                       }}
                       className="w-full pl-8 pr-4 py-2.5 bg-white/5 hover:bg-white/10 focus:bg-slate-950/60 border border-[#2D284F] focus:border-[#7B5BF2] text-white font-mono text-sm rounded-xl outline-none transition-all"
                       placeholder="অ্যামাউন্ট লিখুন"

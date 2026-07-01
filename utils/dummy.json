@@ -61,10 +61,28 @@
       "say": "{1} {2}-কে ৳{3} দিয়েছেন"
     },
     {
+      "id": "pardon_card",
+      "enabled": true,
+      "match": "পার্ডন\\s+কার্ড\\s+পেয়েছেন",
+      "say": "{player} পার্ডন কার্ড পেয়েছেন"
+    },
+    {
+      "id": "power_card",
+      "enabled": true,
+      "match": "পাওয়ার\\s+কার্ড\\s+পেয়েছেন",
+      "say": "{player} পাওয়ার কার্ড পেয়েছেন"
+    },
+    {
       "id": "chest",
       "enabled": true,
       "match": "গুপ্তধন:\\s*(.+)",
       "say": "{player} গুপ্তধন কার্ড পেয়েছেন: {1}"
+    },
+    {
+      "id": "chance_visit",
+      "enabled": true,
+      "match": "ভাগ্য পরীক্ষা:\\s*(.+তে যান|.+ে যান)",
+      "say": "{player} {1}"
     },
     {
       "id": "chance",

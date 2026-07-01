@@ -87,6 +87,8 @@ function extractAmount(log: string, match?: RegExpMatchArray | null): string | n
 }
 
 function parseSimpleMoney(log: string, players: Player[]): BoardHistoryEntry | null {
+  if (/ভাগ্য\s+পরীক্ষা|গুপ্তধন:/i.test(log)) return null;
+
   const player = findPlayerInLog(log, players);
 
   const gain = log.match(new RegExp(`\\+৳(${AMOUNT})\\s*পেয়েছেন`));
@@ -355,6 +357,42 @@ function parseTrafficLog(
   return null;
 }
 
+function parseCardDrawLog(log: string, players: Player[]): BoardHistoryEntry | null {
+  const pardon = log.match(/([\w\u0980-\u09FF]+)\s+পার্ডন\s+কার্ড\s+পেয়েছেন/i);
+  if (pardon) {
+    const name = cleanText(pardon[1]);
+    const player = players.find((p) => p.name === name) || findPlayerInLog(log, players);
+    return { player, text: `${name} পার্ডন কার্ড পেয়েছেন` };
+  }
+
+  const power = log.match(/([\w\u0980-\u09FF]+)\s+পাওয়ার\s+কার্ড\s+পেয়েছেন/i);
+  if (power) {
+    const name = cleanText(power[1]);
+    const player = players.find((p) => p.name === name) || findPlayerInLog(log, players);
+    return { player, text: `${name} পাওয়ার কার্ড পেয়েছেন` };
+  }
+
+  for (const [prefix, label] of [
+    ['ভাগ্য পরীক্ষা', 'ভাগ্য কার্ড'],
+    ['গুপ্তধন', 'গুপ্তধন কার্ড'],
+  ] as const) {
+    const re = new RegExp(`${prefix}:\\s*(.+?)(?:\\s*\\([+-]৳|।|$)`, 'i');
+    const m = log.match(re);
+    if (m) {
+      const cardText = cleanText(m[1]);
+      if (!cardText) continue;
+      const player = findPlayerInLog(log, players);
+      const name = player?.name || '';
+      if (/তে যান$|ে যান$/.test(cardText)) {
+        return { player, text: name ? `${name} ${cardText}` : cardText };
+      }
+      return { player, text: name ? `${name} ${label} পেয়েছেন: ${cardText}` : `${label} পেয়েছেন: ${cardText}` };
+    }
+  }
+
+  return null;
+}
+
 function parseChunk(
   chunk: string,
   fullLog: string,
@@ -378,6 +416,9 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
   if (!normalized?.trim() || shouldSkipLog(normalized)) return null;
 
   const player = findPlayerInLog(normalized, players);
+
+  const cardDraw = parseCardDrawLog(normalized, players);
+  if (cardDraw) return cardDraw;
 
   if (/ট্রাফিক পুলিশ/i.test(normalized)) {
     const trafficEntry = parseTrafficLog(normalized, players, player);
@@ -403,6 +444,9 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
   if (simpleMoney) return simpleMoney;
 
   if (/রোল:|➡️/i.test(normalized)) {
+    const cardFromRoll = parseCardDrawLog(normalized, players);
+    if (cardFromRoll) return cardFromRoll;
+
     const rentFromRoll = parsePaidRentLog(normalized, players);
     if (rentFromRoll) return rentFromRoll;
 
@@ -430,8 +474,76 @@ export function parseBoardHistoryLog(log: string, players: Player[]): BoardHisto
   return null;
 }
 
+function isRedundantMovedToClause(clause: string, fullLog: string): boolean {
+  if (!/ভাগ্য পরীক্ষা:/i.test(fullLog)) return false;
+  if (!/তে যান|ে যান/.test(fullLog)) return false;
+
+  const cleaned = cleanText(clause.replace(/^➡️\s*/, ''));
+  if (!cleaned.endsWith('।') && !cleaned.endsWith('.')) return false;
+  const inner = cleaned.replace(/[।.]+$/, '');
+  if (/ভাড়া|ভাড়া|কর|GO|নিজের|বন্ধক|কিনেছেন/i.test(inner)) return false;
+  return inner.length > 0 && inner.length < 80;
+}
+
+function parseClauseHistory(
+  clause: string,
+  fullLog: string,
+  players: Player[]
+): BoardHistoryEntry | null {
+  const player = findPlayerInLog(fullLog, players);
+
+  const visitMatch = clause.match(/ভাগ্য\s+পরীক্ষা:\s*(.+?(?:তে যান|ে যান))/i);
+  if (visitMatch) {
+    const instruction = cleanText(visitMatch[1]);
+    return player
+      ? { player, text: `${player.name} ${instruction}` }
+      : { player: null, text: instruction };
+  }
+
+  const paidRent = parsePaidRentLog(clause, players);
+  if (paidRent) return paidRent;
+
+  if (RENT_PAID.test(clause)) {
+    const rentEntry = parseRentPaid(clause, fullLog, players);
+    if (rentEntry) return rentEntry;
+  }
+
+  const cardEntry = parseCardDrawLog(clause, players);
+  if (cardEntry) return cardEntry;
+
+  const simpleMoney = parseSimpleMoney(clause, players);
+  if (simpleMoney) return simpleMoney;
+
+  return parseChunk(clause, fullLog, players, player);
+}
+
 export function parseBoardHistoryLogs(log: string, players: Player[]): BoardHistoryEntry[] {
-  const entry = parseBoardHistoryLog(log, players);
+  const normalized = normalizeHistoryLog(log);
+  if (!normalized?.trim() || shouldSkipLog(normalized)) return [];
+
+  if (/➡️/.test(normalized)) {
+    const entries: BoardHistoryEntry[] = [];
+    const seen = new Set<string>();
+
+    const pushEntry = (entry: BoardHistoryEntry | null) => {
+      if (!entry?.text || seen.has(entry.text)) return;
+      seen.add(entry.text);
+      entries.push(entry);
+    };
+
+    for (const clause of splitLogClauses(normalized)) {
+      if (!clause.trim()) continue;
+      if (shouldSkipSegment(clause)) continue;
+      if (isIntermediateClause(clause, normalized)) continue;
+      if (isRedundantMovedToClause(clause, normalized)) continue;
+
+      pushEntry(parseClauseHistory(clause, normalized, players));
+    }
+
+    if (entries.length > 0) return entries;
+  }
+
+  const entry = parseBoardHistoryLog(normalized, players);
   return entry ? [entry] : [];
 }
 

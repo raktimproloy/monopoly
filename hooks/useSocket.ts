@@ -7,6 +7,9 @@ import { resolveServerUrl } from '../utils/serverUrl';
 import {
   DICE_RESULT_MS,
   JAIL_TRANSFER_MS,
+  TOKEN_TRANSITION_MS,
+  BALANCE_GAP_MS,
+  HISTORY_GAP_MS,
   rollBalanceRevealMs,
   rollHistoryRevealMs,
   rollLandCompleteMs,
@@ -284,6 +287,52 @@ export function useSocket(
         }, historyMs);
       } else {
         clearRollTimers();
+        const prevState = gameStateRef.current;
+
+        const resolvedPropertyVisit =
+          prevState?.drawnCard?.action === 'VISIT_RANDOM_PROPERTY' && !newState.drawnCard;
+
+        if (resolvedPropertyVisit && prevState) {
+          const activeId = newState.currentTurnPlayerId;
+          const oldPos = prevState.players[activeId]?.position;
+          const newPos = newState.players[activeId]?.position;
+
+          if (activeId && oldPos !== undefined && newPos !== undefined && oldPos !== newPos) {
+            const capturedNewState = newState;
+            const frozen = cloneGameState(capturedNewState);
+            frozen.players[activeId].position = oldPos;
+            preserveBalancesFromOld(frozen, prevState);
+            frozen.turnStatus = prevState.turnStatus;
+            frozen.drawnCard = null;
+            applyStateUpdate(frozen, '', version, { skipTelemetry: true });
+
+            const landMs = DICE_RESULT_MS + TOKEN_TRANSITION_MS;
+            const balanceMs = landMs + BALANCE_GAP_MS;
+            const historyMs = balanceMs + HISTORY_GAP_MS;
+
+            positionAnimTimerRef.current = setTimeout(() => {
+              positionAnimTimerRef.current = null;
+              const moving = cloneGameState(capturedNewState);
+              preserveBalancesFromOld(moving, prevState);
+              moving.drawnCard = null;
+              gameStateRef.current = moving;
+              setGameState(moving);
+            }, DICE_RESULT_MS);
+
+            balanceTimerRef.current = setTimeout(() => {
+              balanceTimerRef.current = null;
+              gameStateRef.current = capturedNewState;
+              setGameState(capturedNewState);
+            }, balanceMs);
+
+            historyTimerRef.current = setTimeout(() => {
+              historyTimerRef.current = null;
+              pushTelemetry(log, capturedNewState);
+            }, historyMs);
+            return;
+          }
+        }
+
         applyStateUpdate(newState, log, version);
       }
     };
