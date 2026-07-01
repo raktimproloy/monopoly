@@ -117,9 +117,16 @@ export function useSocket(
     const socket = io(dynamicServerUrl, {
       auth: { userId },
       query: { userId },
+      // WebSocket first for low latency; polling only as a fallback when WS is blocked.
       transports: ['websocket', 'polling'],
+      upgrade: true,
+      // Faster failure detection so a dead socket reconnects quickly.
+      timeout: 8000,
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
+      randomizationFactor: 0.5,
     });
 
     socketRef.current = socket;
@@ -335,7 +342,7 @@ export function useSocket(
     };
 
     measurePing();
-    const pingInterval = setInterval(measurePing, 3000);
+    const pingInterval = setInterval(measurePing, 5000);
 
     return () => {
       clearInterval(pingInterval);
