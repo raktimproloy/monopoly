@@ -9,6 +9,7 @@ import { getCompleteSets } from '../utils/propertySets';
 import { historyTheme, parseBoardHistoryLogs } from '../utils/boardHistory';
 import { useBoardHistoryLogs } from '../hooks/useBoardHistoryLogs';
 import { isPropertyFrozenForOwner, isPropertyHijackedByDon } from '../utils/donPower';
+import { AUTO_END_TURN_AFTER_LAND_MS } from '../constants/timing';
 
 interface BoardProps {
   gameState: GameState;
@@ -165,7 +166,6 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
 
   const [floaters, setFloaters] = useState<{ id: number; diff: number }[]>([]);
   const prevBalance = useRef(initialEffectiveBalance);
-  const prevGameState = useRef<GameState>(gameState);
 
   const isCurrentTurn = gameState.currentTurnPlayerId === player.id;
   const isMe = player.id === userId;
@@ -242,11 +242,8 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
     };
   }, [displayPosition, gameState.players, player.id]);
 
-  // Watch for balance changes to trigger floating animation
+  // Watch for balance changes to trigger floating animation (synced via useSocket roll pipeline)
   useEffect(() => {
-    const prevState = prevGameState.current;
-    prevGameState.current = gameState;
-
     const effectiveBalance = gameState.pendingRentOwed?.debtorId === player.id
       ? player.balance - gameState.pendingRentOwed.remainingAmount
       : player.balance;
@@ -255,25 +252,15 @@ function PlayerToken({ player, gameState, userId, hoveredTileIndex }: { player: 
       const diff = effectiveBalance - prevBalance.current;
       prevBalance.current = effectiveBalance;
 
-      // Determine if a movement occurred during this state update
-      const currentActiveId = gameState.currentTurnPlayerId;
-      const prevActivePos = prevState.players[currentActiveId]?.position;
-      const newActivePos = gameState.players[currentActiveId]?.position;
-      const activeMoved = prevActivePos !== undefined && prevActivePos !== newActivePos;
-
-      const delay = activeMoved ? 2200 : 0; // Wait for dice (1.5s) + move (0.7s)
+      setDisplayBalance(effectiveBalance);
+      const fId = Math.random();
+      setFloaters(prev => [...prev, { id: fId, diff }]);
 
       setTimeout(() => {
-        setDisplayBalance(effectiveBalance);
-        const fId = Math.random();
-        setFloaters(prev => [...prev, { id: fId, diff }]);
-
-        setTimeout(() => {
-          setFloaters(prev => prev.filter(f => f.id !== fId));
-        }, 1500);
-      }, delay);
+        setFloaters(prev => prev.filter(f => f.id !== fId));
+      }, 1500);
     }
-  }, [player.balance, gameState]);
+  }, [player.balance, gameState, player.id]);
 
   const isFlipped = displayPosition > 10 && displayPosition < 30;
   const isParentTileHovered = hoveredTileIndex === player.position;
@@ -400,11 +387,7 @@ export default function Board({
     }
   }, [gameState.turnStatus, gameState.currentTurnPlayerId, userId, onRollDice]);
 
-  const boardHistoryLogs = useBoardHistoryLogs(
-    logs,
-    gameState,
-    historyTheme.settings.movementDelayMs ?? 1400
-  );
+  const boardHistoryLogs = useBoardHistoryLogs(logs, gameState, 0);
 
   // One-shot glow when a color set is newly completed
   useEffect(() => {
@@ -558,7 +541,7 @@ export default function Board({
         wasAutoEndedRef.current = true;
         const timer = setTimeout(() => {
           onEndTurn();
-        }, 2200); // Wait for the piece animation
+        }, AUTO_END_TURN_AFTER_LAND_MS);
         return () => clearTimeout(timer);
       }
     } else {

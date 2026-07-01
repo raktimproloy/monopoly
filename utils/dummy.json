@@ -11,7 +11,7 @@
     "maxEntries": 12,
     "showPlayerDot": false,
     "segmentSplit": "➡️",
-    "movementDelayMs": 1400
+    "movementDelayMs": 0
   },
   "skipLogs": [
     "joined room",

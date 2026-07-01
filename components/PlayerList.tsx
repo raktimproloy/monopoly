@@ -79,6 +79,7 @@ export default function PlayerList({ gameState, boardTiles, userId, playerPings 
     const prevState = prevGameState.current;
     prevGameState.current = gameState;
 
+    // Balances follow useSocket roll pipeline: move first, then balance (delay 0 here).
     const delay = 0;
     const changes: { id: string; diff: number; newBalance: number }[] = [];
 

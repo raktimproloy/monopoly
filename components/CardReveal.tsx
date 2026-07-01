@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { GameState } from '@/shared/types';
 import { soundManager } from '../utils/soundManager';
 import { toBanglaNum } from '../utils/format';
+import { CARD_SHOW_DELAY_MS } from '../constants/timing';
 
 interface CardRevealProps {
   gameState: GameState;
@@ -28,17 +29,15 @@ export default function CardReveal({ gameState, userId, onResolve, onSellPardon 
       setCanResolve(false);
       setVisible(false);
 
-      // Wait 1.0 seconds (reduced from 2.2s) for player movement
+      // drawnCard is revealed only after token lands; brief pause then flip
       const showTimer = setTimeout(() => {
         setVisible(true);
-        // Automatically flip the card after 0.3 seconds (reduced from 1s)
         setTimeout(() => {
           setFlipped(true);
           soundManager.playEventSound('CARD_FLIP');
         }, 300);
-        // Allow resolving after 1.0 second total (reduced from 2.5s)
         setTimeout(() => setCanResolve(true), 1000);
-      }, 1000);
+      }, CARD_SHOW_DELAY_MS);
       
       return () => {
         clearTimeout(showTimer);

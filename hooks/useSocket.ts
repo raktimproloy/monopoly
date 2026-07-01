@@ -4,11 +4,43 @@ import { GameState, BoardTile, TradeOfferPayload, GameSettings } from '@/shared/
 import { createTelemetryEntry, TelemetryEntry } from '../utils/telemetryLog';
 import { mergeServerPayload, StateDeltaPayload } from '../utils/stateDelta';
 import { resolveServerUrl } from '../utils/serverUrl';
+import {
+  DICE_RESULT_MS,
+  JAIL_TRANSFER_MS,
+  rollBalanceRevealMs,
+  rollHistoryRevealMs,
+  rollLandCompleteMs,
+} from '../constants/timing';
 
 const GO_TO_JAIL_TILE = 30;
 const JAIL_TILE = 10;
-const DICE_ANIM_MS = 1300;
-const JAIL_TRANSFER_MS = 900;
+
+function cloneGameState(state: GameState): GameState {
+  return JSON.parse(JSON.stringify(state)) as GameState;
+}
+
+function freezeRollVisualFields(visual: GameState, oldState: GameState): void {
+  Object.values(oldState.players).forEach((p) => {
+    if (visual.players[p.id]) {
+      visual.players[p.id].position = p.position;
+      visual.players[p.id].inJail = p.inJail;
+      visual.players[p.id].balance = p.balance;
+    }
+  });
+  visual.turnStatus = oldState.turnStatus;
+  visual.drawnCard = oldState.drawnCard;
+  visual.pendingRentOwed = oldState.pendingRentOwed;
+  visual.activeLottery = oldState.activeLottery;
+}
+
+function preserveBalancesFromOld(target: GameState, oldState: GameState): void {
+  Object.values(oldState.players).forEach((p) => {
+    if (target.players[p.id]) {
+      target.players[p.id].balance = p.balance;
+    }
+  });
+  target.pendingRentOwed = oldState.pendingRentOwed;
+}
 
 function isJailViaGoToJailTile(oldState: GameState, newState: GameState, log: string): boolean {
   const activeId = newState.currentTurnPlayerId;
@@ -34,6 +66,9 @@ export function useSocket(
   const gameStateRef = useRef<GameState | null>(null);
   const positionAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const jailTransferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const landTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const balanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [isPredictingRoll, setIsPredictingRoll] = useState(false);
   const stateVersionRef = useRef(0);
@@ -137,70 +172,111 @@ export function useSocket(
       });
     };
 
-    const applyStateUpdate = (state: GameState, log: string, version?: number) => {
+    const applyStateUpdate = (
+      state: GameState,
+      log: string,
+      version?: number,
+      options?: { skipTelemetry?: boolean }
+    ) => {
       if (version !== undefined) stateVersionRef.current = version;
       gameStateRef.current = state;
       setGameState(state);
-      pushTelemetry(log, state);
+      if (!options?.skipTelemetry) {
+        pushTelemetry(log, state);
+      }
       syncRoomDetails(state);
       setIsPredictingRoll(false);
       pendingRollRef.current = null;
     };
 
-    /** Shared transition pipeline for full + delta authoritative updates. */
+    const clearRollTimers = () => {
+      if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
+      if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
+      if (landTimerRef.current) clearTimeout(landTimerRef.current);
+      if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
+      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+      positionAnimTimerRef.current = null;
+      jailTransferTimerRef.current = null;
+      landTimerRef.current = null;
+      balanceTimerRef.current = null;
+      historyTimerRef.current = null;
+    };
+
+    /** Roll pipeline: dice → token move → balance → history. */
     const handleAuthoritativeState = (newState: GameState, log: string, version?: number) => {
       const oldState = gameStateRef.current;
       const rollCounterIncreased = (newState.rollCounter || 0) > (oldState?.rollCounter || 0);
 
       if (rollCounterIncreased && oldState) {
-        if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
-        if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
+        clearRollTimers();
 
         const capturedNewState = newState;
         const jailViaGoToJail = isJailViaGoToJailTile(oldState, newState, log);
         const activeId = newState.currentTurnPlayerId;
 
-        const visualState = JSON.parse(JSON.stringify(newState)) as GameState;
-        Object.values(oldState.players).forEach((p) => {
-          if (visualState.players[p.id]) {
-            visualState.players[p.id].position = p.position;
-            visualState.players[p.id].inJail = p.inJail;
-          }
-        });
+        const visualState = cloneGameState(newState);
+        freezeRollVisualFields(visualState, oldState);
+        applyStateUpdate(visualState, '', version, { skipTelemetry: true });
 
-        applyStateUpdate(visualState, log, version);
+        const landMs = rollLandCompleteMs(jailViaGoToJail);
+        const balanceMs = rollBalanceRevealMs(jailViaGoToJail);
+        const historyMs = rollHistoryRevealMs(jailViaGoToJail);
 
         positionAnimTimerRef.current = setTimeout(() => {
           positionAnimTimerRef.current = null;
 
-          if (jailViaGoToJail && visualState.players[activeId]) {
-            const atGoToJail = JSON.parse(JSON.stringify(capturedNewState)) as GameState;
+          if (jailViaGoToJail && activeId) {
+            const atGoToJail = cloneGameState(capturedNewState);
             atGoToJail.players[activeId].position = GO_TO_JAIL_TILE;
-            atGoToJail.players[activeId].inJail = true;
+            atGoToJail.players[activeId].inJail = false;
+            preserveBalancesFromOld(atGoToJail, oldState);
+            atGoToJail.turnStatus = oldState.turnStatus;
+            atGoToJail.drawnCard = oldState.drawnCard;
+            atGoToJail.activeLottery = oldState.activeLottery;
             gameStateRef.current = atGoToJail;
             setGameState(atGoToJail);
 
             jailTransferTimerRef.current = setTimeout(() => {
               jailTransferTimerRef.current = null;
-              gameStateRef.current = capturedNewState;
-              setGameState(capturedNewState);
-              if (version !== undefined) stateVersionRef.current = version;
+              const atJail = cloneGameState(capturedNewState);
+              preserveBalancesFromOld(atJail, oldState);
+              atJail.turnStatus = oldState.turnStatus;
+              atJail.drawnCard = oldState.drawnCard;
+              atJail.activeLottery = oldState.activeLottery;
+              gameStateRef.current = atJail;
+              setGameState(atJail);
             }, JAIL_TRANSFER_MS);
           } else {
-            gameStateRef.current = capturedNewState;
-            setGameState(capturedNewState);
-            if (version !== undefined) stateVersionRef.current = version;
+            const withPositions = cloneGameState(capturedNewState);
+            preserveBalancesFromOld(withPositions, oldState);
+            withPositions.turnStatus = oldState.turnStatus;
+            withPositions.drawnCard = oldState.drawnCard;
+            withPositions.activeLottery = oldState.activeLottery;
+            gameStateRef.current = withPositions;
+            setGameState(withPositions);
           }
-        }, DICE_ANIM_MS);
+        }, DICE_RESULT_MS);
+
+        landTimerRef.current = setTimeout(() => {
+          landTimerRef.current = null;
+          const withLand = cloneGameState(capturedNewState);
+          preserveBalancesFromOld(withLand, oldState);
+          gameStateRef.current = withLand;
+          setGameState(withLand);
+        }, landMs);
+
+        balanceTimerRef.current = setTimeout(() => {
+          balanceTimerRef.current = null;
+          gameStateRef.current = capturedNewState;
+          setGameState(capturedNewState);
+        }, balanceMs);
+
+        historyTimerRef.current = setTimeout(() => {
+          historyTimerRef.current = null;
+          pushTelemetry(log, capturedNewState);
+        }, historyMs);
       } else {
-        if (positionAnimTimerRef.current) {
-          clearTimeout(positionAnimTimerRef.current);
-          positionAnimTimerRef.current = null;
-        }
-        if (jailTransferTimerRef.current) {
-          clearTimeout(jailTransferTimerRef.current);
-          jailTransferTimerRef.current = null;
-        }
+        clearRollTimers();
         applyStateUpdate(newState, log, version);
       }
     };
@@ -263,8 +339,7 @@ export function useSocket(
 
     return () => {
       clearInterval(pingInterval);
-      if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
-      if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
+      clearRollTimers();
       socket.disconnect();
     };
   }, [roomId, playerName, userId, currentAvatar, pushTelemetry]);
