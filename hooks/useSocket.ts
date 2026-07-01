@@ -46,11 +46,15 @@ function preserveBalancesFromOld(target: GameState, oldState: GameState): void {
 }
 
 function isJailViaGoToJailTile(oldState: GameState, newState: GameState, log: string): boolean {
+  if (log.includes('পরপর ৩ বার')) return false;
+
   const activeId = newState.currentTurnPlayerId;
   const activeNew = newState.players[activeId];
   const activeOld = oldState.players[activeId];
   if (!activeNew?.inJail || activeNew.position !== JAIL_TILE || !activeOld) return false;
-  if (log.includes('পরপর ৩ বার')) return false;
+
+  if (log.includes('সোজা জেলে')) return true;
+
   const [d1, d2] = newState.dice || [0, 0];
   return (activeOld.position + d1 + d2) % 40 === GO_TO_JAIL_TILE;
 }
@@ -72,6 +76,7 @@ export function useSocket(
   const landTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const balanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rollAnimGenRef = useRef(0);
   const [playerPings, setPlayerPings] = useState<Record<string, number>>({});
   const [isPredictingRoll, setIsPredictingRoll] = useState(false);
   const stateVersionRef = useRef(0);
@@ -159,8 +164,27 @@ export function useSocket(
       setErrorMessage(`Connection error: ${err.message}`);
     });
 
+    const clearRollTimers = () => {
+      if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
+      if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
+      if (landTimerRef.current) clearTimeout(landTimerRef.current);
+      if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
+      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+      positionAnimTimerRef.current = null;
+      jailTransferTimerRef.current = null;
+      landTimerRef.current = null;
+      balanceTimerRef.current = null;
+      historyTimerRef.current = null;
+    };
+
+    const invalidateRollAnimation = () => {
+      clearRollTimers();
+      rollAnimGenRef.current += 1;
+    };
+
     // Handle initial room setup
     socket.on('room_initialized', (data: { state: GameState; board: BoardTile[] }) => {
+      invalidateRollAnimation();
       gameStateRef.current = data.state;
       setGameState(data.state);
       setBoardTiles(data.board);
@@ -199,19 +223,6 @@ export function useSocket(
       pendingRollRef.current = null;
     };
 
-    const clearRollTimers = () => {
-      if (positionAnimTimerRef.current) clearTimeout(positionAnimTimerRef.current);
-      if (jailTransferTimerRef.current) clearTimeout(jailTransferTimerRef.current);
-      if (landTimerRef.current) clearTimeout(landTimerRef.current);
-      if (balanceTimerRef.current) clearTimeout(balanceTimerRef.current);
-      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
-      positionAnimTimerRef.current = null;
-      jailTransferTimerRef.current = null;
-      landTimerRef.current = null;
-      balanceTimerRef.current = null;
-      historyTimerRef.current = null;
-    };
-
     /** Roll pipeline: dice → token move → balance → history. */
     const handleAuthoritativeState = (newState: GameState, log: string, version?: number) => {
       const oldState = gameStateRef.current;
@@ -219,6 +230,7 @@ export function useSocket(
 
       if (rollCounterIncreased && oldState) {
         clearRollTimers();
+        const animGen = ++rollAnimGenRef.current;
 
         const capturedNewState = newState;
         const jailViaGoToJail = isJailViaGoToJailTile(oldState, newState, log);
@@ -234,6 +246,7 @@ export function useSocket(
 
         positionAnimTimerRef.current = setTimeout(() => {
           positionAnimTimerRef.current = null;
+          if (animGen !== rollAnimGenRef.current) return;
 
           if (jailViaGoToJail && activeId) {
             const atGoToJail = cloneGameState(capturedNewState);
@@ -248,11 +261,9 @@ export function useSocket(
 
             jailTransferTimerRef.current = setTimeout(() => {
               jailTransferTimerRef.current = null;
+              if (animGen !== rollAnimGenRef.current) return;
               const atJail = cloneGameState(capturedNewState);
               preserveBalancesFromOld(atJail, oldState);
-              atJail.turnStatus = oldState.turnStatus;
-              atJail.drawnCard = oldState.drawnCard;
-              atJail.activeLottery = oldState.activeLottery;
               gameStateRef.current = atJail;
               setGameState(atJail);
             }, JAIL_TRANSFER_MS);
@@ -269,6 +280,7 @@ export function useSocket(
 
         landTimerRef.current = setTimeout(() => {
           landTimerRef.current = null;
+          if (animGen !== rollAnimGenRef.current) return;
           const withLand = cloneGameState(capturedNewState);
           preserveBalancesFromOld(withLand, oldState);
           gameStateRef.current = withLand;
@@ -277,16 +289,18 @@ export function useSocket(
 
         balanceTimerRef.current = setTimeout(() => {
           balanceTimerRef.current = null;
+          if (animGen !== rollAnimGenRef.current) return;
           gameStateRef.current = capturedNewState;
           setGameState(capturedNewState);
         }, balanceMs);
 
         historyTimerRef.current = setTimeout(() => {
           historyTimerRef.current = null;
+          if (animGen !== rollAnimGenRef.current) return;
           pushTelemetry(log, capturedNewState);
         }, historyMs);
       } else {
-        clearRollTimers();
+        invalidateRollAnimation();
         const prevState = gameStateRef.current;
 
         const resolvedPropertyVisit =
@@ -299,6 +313,7 @@ export function useSocket(
 
           if (activeId && oldPos !== undefined && newPos !== undefined && oldPos !== newPos) {
             const capturedNewState = newState;
+            const animGen = ++rollAnimGenRef.current;
             const frozen = cloneGameState(capturedNewState);
             frozen.players[activeId].position = oldPos;
             preserveBalancesFromOld(frozen, prevState);
@@ -312,6 +327,7 @@ export function useSocket(
 
             positionAnimTimerRef.current = setTimeout(() => {
               positionAnimTimerRef.current = null;
+              if (animGen !== rollAnimGenRef.current) return;
               const moving = cloneGameState(capturedNewState);
               preserveBalancesFromOld(moving, prevState);
               moving.drawnCard = null;
@@ -321,12 +337,14 @@ export function useSocket(
 
             balanceTimerRef.current = setTimeout(() => {
               balanceTimerRef.current = null;
+              if (animGen !== rollAnimGenRef.current) return;
               gameStateRef.current = capturedNewState;
               setGameState(capturedNewState);
             }, balanceMs);
 
             historyTimerRef.current = setTimeout(() => {
               historyTimerRef.current = null;
+              if (animGen !== rollAnimGenRef.current) return;
               pushTelemetry(log, capturedNewState);
             }, historyMs);
             return;
@@ -395,7 +413,7 @@ export function useSocket(
 
     return () => {
       clearInterval(pingInterval);
-      clearRollTimers();
+      invalidateRollAnimation();
       socket.disconnect();
     };
   }, [roomId, playerName, userId, currentAvatar, pushTelemetry]);
@@ -510,7 +528,7 @@ export function useSocket(
   const declareBankruptcy = useCallback(() => {
     console.log('[Socket Emit] declare_bankruptcy', { playerId: userId });
     if (socketRef.current) {
-      socketRef.current.emit('declare_bankruptcy', { playerId: userId });
+      socketRef.current.emit('declare_bankruptcy', { playerId: userId, confirmed: true });
     }
   }, [userId]);
 
@@ -703,7 +721,10 @@ export function useSocket(
       }
     };
     const handleCustomAuction = (e: any) => auctionProperty(e.detail);
-    const handleCustomBankrupt = () => declareBankruptcy();
+    const handleCustomBankrupt = (e: Event) => {
+      if ((e as CustomEvent).detail?.confirmed !== true) return;
+      declareBankruptcy();
+    };
     const handleCustomMortgage = (e: any) => mortgageProperty(e.detail);
     const handleCustomUnmortgage = (e: any) => unmortgageProperty(e.detail);
     const handleCustomSellPardon = () => sellPardonCard();

@@ -26,3 +26,6 @@ export function rollBalanceRevealMs(jailViaGoToJail: boolean): number {
 export function rollHistoryRevealMs(jailViaGoToJail: boolean): number {
   return rollBalanceRevealMs(jailViaGoToJail) + HISTORY_GAP_MS;
 }
+
+/** Server auto end-turn should wait until Go-To-Jail animation finishes on clients. */
+export const GO_TO_JAIL_AUTO_END_DELAY_MS = rollLandCompleteMs(true) + 200;

@@ -111,7 +111,7 @@ function GameRoomContent() {
   const [guestName, setGuestName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [modalError, setModalError] = useState<string | null>(null);
-  const [activeModal, setActiveModal] = useState<'NONE' | 'BANK' | 'KICK'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'BANK' | 'KICK' | 'BANKRUPTCY'>('NONE');
   const [showAppearanceModal, setShowAppearanceModal] = useState(false);
   const [mobileTab, setMobileTab] = useState<'board' | 'bank' | 'logs' | 'players' | 'properties'>('board');
   const [mobileLobbyTab, setMobileLobbyTab] = useState<'nodes' | 'rules' | 'logs'>('rules');
@@ -808,6 +808,33 @@ function GameRoomContent() {
               {activeModal === 'BANK' && (<BankModal onClose={() => setActiveModal('NONE')} onTakeLoan={takeLoan} />)}
               {/* Kick Vote Modal */}
               {activeModal === 'KICK' && gameState && (<KickVoteModal gameState={gameState} userId={userId} onClose={() => setActiveModal('NONE')} onCastVote={castKickVote} />)}
+              {activeModal === 'BANKRUPTCY' && gameState && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                  <div className="glass-card max-w-sm w-full p-6 border border-red-500/30 bg-slate-950/95">
+                    <h3 className="text-lg font-orbitron font-bold text-red-400 mb-3">দেউলিয়া ঘোষণা</h3>
+                    <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                      আপনি কি নিশ্চিত? সব সম্পত্তি ব্যাংকে ফিরে যাবে এবং আপনি গেম থেকে বাদ পড়বেন।
+                    </p>
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => setActiveModal('NONE')}
+                        className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        বাতিল
+                      </button>
+                      <button
+                        onClick={() => {
+                          declareBankruptcy();
+                          setActiveModal('NONE');
+                        }}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-orbitron font-bold rounded transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        হ্যাঁ, দেউলিয়া ঘোষণা করুন
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Game Over Overlay — visible to all players */}
               {gameState?.gameStatus === 'FINISHED' && (<GameOverOverlay gameState={gameState} onRestartGame={restartGame} />)}
 
@@ -865,12 +892,16 @@ function GameRoomContent() {
             >
               ভোটকিক
             </button>
-            <button
-              onClick={declareBankruptcy}
-              className="px-2.5 py-1.5 bg-slate-800/80 border border-slate-700 hover:bg-slate-700 text-white text-[10px] font-orbitron font-bold tracking-widest rounded transition-all active:scale-[0.98] cursor-pointer"
-            >
-              দেউলিয়া
-            </button>
+            {((gameState?.players[userId]?.balance ?? 0) < 0 ||
+              (gameState?.pendingRentOwed?.debtorId === userId &&
+                (gameState?.pendingRentOwed?.remainingAmount ?? 0) > 0)) && (
+              <button
+                onClick={() => setActiveModal('BANKRUPTCY')}
+                className="px-2.5 py-1.5 bg-red-900/80 border border-red-500/40 hover:bg-red-800 text-red-100 text-[10px] font-orbitron font-bold tracking-widest rounded transition-all active:scale-[0.98] cursor-pointer"
+              >
+                দেউলিয়া
+              </button>
+            )}
           </div>
         </div>
 
