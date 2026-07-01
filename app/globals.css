@@ -216,33 +216,6 @@ body {
   animation: playerPulse 1.5s infinite;
 }
 
-/* Dice Roll Animation (Apply the class .animate-dice-roll to your DiceManager container when rolling!) */
-@keyframes diceRollBounce {
-  0% {
-    transform: translateY(0) scale(1) rotate(0deg);
-  }
-
-  20% {
-    transform: translateY(-40px) scale(1.2) rotate(45deg);
-  }
-
-  50% {
-    transform: translateY(-50px) scale(1.3) rotate(180deg);
-  }
-
-  80% {
-    transform: translateY(-20px) scale(1.1) rotate(300deg);
-  }
-
-  100% {
-    transform: translateY(0) scale(1) rotate(360deg);
-  }
-}
-
-.animate-dice-roll {
-  animation: diceRollBounce 0.8s cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
-}
-
 /* Floating Money Animation */
 @keyframes floatUpAndFade {
   0% {

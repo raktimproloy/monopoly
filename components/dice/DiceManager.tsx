@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { GameState } from '@/shared/types';
-import Dice3D from './Dice3D';
+import DicePair from './DicePair';
 
 interface DiceManagerProps {
   gameState: GameState;
@@ -10,10 +10,15 @@ interface DiceManagerProps {
   isPredictingRoll?: boolean;
 }
 
+function isDisplayableDice(dice: [number, number] | undefined): dice is [number, number] {
+  if (!dice) return false;
+  return dice[0] >= 1 && dice[0] <= 6 && dice[1] >= 1 && dice[1] <= 6;
+}
+
 export default function DiceManager({ gameState, isPredictingRoll = false }: DiceManagerProps) {
   const [rollTrigger, setRollTrigger] = useState(0);
-  const [displayValues, setDisplayValues] = useState<[number, number]>(
-    gameState.dice && gameState.dice[0] > 0 ? gameState.dice : [1, 1]
+  const [displayValues, setDisplayValues] = useState<[number, number]>(() =>
+    isDisplayableDice(gameState.dice) ? gameState.dice : [1, 1]
   );
 
   const prevDice = useRef<[number, number]>(gameState.dice || [0, 0]);
@@ -27,18 +32,19 @@ export default function DiceManager({ gameState, isPredictingRoll = false }: Dic
     const predictionStarted = isPredictingRoll && !prevPredicting.current;
 
     if (rollCounterIncreased) {
-      setDisplayValues(gameState.dice);
+      if (isDisplayableDice(gameState.dice)) {
+        setDisplayValues(gameState.dice);
+      }
       setRollTrigger((prev) => prev + 1);
     } else if (predictionStarted) {
-      // Optimistic: start dice physics immediately before server delta arrives
       setRollTrigger((prev) => prev + 1);
     } else {
-      // If we aren't starting a new roll, but the dice values changed (e.g. game initialized or hard reset)
       const diceChanged = gameState.dice && (
-        gameState.dice[0] !== prevDice.current[0] || 
+        gameState.dice[0] !== prevDice.current[0] ||
         gameState.dice[1] !== prevDice.current[1]
       );
-      if (diceChanged) {
+      // Keep last rolled faces visible when server clears dice ([0,0]) on end turn.
+      if (diceChanged && isDisplayableDice(gameState.dice)) {
         setDisplayValues(gameState.dice);
       }
     }
@@ -50,12 +56,7 @@ export default function DiceManager({ gameState, isPredictingRoll = false }: Dic
 
   return (
     <div className="w-full mx-auto flex flex-col items-center justify-center bg-transparent">
-      <Dice3D
-        values={displayValues}
-        rollTrigger={rollTrigger}
-        borderColor="#ffffff" 
-        dotColor="#111111"    
-      />
+      <DicePair values={displayValues} rollTrigger={rollTrigger} />
     </div>
   );
 }

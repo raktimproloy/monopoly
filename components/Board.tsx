@@ -1130,8 +1130,8 @@ export default function Board({
             </div>
           )}
 
-          {/* 3D Physics Dice Display - Centered wrapper with standard height constraint */}
-          <div className="w-full h-40 md:h-48 flex items-center justify-center relative shrink-0 transform-gpu perspective-1000">
+          {/* CSS 3D Dice — premium roll animation with ground shadow */}
+          <div className="w-full h-36 md:h-44 flex items-center justify-center relative shrink-0">
             <DiceManager gameState={gameState} isPredictingRoll={isPredictingRoll} />
           </div>
 
